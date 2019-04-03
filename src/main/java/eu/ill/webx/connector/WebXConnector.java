@@ -26,6 +26,11 @@ public class WebXConnector {
     private int webXServerPort;
     private int webXPublisherPort;
     private int webXCollectorPort;
+
+    private WebXSubscriber subscriber;
+    private Thread subscriberThread;
+    private Thread publisherThread;
+
     private Size screenSize;
 
     private static WebXConnector instance = null;
@@ -56,6 +61,10 @@ public class WebXConnector {
         return screenSize;
     }
 
+    public WebXSubscriber getSubscriber() {
+        return subscriber;
+    }
+
     public void connect(String webXServerAddress, int webXServerPort) {
         this.webXServerAddress = webXServerAddress;
         this.webXServerPort = webXServerPort;
@@ -73,6 +82,10 @@ public class WebXConnector {
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
                 this.screenSize = connectionResponse.getScreenSize();
 
+                this.subscriber = new WebXSubscriber(this.context, this.webXServerAddress, this.webXPublisherPort);
+                this.subscriberThread = new Thread(this.subscriber);
+                this.subscriberThread.start();
+
             } else {
                logger.error("Unable to establish connection to WebX server");
 
@@ -84,9 +97,20 @@ public class WebXConnector {
     public void disconnect() {
         if (this.context != null) {
             this.socket.close();
-            this.context.destroy();
-
             this.socket = null;
+
+            if (this.subscriberThread != null) {
+                this.subscriber.stop();
+                this.subscriberThread.interrupt();
+                try {
+                    this.subscriberThread.join();
+
+                } catch (InterruptedException e) {
+                    logger.error("Failed to join subscriber thread");
+                }
+            }
+
+            this.context.destroy();
             this.context = null;
         }
     }
@@ -116,7 +140,7 @@ public class WebXConnector {
             logger.error("Error mapping JSON response");
 
         } catch (IOException e) {
-            logger.error("Unable to convert request to JSON");
+            logger.error("Unable to convert response to JSON");
         }
 
         return response;

@@ -2,6 +2,7 @@ package eu.ill.webx.connector;
 
 import eu.ill.webx.connector.response.WebXWindowsResponse;
 import eu.ill.webx.domain.display.WindowProperties;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -19,6 +20,11 @@ public class WebXConnectorTest {
     @BeforeClass
     static public void connect() {
         WebXConnector.instance().connect("localhost", 5555);
+    }
+
+    @AfterClass
+    static public void disconnect() {
+        WebXConnector.instance().disconnect();
     }
 
     @Test
