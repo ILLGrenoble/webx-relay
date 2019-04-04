@@ -32,8 +32,10 @@ public class Relay implements WebXMessageListener {
     private RemoteEndpoint remoteEndpoint;
 
     public Relay(Session session) {
-        this.session = session;
-        this.remoteEndpoint = session.getRemote();
+        if (session != null) {
+            this.session = session;
+            this.remoteEndpoint = session.getRemote();
+        }
     }
 
     public Thread getWebXListenerThread() {
@@ -144,7 +146,9 @@ public class Relay implements WebXMessageListener {
 
     private synchronized void sendDataToRemote(String data) {
         try {
-            this.remoteEndpoint.sendString(data);
+            if (this.remoteEndpoint != null) {
+                this.remoteEndpoint.sendString(data);
+            }
 
         } catch (IOException e) {
             logger.error("Failed to write data to web socket");

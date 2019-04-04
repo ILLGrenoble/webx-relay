@@ -27,7 +27,7 @@ public class RelayTest {
 
     @Test
     public void testRelayStartSTop() {
-        Relay relay = new Relay();
+        Relay relay = new Relay(null);
         relay.start();
 
         try {
@@ -43,7 +43,7 @@ public class RelayTest {
 
     @Test
     public void testRelaySubscriber() {
-        Relay relay = new Relay();
+        Relay relay = new Relay(null);
         relay.start();
         WebXConnector.instance().getSubscriber().addListener(relay);
 
