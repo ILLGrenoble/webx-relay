@@ -6,6 +6,7 @@ import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
+import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.ws.WebSocketTunnelServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -18,6 +19,12 @@ public class Application {
 
     @Parameter(names = {"--port"})
     private Integer port = 8080;
+
+    @Parameter(names = {"--webxhost"}, required = true)
+    private String webXHost = "localhost";
+
+    @Parameter(names = {"--webxport"}, required = true)
+    private Integer webXPort = 5555;
 
 
     public static void main(String... argv) throws Exception {
@@ -32,6 +39,9 @@ public class Application {
     private void run() throws Exception {
         final Server                   server        = new Server(port);
         final ServletContextHandler    context       = new ServletContextHandler(server, "/", NO_SESSIONS);
+
+        // Start WebXConnector (and message listener)
+        WebXConnector.instance().connect(webXHost, webXPort);
 
         context.addEventListener(new GuiceServletContextListener() {
             @Override

@@ -3,6 +3,7 @@ package eu.ill.webx.connector;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.ill.webx.connector.request.WebXRequest;
 import eu.ill.webx.connector.response.WebXConnectionResponse;
 import eu.ill.webx.connector.response.WebXResponse;
 import eu.ill.webx.connector.response.WebXWindowsResponse;
@@ -28,8 +29,6 @@ public class WebXConnector {
     private int webXCollectorPort;
 
     private WebXSubscriber subscriber;
-    private Thread subscriberThread;
-    private Thread publisherThread;
 
     private Size screenSize;
 
@@ -83,9 +82,9 @@ public class WebXConnector {
                 this.screenSize = connectionResponse.getScreenSize();
 
                 this.subscriber = new WebXSubscriber(this.context, this.webXServerAddress, this.webXPublisherPort);
-                this.subscriberThread = new Thread(this.subscriber);
-                this.subscriberThread.start();
+                this.subscriber.start();
 
+                logger.info("WebX Connector started");
             } else {
                logger.error("Unable to establish connection to WebX server");
 
@@ -99,19 +98,14 @@ public class WebXConnector {
             this.socket.close();
             this.socket = null;
 
-            if (this.subscriberThread != null) {
+            if (this.subscriber != null) {
                 this.subscriber.stop();
-                this.subscriberThread.interrupt();
-                try {
-                    this.subscriberThread.join();
-
-                } catch (InterruptedException e) {
-                    logger.error("Failed to join subscriber thread");
-                }
+                this.subscriber = null;
             }
 
             this.context.destroy();
             this.context = null;
+            logger.info("WebX Connector stopped");
         }
     }
 

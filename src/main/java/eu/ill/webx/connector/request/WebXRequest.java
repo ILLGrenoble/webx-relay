@@ -1,4 +1,4 @@
-package eu.ill.webx.connector;
+package eu.ill.webx.connector.request;
 
 import com.fasterxml.jackson.annotation.JsonValue;
 

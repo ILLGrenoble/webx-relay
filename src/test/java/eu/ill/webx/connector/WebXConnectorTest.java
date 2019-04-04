@@ -1,5 +1,6 @@
 package eu.ill.webx.connector;
 
+import eu.ill.webx.connector.request.WebXRequest;
 import eu.ill.webx.connector.response.WebXWindowsResponse;
 import eu.ill.webx.domain.display.WindowProperties;
 import org.junit.AfterClass;
