@@ -3,6 +3,7 @@ package eu.ill.webx.ws;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.relay.Relay;
 import eu.ill.webx.relay.command.ClientCommand;
 import org.eclipse.jetty.websocket.api.Session;
@@ -21,9 +22,12 @@ public class WebSocketTunnelListener implements WebSocketListener {
 
     @Override
     public void onWebSocketConnect(final Session session) {
-      logger.debug("WebSocket connection, creating relay...");
-      this.relay = new Relay(session);
-      this.relay.start();
+        logger.debug("WebSocket connection, creating relay...");
+        this.relay = new Relay(session);
+        this.relay.start();
+
+        // Add relay as a listener to webx messages
+        WebXConnector.instance().getSubscriber().addListener(relay);
     }
 
     @Override
@@ -57,6 +61,10 @@ public class WebSocketTunnelListener implements WebSocketListener {
     @Override
     public void onWebSocketError(Throwable throwable) {
         logger.debug("WebSocket tunnel closing due to error: {}", throwable);
+
+        // Remove relay from webx subscriber
+        WebXConnector.instance().getSubscriber().removeListener(relay);
+
         this.relay.stop();
         this.relay = null;
     }
@@ -64,6 +72,10 @@ public class WebSocketTunnelListener implements WebSocketListener {
     @Override
     public void onWebSocketClose(int statusCode, String reason) {
         logger.debug("WebSocket closing with reason: {}", reason);
+
+        // Remove relay from webx subscriber
+        WebXConnector.instance().getSubscriber().removeListener(relay);
+
         this.relay.stop();
         this.relay = null;
     }

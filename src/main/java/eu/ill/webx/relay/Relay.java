@@ -110,8 +110,14 @@ public class Relay implements WebXMessageListener {
                 // Send message to client through web socket
                 logger.info(message.toString());
 
+                String responseData = this.objectMapper.writeValueAsString(message);
+                this.sendDataToRemote(responseData);
+
             } catch (InterruptedException ie) {
                 logger.info("Relay message listener thread interrupted");
+
+            } catch (JsonProcessingException e) {
+                logger.error("Failed to convert object to JSON");
             }
         }
     }
