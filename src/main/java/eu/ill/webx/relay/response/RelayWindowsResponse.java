@@ -10,9 +10,11 @@ public class RelayWindowsResponse extends RelayResponse {
     private List<WindowProperties> windows = new ArrayList<>();
 
     public RelayWindowsResponse() {
+        super("Windows");
     }
 
     public RelayWindowsResponse(List<WindowProperties> windows) {
+        super("Windows");
         this.windows = windows;
     }
 
