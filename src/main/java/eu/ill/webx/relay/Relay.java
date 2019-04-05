@@ -134,8 +134,6 @@ public class Relay implements WebXMessageListener {
     private RelayResponse handleClientCommand(ClientCommand command) {
 
         // Handle command
-        logger.info(command.toString());
-
         RelayResponse response = null;
         if (command.getType().equals(ClientCommand.Type.Connect)) {
             response = new RelayConnectionResponse(WebXConnector.instance().getScreenSize());

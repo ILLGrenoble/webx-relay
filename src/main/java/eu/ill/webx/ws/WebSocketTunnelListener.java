@@ -36,12 +36,13 @@ public class WebSocketTunnelListener implements WebSocketListener {
        logger.debug("Received command: {}", message);
         try {
             ClientCommand command = objectMapper.readValue(message, ClientCommand.class);
+            this.relay.queueCommand(command);
 
         } catch (JsonParseException e) {
-            logger.error("Error parsing JSON command");
+            logger.error("Error parsing JSON command", e);
 
         } catch (JsonMappingException e) {
-            logger.error("Error mapping JSON command");
+            logger.error("Error mapping JSON command", e);
 
         } catch (IOException e) {
             logger.error("Unable to convert command to JSON");
