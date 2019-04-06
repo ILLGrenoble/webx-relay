@@ -34,4 +34,14 @@ public class WebXConnectionResponse extends WebXResponse {
     public void setScreenSize(Size screenSize) {
         this.screenSize = screenSize;
     }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("WebXConnectionResponse{");
+        sb.append("publisherPort=").append(publisherPort);
+        sb.append(", collectorPort=").append(collectorPort);
+        sb.append(", screenSize=").append(screenSize);
+        sb.append('}');
+        return sb.toString();
+    }
 }

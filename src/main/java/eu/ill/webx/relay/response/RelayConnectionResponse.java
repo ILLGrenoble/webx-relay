@@ -6,8 +6,8 @@ public class RelayConnectionResponse extends RelayResponse {
 
     private Size screenSize;
 
-    public RelayConnectionResponse(Size screenSize) {
-        super("Connection");
+    public RelayConnectionResponse(long commandId, Size screenSize) {
+        super("Connection", commandId);
         this.screenSize = screenSize;
     }
 

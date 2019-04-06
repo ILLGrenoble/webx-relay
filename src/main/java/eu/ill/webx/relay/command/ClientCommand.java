@@ -36,6 +36,7 @@ public class ClientCommand {
     }
 
     private Type type;
+    private long id;
     private String stringPayload;
     private int integerPayload;
 
@@ -50,4 +51,11 @@ public class ClientCommand {
         return type;
     }
 
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
 }

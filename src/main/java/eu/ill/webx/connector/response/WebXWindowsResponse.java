@@ -12,11 +12,23 @@ public class WebXWindowsResponse extends WebXResponse {
     public WebXWindowsResponse() {
     }
 
+    public WebXWindowsResponse(List<WindowProperties> windows) {
+        this.windows = windows;
+    }
+
     public List<WindowProperties> getWindows() {
         return windows;
     }
 
     public void setWindows(List<WindowProperties> windows) {
         this.windows = windows;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("WebXWindowsResponse{");
+        sb.append("windows=").append(windows);
+        sb.append('}');
+        return sb.toString();
     }
 }

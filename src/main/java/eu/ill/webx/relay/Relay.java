@@ -145,12 +145,12 @@ public class Relay implements WebXMessageListener {
         // Handle command
         RelayResponse response = null;
         if (command.getType().equals(ClientCommand.Type.Connect)) {
-            response = new RelayConnectionResponse(WebXConnector.instance().getScreenSize());
+            response = new RelayConnectionResponse(command.getId(), WebXConnector.instance().getScreenSize());
 
         } else if (command.getType().equals(ClientCommand.Type.Windows)) {
             WebXWindowsResponse windowsResponse =  (WebXWindowsResponse)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Windows));
 
-            response = new RelayWindowsResponse(windowsResponse.getWindows());
+            response = new RelayWindowsResponse(command.getId(), windowsResponse.getWindows());
         }
 
         return response;
