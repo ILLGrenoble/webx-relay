@@ -6,9 +6,11 @@ import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.connector.listener.WebXMessageListener;
 import eu.ill.webx.connector.message.WebXMessage;
 import eu.ill.webx.connector.request.WebXRequest;
+import eu.ill.webx.connector.response.WebXImageResponse;
 import eu.ill.webx.connector.response.WebXWindowsResponse;
 import eu.ill.webx.relay.command.ClientCommand;
 import eu.ill.webx.relay.response.RelayConnectionResponse;
+import eu.ill.webx.relay.response.RelayImageResponse;
 import eu.ill.webx.relay.response.RelayResponse;
 import eu.ill.webx.relay.response.RelayWindowsResponse;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
@@ -151,6 +153,11 @@ public class Relay implements WebXMessageListener {
             WebXWindowsResponse windowsResponse =  (WebXWindowsResponse)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Windows));
 
             response = new RelayWindowsResponse(command.getId(), windowsResponse.getWindows());
+
+        } else if (command.getType().equals(ClientCommand.Type.Image)) {
+            WebXImageResponse imageResponse =  (WebXImageResponse)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Windows));
+
+            response = new RelayImageResponse(command.getId(), imageResponse.getBase64ImageData());
         }
 
         return response;

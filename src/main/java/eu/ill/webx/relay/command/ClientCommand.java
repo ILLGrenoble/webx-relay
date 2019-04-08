@@ -6,7 +6,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public class ClientCommand {
     public enum Type {
         Connect(1),
-        Windows(2);
+        Windows(2),
+        Image(3);
 
         private final int value;
 
