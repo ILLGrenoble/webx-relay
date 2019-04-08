@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.ill.webx.connector.request.WebXRequest;
 import eu.ill.webx.connector.response.WebXConnectionResponse;
+import eu.ill.webx.connector.response.WebXImageResponse;
 import eu.ill.webx.connector.response.WebXResponse;
 import eu.ill.webx.connector.response.WebXWindowsResponse;
 import eu.ill.webx.domain.utils.Size;
@@ -126,7 +127,10 @@ public class WebXConnector {
             } else if (request.getType().equals(WebXRequest.Type.Windows)) {
                 response = objectMapper.readValue(responseData, WebXWindowsResponse.class);
 
+            } else if (request.getType().equals(WebXRequest.Type.Image)) {
+                response = objectMapper.readValue(responseData, WebXImageResponse.class);
             }
+
         } catch (JsonParseException e) {
             logger.error("Error parsing JSON response");
 

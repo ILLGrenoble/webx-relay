@@ -31,6 +31,11 @@ public class WebXRequest {
         this.type = type;
     }
 
+    public WebXRequest(Type type, long numericPayload) {
+        this.type = type;
+        this.numericPayload = numericPayload;
+    }
+
     public Type getType() {
         return type;
     }

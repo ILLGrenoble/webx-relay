@@ -39,7 +39,7 @@ public class ClientCommand {
     private Type type;
     private long id;
     private String stringPayload;
-    private int integerPayload;
+    private long numericPayload;
 
     public ClientCommand() {
     }
@@ -58,5 +58,21 @@ public class ClientCommand {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public long getNumericPayload() {
+        return numericPayload;
+    }
+
+    public void setNumericPayload(long numericPayload) {
+        this.numericPayload = numericPayload;
+    }
+
+    public String getStringPayload() {
+        return stringPayload;
+    }
+
+    public void setStringPayload(String stringPayload) {
+        this.stringPayload = stringPayload;
     }
 }
