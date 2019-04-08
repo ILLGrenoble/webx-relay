@@ -25,7 +25,7 @@ public class WebXRequest {
 
     private Type type;
     private String stringPayload;
-    private int integerPayload;
+    private long numericPayload;
 
     public WebXRequest(Type type) {
         this.type = type;
@@ -43,11 +43,11 @@ public class WebXRequest {
         this.stringPayload = stringPayload;
     }
 
-    public int getIntegerPayload() {
-        return integerPayload;
+    public long getNumericPayload() {
+        return numericPayload;
     }
 
-    public void setIntegerPayload(int integerPayload) {
-        this.integerPayload = integerPayload;
+    public void setNumericPayload(long numericPayload) {
+        this.numericPayload = numericPayload;
     }
 }
