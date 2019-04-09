@@ -110,7 +110,7 @@ public class Relay implements WebXMessageListener {
                 WebXMessage message = this.webXMessageQueue.take();
 
                 // Send message to client through web socket
-                logger.info(message.toString());
+//                logger.debug(message.toString());
 
                 String responseData = this.objectMapper.writeValueAsString(message);
                 this.sendDataToRemote(responseData);
