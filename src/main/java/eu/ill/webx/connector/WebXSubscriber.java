@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.ill.webx.connector.listener.WebXMessageListener;
+import eu.ill.webx.connector.message.WebXImageMessage;
 import eu.ill.webx.connector.message.WebXMessage;
 import eu.ill.webx.connector.message.WebXWindowsMessage;
 import org.slf4j.Logger;
@@ -14,6 +15,7 @@ import org.zeromq.ZMQ;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class WebXSubscriber {
@@ -80,9 +82,20 @@ public class WebXSubscriber {
 			try {
 				byte[] messageData = socket.recv();
 
-				// TODO just forward binary data to listeners
-				WebXWindowsMessage message = objectMapper.readValue(messageData, WebXWindowsMessage.class);
-				this.notifyListeners(message);
+				// TMP Need to add explicit message header
+				byte[] headerData = Arrays.copyOf(messageData, 10);
+				String header= new String(headerData);
+				if (header.startsWith("{\"data\"")) {
+					// TODO just forward binary data to listeners
+					WebXImageMessage message = objectMapper.readValue(messageData, WebXImageMessage.class);
+					this.notifyListeners(message);
+
+				} else {
+					// TODO just forward binary data to listeners
+					WebXWindowsMessage message = objectMapper.readValue(messageData, WebXWindowsMessage.class);
+					this.notifyListeners(message);
+				}
+
 
 			} catch (JsonParseException e) {
 				logger.error("Error parsing JSON message");
