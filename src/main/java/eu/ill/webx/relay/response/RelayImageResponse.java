@@ -4,15 +4,17 @@ package eu.ill.webx.relay.response;
 public class RelayImageResponse extends RelayResponse {
 
     private String data;
+    private int depth;
     private long windowId;
 
     public RelayImageResponse(long commandId) {
         super("Image", commandId);
     }
 
-    public RelayImageResponse(long commandId, long windowId, String data) {
+    public RelayImageResponse(long commandId, long windowId, int depth, String data) {
         super("Image", commandId);
         this.windowId = windowId;
+        this.depth = depth;
         this.data = data;
     }
 
@@ -22,6 +24,14 @@ public class RelayImageResponse extends RelayResponse {
 
     public void setData(String data) {
         this.data = data;
+    }
+
+    public int getDepth() {
+        return depth;
+    }
+
+    public void setDepth(int depth) {
+        this.depth = depth;
     }
 
     public long getWindowId() {

@@ -158,10 +158,10 @@ public class Relay implements WebXMessageListener {
             WebXImageResponse imageResponse = (WebXImageResponse)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Image, command.getNumericPayload()));
 
             if (imageResponse != null) {
-                response = new RelayImageResponse(command.getId(), imageResponse.getWindowId(), imageResponse.getData());
+                response = new RelayImageResponse(command.getId(), imageResponse.getWindowId(), imageResponse.getDepth(), imageResponse.getData());
 
             } else {
-                response = new RelayImageResponse(command.getId(), command.getNumericPayload(), null);
+                response = new RelayImageResponse(command.getId(), command.getNumericPayload(), 0, null);
             }
         }
 

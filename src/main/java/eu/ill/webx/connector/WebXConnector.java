@@ -132,13 +132,13 @@ public class WebXConnector {
             }
 
         } catch (JsonParseException e) {
-            logger.error("Error parsing JSON response");
+            logger.error("Error parsing JSON response for request type " + request.getType());
 
         } catch (JsonMappingException e) {
-            logger.error("Error mapping JSON response");
+            logger.error("Error mapping JSON response for request type " + request.getType());
 
         } catch (IOException e) {
-            logger.error("Unable to convert response to JSON");
+            logger.error("Unable to convert response to JSON for request type " + request.getType());
         }
 
         return response;
