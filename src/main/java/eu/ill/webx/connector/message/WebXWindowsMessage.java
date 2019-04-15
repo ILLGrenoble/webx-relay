@@ -10,7 +10,6 @@ public class WebXWindowsMessage extends WebXMessage {
     private List<WindowProperties> windows = new ArrayList<>();
 
     public WebXWindowsMessage() {
-        super("Windows");
     }
 
     public List<WindowProperties> getWindows() {

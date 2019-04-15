@@ -8,14 +8,6 @@ public class WebXImageMessage extends WebXMessage {
     private String data;
 
     public WebXImageMessage() {
-        super("Image");
-    }
-
-    public WebXImageMessage(long windowId, int depth, String data) {
-        super("Image");
-        this.windowId = windowId;
-        this.depth = depth;
-        this.data = data;
     }
 
     public long getWindowId() {

@@ -8,11 +8,11 @@ public class RelayImageResponse extends RelayResponse {
     private long windowId;
 
     public RelayImageResponse(long commandId) {
-        super("Image", commandId);
+        super(commandId);
     }
 
     public RelayImageResponse(long commandId, long windowId, int depth, String data) {
-        super("Image", commandId);
+        super(commandId);
         this.windowId = windowId;
         this.depth = depth;
         this.data = data;

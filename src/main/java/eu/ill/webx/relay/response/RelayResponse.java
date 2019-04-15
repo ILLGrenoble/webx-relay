@@ -1,25 +1,27 @@
 package eu.ill.webx.relay.response;
 
-public abstract class RelayResponse {
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-    private String type;
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.PROPERTY,
+        property = "type")
+@JsonSubTypes({
+        @Type(value = RelayConnectionResponse.class, name = "connection"),
+        @Type(value = RelayImageResponse.class, name = "image"),
+        @Type(value = RelayWindowsResponse.class, name = "windows")
+})
+public class RelayResponse {
+
     private long commandId;
 
-    public RelayResponse(String type) {
-        this.type = type;
+    public RelayResponse() {
     }
 
-    public RelayResponse(String type, long commandId) {
-        this.type = type;
+    public RelayResponse(long commandId) {
         this.commandId = commandId;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
     }
 
     public long getCommandId() {
