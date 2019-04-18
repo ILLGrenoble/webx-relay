@@ -3,11 +3,11 @@ package eu.ill.webx.connector;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import eu.ill.webx.connector.message.WebXConnectionMessage;
+import eu.ill.webx.connector.message.WebXImageMessage;
+import eu.ill.webx.connector.message.WebXMessage;
+import eu.ill.webx.connector.message.WebXWindowsMessage;
 import eu.ill.webx.connector.request.WebXRequest;
-import eu.ill.webx.connector.response.WebXConnectionResponse;
-import eu.ill.webx.connector.response.WebXImageResponse;
-import eu.ill.webx.connector.response.WebXResponse;
-import eu.ill.webx.connector.response.WebXWindowsResponse;
 import eu.ill.webx.domain.utils.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +76,7 @@ public class WebXConnector {
             socket.connect(fullAddress);
 
             // Send connection request
-            WebXConnectionResponse connectionResponse = (WebXConnectionResponse)this.sendRequest(new WebXRequest(WebXRequest.Type.Connect));
+            WebXConnectionMessage connectionResponse = (WebXConnectionMessage)this.sendRequest(new WebXRequest(WebXRequest.Type.Connect));
             if (connectionResponse != null) {
                 this.webXCollectorPort = connectionResponse.getCollectorPort();
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
@@ -114,21 +114,21 @@ public class WebXConnector {
         return this.socket != null;
     }
 
-    public WebXResponse sendRequest(WebXRequest request) {
-        WebXResponse response = null;
+    public WebXMessage sendRequest(WebXRequest request) {
+        WebXMessage response = null;
         try {
             byte[] requestData = objectMapper.writeValueAsBytes(request);
             this.socket.send(requestData, 0);
 
             byte[] responseData = socket.recv(0);
             if (request.getType().equals(WebXRequest.Type.Connect)) {
-                response = objectMapper.readValue(responseData, WebXConnectionResponse.class);
+                response = objectMapper.readValue(responseData, WebXConnectionMessage.class);
 
             } else if (request.getType().equals(WebXRequest.Type.Windows)) {
-                response = objectMapper.readValue(responseData, WebXWindowsResponse.class);
+                response = objectMapper.readValue(responseData, WebXWindowsMessage.class);
 
             } else if (request.getType().equals(WebXRequest.Type.Image)) {
-                response = objectMapper.readValue(responseData, WebXImageResponse.class);
+                response = objectMapper.readValue(responseData, WebXImageMessage.class);
             }
 
         } catch (JsonParseException e) {

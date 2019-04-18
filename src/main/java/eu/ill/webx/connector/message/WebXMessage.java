@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         include = JsonTypeInfo.As.PROPERTY,
         property = "type")
 @JsonSubTypes({
+        @Type(value = WebXConnectionMessage.class, name = "connection"),
         @Type(value = WebXImageMessage.class, name = "image"),
         @Type(value = WebXSubImagesMessage.class, name = "subimages"),
         @Type(value = WebXWindowsMessage.class, name = "windows")

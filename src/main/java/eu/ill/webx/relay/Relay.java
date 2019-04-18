@@ -4,10 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.connector.listener.WebXMessageListener;
+import eu.ill.webx.connector.message.WebXImageMessage;
 import eu.ill.webx.connector.message.WebXMessage;
+import eu.ill.webx.connector.message.WebXWindowsMessage;
 import eu.ill.webx.connector.request.WebXRequest;
-import eu.ill.webx.connector.response.WebXImageResponse;
-import eu.ill.webx.connector.response.WebXWindowsResponse;
 import eu.ill.webx.relay.command.ClientCommand;
 import eu.ill.webx.relay.response.RelayConnectionResponse;
 import eu.ill.webx.relay.response.RelayImageResponse;
@@ -150,15 +150,15 @@ public class Relay implements WebXMessageListener {
             response = new RelayConnectionResponse(command.getId(), WebXConnector.instance().getScreenSize());
 
         } else if (command.getType().equals(ClientCommand.Type.Windows)) {
-            WebXWindowsResponse windowsResponse =  (WebXWindowsResponse)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Windows));
+            WebXWindowsMessage windowsMessage =  (WebXWindowsMessage)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Windows));
 
-            response = new RelayWindowsResponse(command.getId(), windowsResponse.getWindows());
+            response = new RelayWindowsResponse(command.getId(), windowsMessage.getWindows());
 
         } else if (command.getType().equals(ClientCommand.Type.Image)) {
-            WebXImageResponse imageResponse = (WebXImageResponse)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Image, command.getNumericPayload()));
+            WebXImageMessage imageMessage = (WebXImageMessage)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Image, command.getNumericPayload()));
 
-            if (imageResponse != null) {
-                response = new RelayImageResponse(command.getId(), imageResponse.getWindowId(), imageResponse.getDepth(), imageResponse.getData());
+            if (imageMessage != null) {
+                response = new RelayImageResponse(command.getId(), imageMessage.getWindowId(), imageMessage.getDepth(), imageMessage.getData());
 
             } else {
                 response = new RelayImageResponse(command.getId(), command.getNumericPayload(), 0, null);

@@ -1,14 +1,14 @@
-package eu.ill.webx.connector.response;
+package eu.ill.webx.connector.message;
 
 import eu.ill.webx.domain.utils.Size;
 
-public class WebXConnectionResponse extends WebXResponse {
+public class WebXConnectionMessage extends WebXMessage {
 
     private int publisherPort;
     private int collectorPort;
     private Size screenSize;
 
-    public WebXConnectionResponse() {
+    public WebXConnectionMessage() {
     }
 
     public int getPublisherPort() {
