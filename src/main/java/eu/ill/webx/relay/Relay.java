@@ -4,15 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.connector.listener.WebXMessageListener;
-import eu.ill.webx.connector.message.WebXImageMessage;
-import eu.ill.webx.connector.message.WebXMessage;
-import eu.ill.webx.connector.message.WebXWindowsMessage;
-import eu.ill.webx.connector.request.WebXRequest;
-import eu.ill.webx.relay.command.ClientCommand;
-import eu.ill.webx.relay.response.RelayConnectionResponse;
-import eu.ill.webx.relay.response.RelayImageResponse;
-import eu.ill.webx.relay.response.RelayResponse;
-import eu.ill.webx.relay.response.RelayWindowsResponse;
+import eu.ill.webx.transport.instruction.Instruction;
+import eu.ill.webx.transport.message.ConnectionMessage;
+import eu.ill.webx.transport.message.Message;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
@@ -29,8 +23,8 @@ public class Relay implements WebXMessageListener {
 
     private Thread webXListenerThread;
     private Thread clientCommandThread;
-    private LinkedBlockingDeque<WebXMessage> webXMessageQueue = new LinkedBlockingDeque<>();
-    private LinkedBlockingDeque<ClientCommand> clientCommandQueue = new LinkedBlockingDeque<>();
+    private LinkedBlockingDeque<Message> messageQueue = new LinkedBlockingDeque<>();
+    private LinkedBlockingDeque<Instruction> instructionQueue = new LinkedBlockingDeque<>();
     private boolean running = false;
 
     private Session session;
@@ -86,18 +80,18 @@ public class Relay implements WebXMessageListener {
     }
 
     @Override
-    public void onMessage(WebXMessage message) {
+    public void onMessage(Message message) {
         try {
-            this.webXMessageQueue.put(message);
+            this.messageQueue.put(message);
 
         } catch (InterruptedException e) {
             logger.error("Interrupted when adding message to relay message queue");
         }
     }
 
-    public void queueCommand(ClientCommand command) {
+    public void queueCommand(Instruction command) {
         try {
-            this.clientCommandQueue.put(command);
+            this.instructionQueue.put(command);
 
         } catch (InterruptedException e) {
             logger.error("Interrupted when adding command to relay command queue");
@@ -107,7 +101,7 @@ public class Relay implements WebXMessageListener {
     private void webXListenerLoop() {
         while (this.running) {
             try {
-                WebXMessage message = this.webXMessageQueue.take();
+                Message message = this.messageQueue.take();
 
                 // Send message to client through web socket
 //                logger.debug(message.toString());
@@ -127,8 +121,8 @@ public class Relay implements WebXMessageListener {
     private void clientCommandLoop() {
         while (this.running) {
             try {
-                ClientCommand command = this.clientCommandQueue.take();
-                RelayResponse response = this.handleClientCommand(command);
+                Instruction command = this.instructionQueue.take();
+                Message response = this.handleClientCommand(command);
 
                 String responseData = this.objectMapper.writeValueAsString(response);
                 this.sendDataToRemote(responseData);
@@ -142,27 +136,15 @@ public class Relay implements WebXMessageListener {
         }
     }
 
-    private RelayResponse handleClientCommand(ClientCommand command) {
+    private Message handleClientCommand(Instruction command) {
 
         // Handle command
-        RelayResponse response = null;
-        if (command.getType().equals(ClientCommand.Type.Connect)) {
-            response = new RelayConnectionResponse(command.getId(), WebXConnector.instance().getScreenSize());
+        Message response = null;
+        if (command.getType().equals(Instruction.Type.Connect)) {
+            response = new ConnectionMessage(command.getId(), WebXConnector.instance().getScreenSize());
 
-        } else if (command.getType().equals(ClientCommand.Type.Windows)) {
-            WebXWindowsMessage windowsMessage =  (WebXWindowsMessage)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Windows));
-
-            response = new RelayWindowsResponse(command.getId(), windowsMessage.getWindows());
-
-        } else if (command.getType().equals(ClientCommand.Type.Image)) {
-            WebXImageMessage imageMessage = (WebXImageMessage)WebXConnector.instance().sendRequest(new WebXRequest(WebXRequest.Type.Image, command.getNumericPayload()));
-
-            if (imageMessage != null) {
-                response = new RelayImageResponse(command.getId(), imageMessage.getWindowId(), imageMessage.getDepth(), imageMessage.getData());
-
-            } else {
-                response = new RelayImageResponse(command.getId(), command.getNumericPayload(), 0, null);
-            }
+        } else {
+            response = WebXConnector.instance().sendRequest(command);
         }
 
         return response;

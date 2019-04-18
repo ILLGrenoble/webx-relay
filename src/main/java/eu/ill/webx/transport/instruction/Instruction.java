@@ -1,9 +1,9 @@
-package eu.ill.webx.relay.command;
+package eu.ill.webx.transport.instruction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public class ClientCommand {
+public class Instruction {
     public enum Type {
         Connect(1),
         Windows(2),
@@ -41,7 +41,11 @@ public class ClientCommand {
     private String stringPayload;
     private long numericPayload;
 
-    public ClientCommand() {
+    public Instruction() {
+    }
+
+    public Instruction(Type type) {
+        this.type = type;
     }
 
     public void setType(Type type) {

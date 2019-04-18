@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.relay.Relay;
-import eu.ill.webx.relay.command.ClientCommand;
+import eu.ill.webx.transport.instruction.Instruction;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
 
        logger.debug("Received command: {}", message);
         try {
-            ClientCommand command = objectMapper.readValue(message, ClientCommand.class);
+            Instruction command = objectMapper.readValue(message, Instruction.class);
             this.relay.queueCommand(command);
 
         } catch (JsonParseException e) {

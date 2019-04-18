@@ -1,15 +1,15 @@
-package eu.ill.webx.connector.message;
+package eu.ill.webx.transport.message;
 
 import eu.ill.webx.domain.display.WindowProperties;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class WebXWindowsMessage extends WebXMessage {
+public class WindowsMessage extends Message {
 
     private List<WindowProperties> windows = new ArrayList<>();
 
-    public WebXWindowsMessage() {
+    public WindowsMessage() {
     }
 
     public List<WindowProperties> getWindows() {

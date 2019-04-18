@@ -1,13 +1,13 @@
-package eu.ill.webx.connector.message;
+package eu.ill.webx.transport.message;
 
 
-public class WebXImageMessage extends WebXMessage {
+public class ImageMessage extends Message {
 
     private long windowId;
     private int depth;
     private String data;
 
-    public WebXImageMessage() {
+    public ImageMessage() {
     }
 
     public long getWindowId() {

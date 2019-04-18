@@ -3,12 +3,10 @@ package eu.ill.webx.connector;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.ill.webx.connector.message.WebXConnectionMessage;
-import eu.ill.webx.connector.message.WebXImageMessage;
-import eu.ill.webx.connector.message.WebXMessage;
-import eu.ill.webx.connector.message.WebXWindowsMessage;
-import eu.ill.webx.connector.request.WebXRequest;
+import eu.ill.webx.transport.message.ConnectionMessage;
+import eu.ill.webx.transport.message.Message;
 import eu.ill.webx.domain.utils.Size;
+import eu.ill.webx.transport.instruction.Instruction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -49,14 +47,6 @@ public class WebXConnector {
         return instance;
     }
 
-    public int getWebXPublisherPort() {
-        return webXPublisherPort;
-    }
-
-    public int getWebXCollectorPort() {
-        return webXCollectorPort;
-    }
-
     public Size getScreenSize() {
         return screenSize;
     }
@@ -76,7 +66,7 @@ public class WebXConnector {
             socket.connect(fullAddress);
 
             // Send connection request
-            WebXConnectionMessage connectionResponse = (WebXConnectionMessage)this.sendRequest(new WebXRequest(WebXRequest.Type.Connect));
+            ConnectionMessage connectionResponse = (ConnectionMessage)this.sendRequest(new Instruction(Instruction.Type.Connect));
             if (connectionResponse != null) {
                 this.webXCollectorPort = connectionResponse.getCollectorPort();
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
@@ -114,31 +104,23 @@ public class WebXConnector {
         return this.socket != null;
     }
 
-    public WebXMessage sendRequest(WebXRequest request) {
-        WebXMessage response = null;
+    public Message sendRequest(Instruction instruction) {
+        Message response = null;
         try {
-            byte[] requestData = objectMapper.writeValueAsBytes(request);
+            byte[] requestData = objectMapper.writeValueAsBytes(instruction);
             this.socket.send(requestData, 0);
 
             byte[] responseData = socket.recv(0);
-            if (request.getType().equals(WebXRequest.Type.Connect)) {
-                response = objectMapper.readValue(responseData, WebXConnectionMessage.class);
-
-            } else if (request.getType().equals(WebXRequest.Type.Windows)) {
-                response = objectMapper.readValue(responseData, WebXWindowsMessage.class);
-
-            } else if (request.getType().equals(WebXRequest.Type.Image)) {
-                response = objectMapper.readValue(responseData, WebXImageMessage.class);
-            }
+            response = objectMapper.readValue(responseData, Message.class);
 
         } catch (JsonParseException e) {
-            logger.error("Error parsing JSON response for request type " + request.getType());
+            logger.error("Error parsing JSON response for request type " + instruction.getType());
 
         } catch (JsonMappingException e) {
-            logger.error("Error mapping JSON response for request type " + request.getType());
+            logger.error("Error mapping JSON response for request type " + instruction.getType());
 
         } catch (IOException e) {
-            logger.error("Unable to convert response to JSON for request type " + request.getType());
+            logger.error("Unable to convert response to JSON for request type " + instruction.getType());
         }
 
         return response;

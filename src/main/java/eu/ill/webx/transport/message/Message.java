@@ -1,4 +1,4 @@
-package eu.ill.webx.relay.response;
+package eu.ill.webx.transport.message;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
@@ -9,18 +9,20 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         include = JsonTypeInfo.As.PROPERTY,
         property = "type")
 @JsonSubTypes({
-        @Type(value = RelayConnectionResponse.class, name = "connection"),
-        @Type(value = RelayImageResponse.class, name = "image"),
-        @Type(value = RelayWindowsResponse.class, name = "windows")
+        @Type(value = ConnectionMessage.class, name = "connection"),
+        @Type(value = ImageMessage.class, name = "image"),
+        @Type(value = SubImagesMessage.class, name = "subimages"),
+        @Type(value = WindowsMessage.class, name = "windows")
 })
-public class RelayResponse {
+public abstract class Message {
 
+    private String type;
     private long commandId;
 
-    public RelayResponse() {
+    public Message() {
     }
 
-    public RelayResponse(long commandId) {
+    public Message(long commandId) {
         this.commandId = commandId;
     }
 

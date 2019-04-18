@@ -1,14 +1,20 @@
-package eu.ill.webx.connector.message;
+package eu.ill.webx.transport.message;
 
 import eu.ill.webx.domain.utils.Size;
 
-public class WebXConnectionMessage extends WebXMessage {
+public class ConnectionMessage extends Message {
 
     private int publisherPort;
     private int collectorPort;
+    private String serializer;
     private Size screenSize;
 
-    public WebXConnectionMessage() {
+    public ConnectionMessage() {
+    }
+
+    public ConnectionMessage(long commandId, Size screenSize) {
+        super(commandId);
+        this.screenSize = screenSize;
     }
 
     public int getPublisherPort() {
@@ -27,6 +33,14 @@ public class WebXConnectionMessage extends WebXMessage {
         this.collectorPort = collectorPort;
     }
 
+    public String getSerializer() {
+        return serializer;
+    }
+
+    public void setSerializer(String serializer) {
+        this.serializer = serializer;
+    }
+
     public Size getScreenSize() {
         return screenSize;
     }
@@ -40,6 +54,7 @@ public class WebXConnectionMessage extends WebXMessage {
         final StringBuilder sb = new StringBuilder("WebXConnectionResponse{");
         sb.append("publisherPort=").append(publisherPort);
         sb.append(", collectorPort=").append(collectorPort);
+        sb.append(", serializer=").append(serializer);
         sb.append(", screenSize=").append(screenSize);
         sb.append('}');
         return sb.toString();

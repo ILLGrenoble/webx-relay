@@ -1,4 +1,4 @@
-package eu.ill.webx.connector.message;
+package eu.ill.webx.transport.message;
 
 
 import eu.ill.webx.domain.image.SubImage;
@@ -6,12 +6,12 @@ import eu.ill.webx.domain.image.SubImage;
 import java.util.ArrayList;
 import java.util.List;
 
-public class WebXSubImagesMessage extends WebXMessage {
+public class SubImagesMessage extends Message {
 
     private long windowId;
     private List<SubImage> subImages = new ArrayList<>();
 
-    public WebXSubImagesMessage() {
+    public SubImagesMessage() {
     }
 
     public long getWindowId() {

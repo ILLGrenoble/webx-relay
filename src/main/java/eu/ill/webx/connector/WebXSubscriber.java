@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.ill.webx.connector.listener.WebXMessageListener;
-import eu.ill.webx.connector.message.WebXMessage;
+import eu.ill.webx.transport.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -79,7 +79,7 @@ public class WebXSubscriber {
 			try {
 				byte[] messageData = socket.recv();
 
-				WebXMessage message = objectMapper.readValue(messageData, WebXMessage.class);
+				Message message = objectMapper.readValue(messageData, Message.class);
 				this.notifyListeners(message);
 
 			} catch (JsonParseException e) {
@@ -105,7 +105,7 @@ public class WebXSubscriber {
 		this.listeners.remove(listener);
 	}
 
-	synchronized private void notifyListeners(WebXMessage message) {
+	synchronized private void notifyListeners(Message message) {
 		this.listeners.forEach(listener -> listener.onMessage(message));
 	}
 }

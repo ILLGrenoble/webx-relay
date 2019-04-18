@@ -1,9 +1,9 @@
 package eu.ill.webx.connector.listener;
 
-import eu.ill.webx.connector.message.WebXMessage;
+import eu.ill.webx.transport.message.Message;
 
 public interface WebXMessageListener {
 
-    void onMessage(WebXMessage message);
+    void onMessage(Message message);
 
 }
