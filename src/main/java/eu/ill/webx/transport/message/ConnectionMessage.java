@@ -1,6 +1,6 @@
 package eu.ill.webx.transport.message;
 
-import eu.ill.webx.domain.utils.Size;
+import eu.ill.webx.domain.Size;
 
 public class ConnectionMessage extends Message {
 

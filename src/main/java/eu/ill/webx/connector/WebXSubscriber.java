@@ -1,10 +1,7 @@
 package eu.ill.webx.connector;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.ill.webx.connector.listener.WebXMessageListener;
 import eu.ill.webx.transport.message.Message;
+import eu.ill.webx.transport.serializer.Serializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -19,7 +16,8 @@ public class WebXSubscriber {
 
 	private static final Logger logger = LoggerFactory.getLogger(WebXSubscriber.class);
 
-	private ObjectMapper objectMapper = new ObjectMapper();
+
+	private Serializer serializer;
 
 	private ZContext context;
 	private ZMQ.Socket socket;
@@ -31,7 +29,8 @@ public class WebXSubscriber {
 
 	private List<WebXMessageListener> listeners = new ArrayList<>();
 
-	public WebXSubscriber(ZContext context, String webXServerAddress, int webXServerPort) {
+	public WebXSubscriber(Serializer serializer, ZContext context, String webXServerAddress, int webXServerPort) {
+		this.serializer = serializer;
 		this.context = context;
 		this.webXServerAddress = webXServerAddress;
 		this.webXServerPort = webXServerPort;
@@ -79,17 +78,9 @@ public class WebXSubscriber {
 			try {
 				byte[] messageData = socket.recv();
 
-				Message message = objectMapper.readValue(messageData, Message.class);
+				Message message = serializer.deserializeMessage(messageData);
+
 				this.notifyListeners(message);
-
-			} catch (JsonParseException e) {
-				logger.error("Error parsing JSON message");
-
-			} catch (JsonMappingException e) {
-				logger.error("Error mapping JSON message");
-
-			} catch (IOException e) {
-				logger.error("Unable to convert message to JSON");
 
 			} catch (org.zeromq.ZMQException e) {
 				logger.info("WebX Subscriber thread interrupted");

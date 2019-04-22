@@ -1,12 +1,11 @@
 package eu.ill.webx.relay;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.ill.webx.connector.WebXConnector;
-import eu.ill.webx.connector.listener.WebXMessageListener;
+import eu.ill.webx.connector.WebXMessageListener;
 import eu.ill.webx.transport.instruction.Instruction;
 import eu.ill.webx.transport.message.ConnectionMessage;
 import eu.ill.webx.transport.message.Message;
+import eu.ill.webx.transport.serializer.Serializer;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
@@ -19,8 +18,7 @@ public class Relay implements WebXMessageListener {
 
     private static final Logger logger = LoggerFactory.getLogger(Relay.class);
 
-    private ObjectMapper objectMapper = new ObjectMapper();
-
+    private Serializer serializer;
     private Thread webXListenerThread;
     private Thread clientCommandThread;
     private LinkedBlockingDeque<Message> messageQueue = new LinkedBlockingDeque<>();
@@ -31,6 +29,7 @@ public class Relay implements WebXMessageListener {
     private RemoteEndpoint remoteEndpoint;
 
     public Relay(Session session) {
+        this.serializer = WebXConnector.instance().getSerializer();
         if (session != null) {
             this.session = session;
             this.remoteEndpoint = session.getRemote();
@@ -106,14 +105,11 @@ public class Relay implements WebXMessageListener {
                 // Send message to client through web socket
 //                logger.debug(message.toString());
 
-                String responseData = this.objectMapper.writeValueAsString(message);
+                String responseData = new String(this.serializer.serializeMessage(message));
                 this.sendDataToRemote(responseData);
 
             } catch (InterruptedException ie) {
                 logger.info("Relay message listener thread interrupted");
-
-            } catch (JsonProcessingException e) {
-                logger.error("Failed to convert object to JSON");
             }
         }
     }
@@ -124,14 +120,11 @@ public class Relay implements WebXMessageListener {
                 Instruction command = this.instructionQueue.take();
                 Message response = this.handleClientCommand(command);
 
-                String responseData = this.objectMapper.writeValueAsString(response);
+                String responseData = new String(this.serializer.serializeMessage(response));
                 this.sendDataToRemote(responseData);
 
             } catch (InterruptedException ie) {
                 logger.info("Relay message listener thread interrupted");
-
-            } catch (JsonProcessingException e) {
-                logger.error("Failed to convert object to JSON");
             }
         }
     }

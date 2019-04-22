@@ -1,4 +1,4 @@
-package eu.ill.webx.domain.utils;
+package eu.ill.webx.domain;
 
 public class Size {
 

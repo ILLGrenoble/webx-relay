@@ -1,6 +1,6 @@
 package eu.ill.webx.transport.message;
 
-import eu.ill.webx.domain.display.WindowProperties;
+import eu.ill.webx.domain.WindowProperties;
 
 import java.util.ArrayList;
 import java.util.List;

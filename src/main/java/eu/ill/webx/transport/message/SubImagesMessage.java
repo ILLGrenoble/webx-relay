@@ -1,7 +1,7 @@
 package eu.ill.webx.transport.message;
 
 
-import eu.ill.webx.domain.image.SubImage;
+import eu.ill.webx.domain.SubImage;
 
 import java.util.ArrayList;
 import java.util.List;

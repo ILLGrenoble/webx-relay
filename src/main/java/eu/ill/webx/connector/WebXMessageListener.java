@@ -1,4 +1,4 @@
-package eu.ill.webx.connector.listener;
+package eu.ill.webx.connector;
 
 import eu.ill.webx.transport.message.Message;
 

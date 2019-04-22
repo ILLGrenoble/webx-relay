@@ -1,11 +1,9 @@
 package eu.ill.webx.ws;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.relay.Relay;
 import eu.ill.webx.transport.instruction.Instruction;
+import eu.ill.webx.transport.serializer.Serializer;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
 import org.slf4j.Logger;
@@ -18,7 +16,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private static final Logger logger = LoggerFactory.getLogger(WebSocketTunnelListener.class);
 
     private Relay relay;
-    private ObjectMapper objectMapper = new ObjectMapper();
+
 
     @Override
     public void onWebSocketConnect(final Session session) {
@@ -32,24 +30,17 @@ public class WebSocketTunnelListener implements WebSocketListener {
 
     @Override
     public void onWebSocketText(String message) {
+        Serializer serializer = WebXConnector.instance().getSerializer();
+
         if (this.relay == null) {
             logger.error("Received command {} on closed relay", message);
             return;
         }
 
        logger.debug("Received command: {}", message);
-        try {
-            Instruction command = objectMapper.readValue(message, Instruction.class);
+        Instruction command = serializer.deserializeInstruction(message.getBytes());
+        if (command != null) {
             this.relay.queueCommand(command);
-
-        } catch (JsonParseException e) {
-            logger.error("Error parsing JSON command", e);
-
-        } catch (JsonMappingException e) {
-            logger.error("Error mapping JSON command", e);
-
-        } catch (IOException e) {
-            logger.error("Unable to convert command to JSON");
         }
     }
 

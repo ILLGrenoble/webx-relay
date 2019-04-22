@@ -1,20 +1,20 @@
-package eu.ill.webx.domain.utils;
+package eu.ill.webx.domain;
 
-public class Rectangle {
+public class WindowProperties {
 
-    private int x = 0;
-    private int y = 0;
-    private int width = 0;
-    private int height = 0;
+    private long id;
+    private int x;
+    private int y;
+    private int width;
+    private int height;
+    private int bpp;
 
-    public Rectangle() {
+    public long getId() {
+        return id;
     }
 
-    public Rectangle(int x, int y, int width, int height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
+    public void setId(long id) {
+        this.id = id;
     }
 
     public int getX() {
@@ -49,13 +49,23 @@ public class Rectangle {
         this.height = height;
     }
 
+    public int getBpp() {
+        return bpp;
+    }
+
+    public void setBpp(int bpp) {
+        this.bpp = bpp;
+    }
+
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("Rectangle{");
-        sb.append("x=").append(x);
+        final StringBuilder sb = new StringBuilder("WindowProperties{");
+        sb.append("id=").append(id);
+        sb.append(", x=").append(x);
         sb.append(", y=").append(y);
         sb.append(", width=").append(width);
         sb.append(", height=").append(height);
+        sb.append(", bpp=").append(bpp);
         sb.append('}');
         return sb.toString();
     }

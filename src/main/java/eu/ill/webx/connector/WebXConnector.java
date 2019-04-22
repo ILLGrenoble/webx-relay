@@ -1,31 +1,29 @@
 package eu.ill.webx.connector;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import eu.ill.webx.transport.message.ConnectionMessage;
 import eu.ill.webx.transport.message.Message;
-import eu.ill.webx.domain.utils.Size;
+import eu.ill.webx.domain.Size;
 import eu.ill.webx.transport.instruction.Instruction;
+import eu.ill.webx.transport.serializer.JsonSerializer;
+import eu.ill.webx.transport.serializer.Serializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-import java.io.IOException;
-
 public class WebXConnector {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXConnector.class);
 
-    private ObjectMapper objectMapper = new ObjectMapper();
     private ZContext context;
     private ZMQ.Socket socket;
     private String webXServerAddress;
     private int webXServerPort;
     private int webXPublisherPort;
     private int webXCollectorPort;
+
+    private Serializer serializer;
 
     private WebXSubscriber subscriber;
 
@@ -34,6 +32,7 @@ public class WebXConnector {
     private static WebXConnector instance = null;
 
     private WebXConnector() {
+        this.serializer = new JsonSerializer();
     }
 
     public static WebXConnector instance() {
@@ -45,6 +44,10 @@ public class WebXConnector {
             }
         }
         return instance;
+    }
+
+    public Serializer getSerializer() {
+        return serializer;
     }
 
     public Size getScreenSize() {
@@ -66,13 +69,18 @@ public class WebXConnector {
             socket.connect(fullAddress);
 
             // Send connection request
+            String serializerType = this.sendCommRequest();
+            if (serializerType.equals("json")) {
+                this.serializer = new JsonSerializer();
+            }
+
             ConnectionMessage connectionResponse = (ConnectionMessage)this.sendRequest(new Instruction(Instruction.Type.Connect));
             if (connectionResponse != null) {
                 this.webXCollectorPort = connectionResponse.getCollectorPort();
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
                 this.screenSize = connectionResponse.getScreenSize();
 
-                this.subscriber = new WebXSubscriber(this.context, this.webXServerAddress, this.webXPublisherPort);
+                this.subscriber = new WebXSubscriber(this.serializer, this.context, this.webXServerAddress, this.webXPublisherPort);
                 this.subscriber.start();
 
                 logger.info("WebX Connector started");
@@ -104,23 +112,24 @@ public class WebXConnector {
         return this.socket != null;
     }
 
+    public String sendCommRequest() {
+        this.socket.send("comm", 0);
+
+        byte[] responseData = socket.recv();
+        String serializerType = new String(responseData);
+
+        return serializerType;
+    }
+
     public Message sendRequest(Instruction instruction) {
         Message response = null;
-        try {
-            byte[] requestData = objectMapper.writeValueAsBytes(instruction);
+        byte[] requestData = serializer.serializeInstruction(instruction);
+
+        if (requestData != null) {
             this.socket.send(requestData, 0);
 
             byte[] responseData = socket.recv(0);
-            response = objectMapper.readValue(responseData, Message.class);
-
-        } catch (JsonParseException e) {
-            logger.error("Error parsing JSON response for request type " + instruction.getType());
-
-        } catch (JsonMappingException e) {
-            logger.error("Error mapping JSON response for request type " + instruction.getType());
-
-        } catch (IOException e) {
-            logger.error("Unable to convert response to JSON for request type " + instruction.getType());
+            response = serializer.deserializeMessage(responseData);
         }
 
         return response;

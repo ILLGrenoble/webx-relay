@@ -1,4 +1,4 @@
-package eu.ill.webx.domain.image;
+package eu.ill.webx.domain;
 
 public class SubImage {
 
