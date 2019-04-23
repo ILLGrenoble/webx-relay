@@ -3,7 +3,6 @@ package eu.ill.webx.transport.serializer;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.transport.instruction.Instruction;
 import eu.ill.webx.transport.message.Message;
 import org.slf4j.Logger;
@@ -18,6 +17,7 @@ public class JsonSerializer implements Serializer {
     private ObjectMapper objectMapper = new ObjectMapper();
 
     public JsonSerializer() {
+        logger.info("JSON serializer instantiated");
         objectMapper.addMixInAnnotations(Message.class, MessageMixIn.class);
     }
 

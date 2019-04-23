@@ -133,7 +133,7 @@ public class Relay implements WebXMessageListener {
 
         // Handle command
         Message response = null;
-        if (command.getType().equals(Instruction.Type.Connect)) {
+        if (command.getType() == Instruction.CONNECT) {
             response = new ConnectionMessage(command.getId(), WebXConnector.instance().getScreenSize());
 
         } else {

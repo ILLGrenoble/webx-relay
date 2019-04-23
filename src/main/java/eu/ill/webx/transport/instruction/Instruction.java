@@ -1,42 +1,12 @@
 package eu.ill.webx.transport.instruction;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
-
 public class Instruction {
-    public enum Type {
-        Connect(1),
-        Windows(2),
-        Image(3);
 
-        private final int value;
+    public static int CONNECT = 1;
+    public static int WINDOWS = 2;
+    public static int IMAGE = 3;
 
-        private Type(int value) {
-            this.value = value;
-        }
-
-        @JsonValue
-        public int getValue() {
-            return this.value;
-        }
-
-
-        public static Type fromValue(int value) {
-            for (Type type : Type.values()) {
-                if (type.value == value) {
-                    return type;
-                }
-            }
-            return null;
-        }
-
-        @JsonCreator
-        public static Type forValue(String v) {
-            return Type.fromValue(Integer.parseInt(v));
-        }
-    }
-
-    private Type type;
+    private int type;
     private long id;
     private String stringPayload;
     private long numericPayload;
@@ -44,15 +14,15 @@ public class Instruction {
     public Instruction() {
     }
 
-    public Instruction(Type type) {
+    public Instruction(int type) {
         this.type = type;
     }
 
-    public void setType(Type type) {
+    public void setType(int type) {
         this.type = type;
     }
 
-    public Type getType() {
+    public int getType() {
         return type;
     }
 

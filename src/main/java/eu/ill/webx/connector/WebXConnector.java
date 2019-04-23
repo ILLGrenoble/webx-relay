@@ -74,7 +74,7 @@ public class WebXConnector {
                 this.serializer = new JsonSerializer();
             }
 
-            ConnectionMessage connectionResponse = (ConnectionMessage)this.sendRequest(new Instruction(Instruction.Type.Connect));
+            ConnectionMessage connectionResponse = (ConnectionMessage)this.sendRequest(new Instruction(Instruction.CONNECT));
             if (connectionResponse != null) {
                 this.webXCollectorPort = connectionResponse.getCollectorPort();
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
