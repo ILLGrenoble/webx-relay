@@ -5,4 +5,5 @@ public class InstructionType {
     public static int WINDOWS = 2;
     public static int IMAGE = 3;
     public static int SCREEN = 4;
+    public static int MOUSE = 5;
 }
