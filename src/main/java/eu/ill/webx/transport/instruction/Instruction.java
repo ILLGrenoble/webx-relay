@@ -1,30 +1,15 @@
 package eu.ill.webx.transport.instruction;
 
-public class Instruction {
+public abstract class Instruction {
 
-    public static int CONNECT = 1;
-    public static int WINDOWS = 2;
-    public static int IMAGE = 3;
-    public static int SCREEN = 4;
-
-    private int type;
     private long id;
-    private String stringPayload;
-    private long numericPayload;
+    private int type;
 
     public Instruction() {
     }
 
     public Instruction(int type) {
         this.type = type;
-    }
-
-    public void setType(int type) {
-        this.type = type;
-    }
-
-    public int getType() {
-        return type;
     }
 
     public long getId() {
@@ -35,19 +20,12 @@ public class Instruction {
         this.id = id;
     }
 
-    public long getNumericPayload() {
-        return numericPayload;
+    public void setType(int type) {
+        this.type = type;
     }
 
-    public void setNumericPayload(long numericPayload) {
-        this.numericPayload = numericPayload;
+    public int getType() {
+        return type;
     }
 
-    public String getStringPayload() {
-        return stringPayload;
-    }
-
-    public void setStringPayload(String stringPayload) {
-        this.stringPayload = stringPayload;
-    }
 }

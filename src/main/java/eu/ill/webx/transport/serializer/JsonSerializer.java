@@ -19,6 +19,7 @@ public class JsonSerializer implements Serializer {
     public JsonSerializer() {
         logger.info("JSON serializer instantiated");
         objectMapper.addMixInAnnotations(Message.class, MessageMixIn.class);
+        objectMapper.addMixInAnnotations(Instruction.class, InstructionMixIn.class);
     }
 
     @Override

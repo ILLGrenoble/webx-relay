@@ -20,10 +20,10 @@ public class Application {
     @Parameter(names = {"--port"})
     private Integer port = 8080;
 
-    @Parameter(names = {"--webxhost"}, required = true)
+    @Parameter(names = {"--webxhost"})
     private String webXHost = "localhost";
 
-    @Parameter(names = {"--webxport"}, required = true)
+    @Parameter(names = {"--webxport"})
     private Integer webXPort = 5555;
 
 
@@ -37,8 +37,8 @@ public class Application {
     }
 
     private void run() throws Exception {
-        final Server                   server        = new Server(port);
-        final ServletContextHandler    context       = new ServletContextHandler(server, "/", NO_SESSIONS);
+        final Server server = new Server(port);
+        final ServletContextHandler context = new ServletContextHandler(server, "/", NO_SESSIONS);
 
         // Start WebXConnector (and message listener)
         WebXConnector.instance().connect(webXHost, webXPort);

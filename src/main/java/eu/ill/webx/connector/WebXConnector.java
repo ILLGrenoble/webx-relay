@@ -1,5 +1,6 @@
 package eu.ill.webx.connector;
 
+import eu.ill.webx.transport.instruction.ConnectInstruction;
 import eu.ill.webx.transport.instruction.Instruction;
 import eu.ill.webx.transport.message.ConnectionMessage;
 import eu.ill.webx.transport.message.Message;
@@ -67,7 +68,7 @@ public class WebXConnector {
                 this.serializer = new JsonSerializer();
             }
 
-            ConnectionMessage connectionResponse = (ConnectionMessage)this.sendRequest(new Instruction(Instruction.CONNECT));
+            ConnectionMessage connectionResponse = (ConnectionMessage)this.sendRequest(new ConnectInstruction());
             if (connectionResponse != null) {
                 this.webXCollectorPort = connectionResponse.getCollectorPort();
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
