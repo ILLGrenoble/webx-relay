@@ -5,6 +5,7 @@ public class Instruction {
     public static int CONNECT = 1;
     public static int WINDOWS = 2;
     public static int IMAGE = 3;
+    public static int SCREEN = 4;
 
     private int type;
     private long id;

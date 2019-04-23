@@ -2,9 +2,6 @@ package eu.ill.webx.relay;
 
 import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.connector.WebXMessageListener;
-import eu.ill.webx.transport.instruction.Instruction;
-import eu.ill.webx.transport.message.ConnectionMessage;
-import eu.ill.webx.transport.message.Message;
 import eu.ill.webx.transport.serializer.Serializer;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
@@ -21,8 +18,8 @@ public class Relay implements WebXMessageListener {
     private Serializer serializer;
     private Thread webXListenerThread;
     private Thread clientCommandThread;
-    private LinkedBlockingDeque<Message> messageQueue = new LinkedBlockingDeque<>();
-    private LinkedBlockingDeque<Instruction> instructionQueue = new LinkedBlockingDeque<>();
+    private LinkedBlockingDeque<byte[]> messageQueue = new LinkedBlockingDeque<>();
+    private LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
     private boolean running = false;
 
     private Session session;
@@ -79,18 +76,18 @@ public class Relay implements WebXMessageListener {
     }
 
     @Override
-    public void onMessage(Message message) {
+    public void onMessage(byte[] messageData) {
         try {
-            this.messageQueue.put(message);
+            this.messageQueue.put(messageData);
 
         } catch (InterruptedException e) {
             logger.error("Interrupted when adding message to relay message queue");
         }
     }
 
-    public void queueCommand(Instruction command) {
+    public void queueCommand(byte[] commandData) {
         try {
-            this.instructionQueue.put(command);
+            this.instructionQueue.put(commandData);
 
         } catch (InterruptedException e) {
             logger.error("Interrupted when adding command to relay command queue");
@@ -100,13 +97,10 @@ public class Relay implements WebXMessageListener {
     private void webXListenerLoop() {
         while (this.running) {
             try {
-                Message message = this.messageQueue.take();
+                byte[] messageData = this.messageQueue.take();
 
-                // Send message to client through web socket
-//                logger.debug(message.toString());
-
-                String responseData = new String(this.serializer.serializeMessage(message));
-                this.sendDataToRemote(responseData);
+                String responseString = new String(messageData);
+                this.sendDataToRemote(responseString);
 
             } catch (InterruptedException ie) {
                 logger.info("Relay message listener thread interrupted");
@@ -117,30 +111,16 @@ public class Relay implements WebXMessageListener {
     private void clientCommandLoop() {
         while (this.running) {
             try {
-                Instruction command = this.instructionQueue.take();
-                Message response = this.handleClientCommand(command);
+                byte[] requestData = this.instructionQueue.take();
+                byte[] responseData =  WebXConnector.instance().sendRequestData(requestData);
 
-                String responseData = new String(this.serializer.serializeMessage(response));
-                this.sendDataToRemote(responseData);
+                String responseString = new String(responseData);
+                this.sendDataToRemote(responseString);
 
             } catch (InterruptedException ie) {
                 logger.info("Relay message listener thread interrupted");
             }
         }
-    }
-
-    private Message handleClientCommand(Instruction command) {
-
-        // Handle command
-        Message response = null;
-        if (command.getType() == Instruction.CONNECT) {
-            response = new ConnectionMessage(command.getId(), WebXConnector.instance().getScreenSize());
-
-        } else {
-            response = WebXConnector.instance().sendRequest(command);
-        }
-
-        return response;
     }
 
     private synchronized void sendDataToRemote(String data) {

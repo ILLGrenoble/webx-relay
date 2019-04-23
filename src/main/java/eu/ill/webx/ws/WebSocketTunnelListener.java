@@ -9,8 +9,6 @@ import org.eclipse.jetty.websocket.api.WebSocketListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-
 public class WebSocketTunnelListener implements WebSocketListener {
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketTunnelListener.class);
@@ -38,10 +36,13 @@ public class WebSocketTunnelListener implements WebSocketListener {
         }
 
        logger.debug("Received command: {}", message);
-        Instruction command = serializer.deserializeInstruction(message.getBytes());
-        if (command != null) {
-            this.relay.queueCommand(command);
-        }
+        // Debugging
+//        Instruction command = serializer.deserializeInstruction(message.getBytes());
+//        if (command != null) {
+//            this.relay.queueCommand(command);
+//        }
+
+        this.relay.queueCommand(message.getBytes());
     }
 
     @Override

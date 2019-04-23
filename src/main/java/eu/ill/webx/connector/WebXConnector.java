@@ -1,9 +1,8 @@
 package eu.ill.webx.connector;
 
+import eu.ill.webx.transport.instruction.Instruction;
 import eu.ill.webx.transport.message.ConnectionMessage;
 import eu.ill.webx.transport.message.Message;
-import eu.ill.webx.domain.Size;
-import eu.ill.webx.transport.instruction.Instruction;
 import eu.ill.webx.transport.serializer.JsonSerializer;
 import eu.ill.webx.transport.serializer.Serializer;
 import org.slf4j.Logger;
@@ -27,8 +26,6 @@ public class WebXConnector {
 
     private WebXSubscriber subscriber;
 
-    private Size screenSize;
-
     private static WebXConnector instance = null;
 
     private WebXConnector() {
@@ -48,10 +45,6 @@ public class WebXConnector {
 
     public Serializer getSerializer() {
         return serializer;
-    }
-
-    public Size getScreenSize() {
-        return screenSize;
     }
 
     public WebXSubscriber getSubscriber() {
@@ -78,7 +71,6 @@ public class WebXConnector {
             if (connectionResponse != null) {
                 this.webXCollectorPort = connectionResponse.getCollectorPort();
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
-                this.screenSize = connectionResponse.getScreenSize();
 
                 this.subscriber = new WebXSubscriber(this.serializer, this.context, this.webXServerAddress, this.webXPublisherPort);
                 this.subscriber.start();
@@ -133,5 +125,13 @@ public class WebXConnector {
         }
 
         return response;
+    }
+
+    public byte[] sendRequestData(byte[] requestData) {
+        this.socket.send(requestData, 0);
+
+        byte[] responseData = socket.recv(0);
+
+        return responseData;
     }
 }

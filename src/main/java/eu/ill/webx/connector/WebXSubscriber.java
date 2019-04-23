@@ -1,6 +1,5 @@
 package eu.ill.webx.connector;
 
-import eu.ill.webx.transport.message.Message;
 import eu.ill.webx.transport.serializer.Serializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,7 +7,6 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,9 +76,10 @@ public class WebXSubscriber {
 			try {
 				byte[] messageData = socket.recv();
 
-				Message message = serializer.deserializeMessage(messageData);
+				// Debug message if needed
+//				Message message = serializer.deserializeMessage(messageData);
 
-				this.notifyListeners(message);
+				this.notifyListeners(messageData);
 
 			} catch (org.zeromq.ZMQException e) {
 				logger.info("WebX Subscriber thread interrupted");
@@ -96,7 +95,7 @@ public class WebXSubscriber {
 		this.listeners.remove(listener);
 	}
 
-	synchronized private void notifyListeners(Message message) {
-		this.listeners.forEach(listener -> listener.onMessage(message));
+	synchronized private void notifyListeners(byte[] messageData) {
+		this.listeners.forEach(listener -> listener.onMessage(messageData));
 	}
 }
