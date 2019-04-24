@@ -4,6 +4,7 @@ import eu.ill.webx.transport.instruction.ConnectInstruction;
 import eu.ill.webx.transport.instruction.Instruction;
 import eu.ill.webx.transport.message.ConnectionMessage;
 import eu.ill.webx.transport.message.Message;
+import eu.ill.webx.transport.serializer.BinarySerializer;
 import eu.ill.webx.transport.serializer.JsonSerializer;
 import eu.ill.webx.transport.serializer.Serializer;
 import org.slf4j.Logger;
@@ -53,6 +54,9 @@ public class WebXConnector {
             String serializerType = this.sendCommRequest();
             if (serializerType.equals("json")) {
                 this.serializer = new JsonSerializer();
+
+            } else if (serializerType.equals("binary")) {
+                this.serializer = new BinarySerializer();
             }
 
             ConnectionMessage connectionResponse = (ConnectionMessage) this.sendRequest(new ConnectInstruction());

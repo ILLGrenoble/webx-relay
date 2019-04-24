@@ -7,7 +7,6 @@ public class WindowProperties {
     private int y;
     private int width;
     private int height;
-    private int bpp;
 
     public long getId() {
         return id;
@@ -49,14 +48,6 @@ public class WindowProperties {
         this.height = height;
     }
 
-    public int getBpp() {
-        return bpp;
-    }
-
-    public void setBpp(int bpp) {
-        this.bpp = bpp;
-    }
-
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("WindowProperties{");
@@ -65,7 +56,6 @@ public class WindowProperties {
         sb.append(", y=").append(y);
         sb.append(", width=").append(width);
         sb.append(", height=").append(height);
-        sb.append(", bpp=").append(bpp);
         sb.append('}');
         return sb.toString();
     }

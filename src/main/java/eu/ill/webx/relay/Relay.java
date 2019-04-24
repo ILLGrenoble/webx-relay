@@ -2,13 +2,13 @@ package eu.ill.webx.relay;
 
 import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.connector.WebXMessageListener;
-import eu.ill.webx.transport.serializer.Serializer;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingDeque;
 
 public class Relay implements WebXMessageListener {
@@ -24,6 +24,7 @@ public class Relay implements WebXMessageListener {
 
     private Session session;
     private RemoteEndpoint remoteEndpoint;
+    private boolean useBinary = false;
 
 
     public Relay(Session session, WebXConnector connector) {
@@ -96,12 +97,17 @@ public class Relay implements WebXMessageListener {
     }
 
     private void webXListenerLoop() {
+        boolean useBinary = this.connector.getSerializer().getType().equals("binary");
         while (this.running) {
             try {
                 byte[] messageData = this.messageQueue.take();
+                if (useBinary) {
+                    this.sendBinaryToRemote(messageData);
 
-                String responseString = new String(messageData);
-                this.sendDataToRemote(responseString);
+                } else {
+                    String responseString = new String(messageData);
+                    this.sendStringToRemote(responseString);
+                }
 
             } catch (InterruptedException ie) {
                 logger.info("Relay message listener thread interrupted");
@@ -110,13 +116,28 @@ public class Relay implements WebXMessageListener {
     }
 
     private void clientCommandLoop() {
+        boolean useBinary = this.connector.getSerializer().getType().equals("binary");
         while (this.running) {
             try {
                 byte[] requestData = this.instructionQueue.take();
-                byte[] responseData = this.connector.sendRequestData(requestData);
 
-                String responseString = new String(responseData);
-                this.sendDataToRemote(responseString);
+                if (requestData.length == 4) {
+                    String messageString = new String(requestData);
+                    if (messageString.equals("comm")) {
+                        String serializerType = this.connector.getSerializer().getType();
+                        this.sendStringToRemote(serializerType);
+                    }
+
+                } else {
+                    byte[] responseData = this.connector.sendRequestData(requestData);
+                    if (useBinary) {
+                        this.sendBinaryToRemote(responseData);
+
+                    } else {
+                        String responseString = new String(responseData);
+                        this.sendStringToRemote(responseString);
+                    }
+                }
 
             } catch (InterruptedException ie) {
                 logger.info("Relay message listener thread interrupted");
@@ -124,10 +145,21 @@ public class Relay implements WebXMessageListener {
         }
     }
 
-    private synchronized void sendDataToRemote(String data) {
+    public synchronized void sendStringToRemote(String data) {
         try {
             if (this.remoteEndpoint != null) {
                 this.remoteEndpoint.sendString(data);
+            }
+
+        } catch (IOException e) {
+            logger.error("Failed to write data to web socket");
+        }
+    }
+
+    public synchronized void sendBinaryToRemote(byte[] data) {
+        try {
+            if (this.remoteEndpoint != null) {
+                this.remoteEndpoint.sendBytes(ByteBuffer.wrap(data));
             }
 
         } catch (IOException e) {

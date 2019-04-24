@@ -14,6 +14,10 @@ public class SubImagesMessage extends Message {
     public SubImagesMessage() {
     }
 
+    public SubImagesMessage(long commandId) {
+        super(commandId);
+    }
+
     public long getWindowId() {
         return windowId;
     }

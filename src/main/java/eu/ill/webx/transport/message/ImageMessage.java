@@ -10,6 +10,10 @@ public class ImageMessage extends Message {
     public ImageMessage() {
     }
 
+    public ImageMessage(long commandId) {
+        super(commandId);
+    }
+
     public long getWindowId() {
         return windowId;
     }

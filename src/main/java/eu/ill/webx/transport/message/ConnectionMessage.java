@@ -1,7 +1,5 @@
 package eu.ill.webx.transport.message;
 
-import eu.ill.webx.domain.Size;
-
 public class ConnectionMessage extends Message {
 
     private int publisherPort;
@@ -10,7 +8,7 @@ public class ConnectionMessage extends Message {
     public ConnectionMessage() {
     }
 
-    public ConnectionMessage(long commandId, Size screenSize) {
+    public ConnectionMessage(long commandId) {
         super(commandId);
     }
 

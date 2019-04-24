@@ -23,6 +23,10 @@ public class JsonSerializer implements Serializer {
         objectMapper.addMixInAnnotations(Instruction.class, InstructionMixIn.class);
     }
 
+    public String getType() {
+        return "json";
+    }
+
     @Override
     public byte[] serializeInstruction(Instruction instruction) {
         byte[] instructionData = null;
