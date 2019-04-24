@@ -14,8 +14,8 @@ import java.util.concurrent.LinkedBlockingDeque;
 public class Relay implements WebXMessageListener {
 
     private static final Logger logger = LoggerFactory.getLogger(Relay.class);
+    private final WebXConnector connector;
 
-    private Serializer serializer;
     private Thread webXListenerThread;
     private Thread clientCommandThread;
     private LinkedBlockingDeque<byte[]> messageQueue = new LinkedBlockingDeque<>();
@@ -25,12 +25,13 @@ public class Relay implements WebXMessageListener {
     private Session session;
     private RemoteEndpoint remoteEndpoint;
 
-    public Relay(Session session) {
-        this.serializer = WebXConnector.instance().getSerializer();
+
+    public Relay(Session session, WebXConnector connector) {
         if (session != null) {
             this.session = session;
             this.remoteEndpoint = session.getRemote();
         }
+        this.connector = connector;
     }
 
     public Thread getWebXListenerThread() {
@@ -112,7 +113,7 @@ public class Relay implements WebXMessageListener {
         while (this.running) {
             try {
                 byte[] requestData = this.instructionQueue.take();
-                byte[] responseData =  WebXConnector.instance().sendRequestData(requestData);
+                byte[] responseData = this.connector.sendRequestData(requestData);
 
                 String responseString = new String(responseData);
                 this.sendDataToRemote(responseString);

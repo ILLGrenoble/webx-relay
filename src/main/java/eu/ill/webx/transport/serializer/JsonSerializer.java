@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+
 public class JsonSerializer implements Serializer {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonSerializer.class);
@@ -61,7 +62,7 @@ public class JsonSerializer implements Serializer {
     public Message deserializeMessage(byte[] data) {
         Message message = null;
         try {
-           message = objectMapper.readValue(data, Message.class);
+            message = objectMapper.readValue(data, Message.class);
 
         } catch (JsonMappingException e) {
             logger.error("Error mapping JSON message");

@@ -6,17 +6,20 @@ import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
+import eu.ill.webx.connector.WebXConnectorConfiguration;
 import eu.ill.webx.connector.WebXConnector;
+import eu.ill.webx.providers.WebXConnectorProvider;
 import eu.ill.webx.ws.WebSocketTunnelServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+
+import javax.inject.Singleton;
 
 import static com.google.inject.Guice.createInjector;
 import static org.eclipse.jetty.servlet.ServletContextHandler.NO_SESSIONS;
 
 public class Application {
-
-
+    
     @Parameter(names = {"--port"})
     private Integer port = 8080;
 
@@ -25,7 +28,6 @@ public class Application {
 
     @Parameter(names = {"--webxport"})
     private Integer webXPort = 5555;
-
 
     public static void main(String... argv) throws Exception {
         final Application application = new Application();
@@ -40,15 +42,14 @@ public class Application {
         final Server server = new Server(port);
         final ServletContextHandler context = new ServletContextHandler(server, "/", NO_SESSIONS);
 
-        // Start WebXConnector (and message listener)
-        WebXConnector.instance().connect(webXHost, webXPort);
-
         context.addEventListener(new GuiceServletContextListener() {
             @Override
             protected Injector getInjector() {
                 return createInjector(new ServletModule() {
                     @Override
                     public void configureServlets() {
+                        bind(WebXConnectorConfiguration.class).toInstance(new WebXConnectorConfiguration(webXHost, webXPort));
+                        bind(WebXConnector.class).toProvider(WebXConnectorProvider.class).in(Singleton.class);
                         serve("/").with(WebSocketTunnelServlet.class);
                     }
                 });

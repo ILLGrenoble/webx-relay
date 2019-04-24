@@ -27,22 +27,9 @@ public class WebXConnector {
 
     private WebXSubscriber subscriber;
 
-    private static WebXConnector instance = null;
-
-    private WebXConnector() {
-        this.serializer = new JsonSerializer();
+    public WebXConnector() {
     }
 
-    public static WebXConnector instance() {
-        if (instance == null) {
-            synchronized (WebXConnector.class) {
-                if (instance == null) {
-                    instance = new WebXConnector();
-                }
-            }
-        }
-        return instance;
-    }
 
     public Serializer getSerializer() {
         return serializer;
@@ -68,7 +55,7 @@ public class WebXConnector {
                 this.serializer = new JsonSerializer();
             }
 
-            ConnectionMessage connectionResponse = (ConnectionMessage)this.sendRequest(new ConnectInstruction());
+            ConnectionMessage connectionResponse = (ConnectionMessage) this.sendRequest(new ConnectInstruction());
             if (connectionResponse != null) {
                 this.webXCollectorPort = connectionResponse.getCollectorPort();
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
@@ -78,9 +65,9 @@ public class WebXConnector {
 
                 logger.info("WebX Connector started");
             } else {
-               logger.error("Unable to establish connection to WebX server");
+                logger.error("Unable to establish connection to WebX server");
 
-               this.disconnect();
+                this.disconnect();
             }
         }
     }

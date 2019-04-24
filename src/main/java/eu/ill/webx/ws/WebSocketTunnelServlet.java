@@ -1,13 +1,21 @@
 package eu.ill.webx.ws;
 
-import com.google.inject.Singleton;
+import eu.ill.webx.connector.WebXConnector;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 @Singleton
 public class WebSocketTunnelServlet extends WebSocketServlet {
 
+    private final WebXConnector connector;
 
+    @Inject
+    public WebSocketTunnelServlet(final WebXConnector connector) {
+        this.connector = connector;
+    }
 
     @Override
     public void configure(final WebSocketServletFactory factory) {
@@ -16,8 +24,6 @@ public class WebSocketTunnelServlet extends WebSocketServlet {
         factory.getExtensionFactory().unregister("permessage-deflate");
 
         // Register WebSocket implementation
-        factory.setCreator((request, response) -> {
-            return new WebSocketTunnelListener();
-        });
+        factory.setCreator((request, response) -> new WebSocketTunnelListener(this.connector));
     }
 }
