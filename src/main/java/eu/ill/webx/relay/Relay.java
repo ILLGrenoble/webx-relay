@@ -2,6 +2,8 @@ package eu.ill.webx.relay;
 
 import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.connector.WebXMessageListener;
+import eu.ill.webx.transport.instruction.Instruction;
+import eu.ill.webx.transport.serializer.Serializer;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
@@ -15,6 +17,7 @@ public class Relay implements WebXMessageListener {
 
     private static final Logger logger = LoggerFactory.getLogger(Relay.class);
     private final WebXConnector connector;
+    private Serializer serializer;
 
     private Thread webXListenerThread;
     private Thread clientCommandThread;
@@ -24,15 +27,27 @@ public class Relay implements WebXMessageListener {
 
     private Session session;
     private RemoteEndpoint remoteEndpoint;
-    private boolean useBinary = false;
+    BinaryEndpointCommunicator binaryEndpointCommunicator = null;
+    StringEndpointCommunicator stringEndpointCommunicator = null;
+    EndpointCommunicator activeEndpointCommunicator = null;
 
 
     public Relay(Session session, WebXConnector connector) {
+        this.connector = connector;
+        this.serializer = connector.getSerializer();
         if (session != null) {
             this.session = session;
             this.remoteEndpoint = session.getRemote();
+            this.binaryEndpointCommunicator = new BinaryEndpointCommunicator(this.remoteEndpoint);
+            this.stringEndpointCommunicator = new StringEndpointCommunicator(this.remoteEndpoint);
+            boolean useBinary = this.connector.getSerializer().getType().equals("binary");
+            if (useBinary) {
+                this.activeEndpointCommunicator = this.binaryEndpointCommunicator;
+
+            } else {
+                this.activeEndpointCommunicator = this.stringEndpointCommunicator;
+            }
         }
-        this.connector = connector;
     }
 
     public Thread getWebXListenerThread() {
@@ -97,17 +112,10 @@ public class Relay implements WebXMessageListener {
     }
 
     private void webXListenerLoop() {
-        boolean useBinary = this.connector.getSerializer().getType().equals("binary");
         while (this.running) {
             try {
                 byte[] messageData = this.messageQueue.take();
-                if (useBinary) {
-                    this.sendBinaryToRemote(messageData);
-
-                } else {
-                    String responseString = new String(messageData);
-                    this.sendStringToRemote(responseString);
-                }
+                this.activeEndpointCommunicator.sendData(messageData);
 
             } catch (InterruptedException ie) {
                 logger.info("Relay message listener thread interrupted");
@@ -116,54 +124,33 @@ public class Relay implements WebXMessageListener {
     }
 
     private void clientCommandLoop() {
-        boolean useBinary = this.connector.getSerializer().getType().equals("binary");
         while (this.running) {
             try {
-                byte[] requestData = this.instructionQueue.take();
+                byte[] instructionData = this.instructionQueue.take();
 
-                if (requestData.length == 4) {
-                    String messageString = new String(requestData);
+                if (instructionData.length == 4) {
+                    String messageString = new String(instructionData);
                     if (messageString.equals("comm")) {
                         String serializerType = this.connector.getSerializer().getType();
-                        this.sendStringToRemote(serializerType);
+                        this.stringEndpointCommunicator.sendData(serializerType);
                     }
 
                 } else {
-                    byte[] responseData = this.connector.sendRequestData(requestData);
-                    if (useBinary) {
-                        this.sendBinaryToRemote(responseData);
+                    // Determine if the instruction is synchronous or not: has an id if it is synchronous
+                    Instruction instruction = this.serializer.deserializeInstruction(instructionData);
+
+                    if (instruction.isSynchronous()) {
+                        byte[] responseData = this.connector.sendRequestData(instructionData);
+                        this.activeEndpointCommunicator.sendData(responseData);
 
                     } else {
-                        String responseString = new String(responseData);
-                        this.sendStringToRemote(responseString);
+                        this.connector.getCommandPublisher().sendCommandData(instructionData);
                     }
                 }
 
             } catch (InterruptedException ie) {
                 logger.info("Relay message listener thread interrupted");
             }
-        }
-    }
-
-    public synchronized void sendStringToRemote(String data) {
-        try {
-            if (this.remoteEndpoint != null) {
-                this.remoteEndpoint.sendString(data);
-            }
-
-        } catch (IOException e) {
-            logger.error("Failed to write data to web socket");
-        }
-    }
-
-    public synchronized void sendBinaryToRemote(byte[] data) {
-        try {
-            if (this.remoteEndpoint != null) {
-                this.remoteEndpoint.sendBytes(ByteBuffer.wrap(data));
-            }
-
-        } catch (IOException e) {
-            logger.error("Failed to write data to web socket");
         }
     }
 }

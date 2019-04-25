@@ -26,18 +26,22 @@ public class WebXConnector {
 
     private Serializer serializer;
 
-    private WebXSubscriber subscriber;
+    private WebXMessageSubscriber messageSubscriber;
+    private WebXCommandPublisher commandPublisher;
 
     public WebXConnector() {
     }
-
 
     public Serializer getSerializer() {
         return serializer;
     }
 
-    public WebXSubscriber getSubscriber() {
-        return subscriber;
+    public WebXMessageSubscriber getMessageSubscriber() {
+        return messageSubscriber;
+    }
+
+    public WebXCommandPublisher getCommandPublisher() {
+        return commandPublisher;
     }
 
     public void connect(String webXServerAddress, int webXServerPort) {
@@ -64,8 +68,11 @@ public class WebXConnector {
                 this.webXCollectorPort = connectionResponse.getCollectorPort();
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
 
-                this.subscriber = new WebXSubscriber(this.serializer, this.context, this.webXServerAddress, this.webXPublisherPort);
-                this.subscriber.start();
+                this.messageSubscriber = new WebXMessageSubscriber(this.serializer, this.context, this.webXServerAddress, this.webXPublisherPort);
+                this.messageSubscriber.start();
+
+                this.commandPublisher = new WebXCommandPublisher(this.serializer);
+                this.commandPublisher.connect(this.context, this.webXServerAddress, this.webXCollectorPort);
 
                 logger.info("WebX Connector started");
             } else {
@@ -81,9 +88,14 @@ public class WebXConnector {
             this.socket.close();
             this.socket = null;
 
-            if (this.subscriber != null) {
-                this.subscriber.stop();
-                this.subscriber = null;
+            if (this.messageSubscriber != null) {
+                this.messageSubscriber.stop();
+                this.messageSubscriber = null;
+            }
+
+            if (this.commandPublisher != null) {
+                this.commandPublisher.disconnect();
+                this.commandPublisher = null;
             }
 
             this.context.destroy();

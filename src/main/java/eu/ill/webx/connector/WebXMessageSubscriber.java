@@ -10,9 +10,9 @@ import org.zeromq.ZMQ;
 import java.util.ArrayList;
 import java.util.List;
 
-public class WebXSubscriber {
+public class WebXMessageSubscriber {
 
-	private static final Logger logger = LoggerFactory.getLogger(WebXSubscriber.class);
+	private static final Logger logger = LoggerFactory.getLogger(WebXMessageSubscriber.class);
 
 
 	private Serializer serializer;
@@ -27,7 +27,7 @@ public class WebXSubscriber {
 
 	private List<WebXMessageListener> listeners = new ArrayList<>();
 
-	public WebXSubscriber(Serializer serializer, ZContext context, String webXServerAddress, int webXServerPort) {
+	public WebXMessageSubscriber(Serializer serializer, ZContext context, String webXServerAddress, int webXServerPort) {
 		this.serializer = serializer;
 		this.context = context;
 		this.webXServerAddress = webXServerAddress;
@@ -50,7 +50,7 @@ public class WebXSubscriber {
 			this.thread = new Thread(() -> this.loop());
 			this.thread.start();
 
-			logger.info("WebX Subscriber started");
+			logger.info("WebX Message Subscriber started");
 		}
 	}
 
@@ -63,7 +63,7 @@ public class WebXSubscriber {
 				this.thread.join();
 				this.thread = null;
 
-				logger.info("WebX Subscriber stopped");
+				logger.info("WebX Message Subscriber stopped");
 
 			} catch (InterruptedException e) {
 				logger.error("Stop of WebX Subscriber thread interrupted");

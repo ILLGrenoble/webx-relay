@@ -4,6 +4,7 @@ public abstract class Instruction {
 
     private long id;
     private int type;
+    private boolean synchronous;
 
     public Instruction() {
     }
@@ -28,4 +29,11 @@ public abstract class Instruction {
         return type;
     }
 
+    public boolean isSynchronous() {
+        return synchronous;
+    }
+
+    public void setSynchronous(boolean synchronous) {
+        this.synchronous = synchronous;
+    }
 }
