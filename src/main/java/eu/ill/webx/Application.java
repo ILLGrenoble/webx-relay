@@ -19,7 +19,7 @@ import static com.google.inject.Guice.createInjector;
 import static org.eclipse.jetty.servlet.ServletContextHandler.NO_SESSIONS;
 
 public class Application {
-    
+
     @Parameter(names = {"--port"})
     private Integer port = 8080;
 

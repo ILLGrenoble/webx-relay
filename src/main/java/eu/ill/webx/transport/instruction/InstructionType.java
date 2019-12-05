@@ -6,4 +6,5 @@ public class InstructionType {
     public static int IMAGE = 3;
     public static int SCREEN = 4;
     public static int MOUSE = 5;
+    public static int KEYBOARD = 6;
 }
