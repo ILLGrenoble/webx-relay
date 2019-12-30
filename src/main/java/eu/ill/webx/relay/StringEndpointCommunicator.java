@@ -21,7 +21,7 @@ public class StringEndpointCommunicator implements EndpointCommunicator {
         this.sendData(new String(data));
     }
 
-    public void sendData(String data) {
+    public synchronized void sendData(String data) {
         try {
             if (this.remoteEndpoint != null) {
                 this.remoteEndpoint.sendString(new String(data));

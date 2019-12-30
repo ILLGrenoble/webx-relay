@@ -18,7 +18,7 @@ public class BinaryEndpointCommunicator implements EndpointCommunicator {
     }
 
     @Override
-    public void sendData(byte[] data) {
+    public synchronized void sendData(byte[] data) {
         try {
             if (this.remoteEndpoint != null) {
                 this.remoteEndpoint.sendBytes(ByteBuffer.wrap(data));
