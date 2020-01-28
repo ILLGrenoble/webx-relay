@@ -16,6 +16,7 @@ import eu.ill.webx.transport.message.*;
         @JsonSubTypes.Type(value = ScreenInstruction.class, name = "4"),
         @JsonSubTypes.Type(value = MouseInstruction.class, name = "5"),
         @JsonSubTypes.Type(value = KeyboardInstruction.class, name = "6"),
+        @JsonSubTypes.Type(value = CursorInstruction.class, name = "7"),
 })
 public class InstructionMixIn {
 
