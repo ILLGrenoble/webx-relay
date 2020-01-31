@@ -3,7 +3,6 @@ package eu.ill.webx.transport.serializer;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import eu.ill.webx.transport.instruction.*;
-import eu.ill.webx.transport.message.*;
 
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
@@ -16,7 +15,7 @@ import eu.ill.webx.transport.message.*;
         @JsonSubTypes.Type(value = ScreenInstruction.class, name = "4"),
         @JsonSubTypes.Type(value = MouseInstruction.class, name = "5"),
         @JsonSubTypes.Type(value = KeyboardInstruction.class, name = "6"),
-        @JsonSubTypes.Type(value = CursorInstruction.class, name = "7"),
+        @JsonSubTypes.Type(value = CursorImageInstruction.class, name = "7"),
 })
 public class InstructionMixIn {
 

@@ -10,10 +10,6 @@ import eu.ill.webx.transport.message.*;
         property = "type")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = ConnectionMessage.class, name = "connection"),
-        @JsonSubTypes.Type(value = ScreenMessage.class, name = "screen"),
-        @JsonSubTypes.Type(value = ImageMessage.class, name = "image"),
-        @JsonSubTypes.Type(value = SubImagesMessage.class, name = "subimages"),
-        @JsonSubTypes.Type(value = WindowsMessage.class, name = "windows")
 })
 public class MessageMixIn {
 

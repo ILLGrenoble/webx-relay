@@ -67,39 +67,6 @@ public class BinarySerializer implements Serializer {
             connectionMessage.setCollectorPort(collectorPort);
 
             return connectionMessage;
-
-        } else if (messageType == MessageType.WINDOWS) {
-            int numberOfWindows = buffer.getInt();
-            for (int i = 0; i < numberOfWindows; i++) {
-                WindowProperties windowProperties = new WindowProperties();
-                windowProperties.setId(buffer.getInt());
-                windowProperties.setX(buffer.getInt());
-                windowProperties.setY(buffer.getInt());
-                windowProperties.setWidth(buffer.getInt());
-                windowProperties.setHeight(buffer.getInt());
-            }
-
-        } else if (messageType == MessageType.IMAGE) {
-            long windowId = buffer.getInt();
-            int depth = buffer.getInt();
-            String imageType = buffer.getString(4);
-            int imageSize = buffer.getInt();
-
-            ImageMessage imageMessage = new ImageMessage(commandId);
-            imageMessage.setWindowId(windowId);
-            imageMessage.setDepth(depth);
-
-        } else if (messageType == MessageType.SCREEN) {
-            int screenWidth = buffer.getInt();
-            int screenHeight = buffer.getInt();
-
-            ScreenMessage screenMessage = new ScreenMessage(commandId, new Size(screenWidth, screenHeight));
-
-            return screenMessage;
-
-
-        } else if (messageType == MessageType.SUBIMAGES) {
-
         }
 
         return null;
