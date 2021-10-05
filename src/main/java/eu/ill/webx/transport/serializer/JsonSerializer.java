@@ -47,22 +47,6 @@ public class JsonSerializer implements Serializer {
     }
 
     @Override
-    public byte[] serializeMessage(Message message) {
-        byte[] messageData = null;
-        try {
-            messageData = objectMapper.writeValueAsBytes(message);
-
-        } catch (JsonMappingException e) {
-            logger.error("Error mapping JSON message");
-
-        } catch (IOException e) {
-            logger.error("Unable to convert message to JSON");
-        }
-
-        return messageData;
-    }
-
-    @Override
     public Message deserializeMessage(byte[] data) {
         Message message = null;
         try {
@@ -78,19 +62,4 @@ public class JsonSerializer implements Serializer {
         return message;
     }
 
-    @Override
-    public Instruction deserializeInstruction(byte[] data) {
-        Instruction instruction = null;
-        try {
-            instruction = objectMapper.readValue(data, Instruction.class);
-
-        } catch (JsonMappingException e) {
-            logger.error("Error mapping JSON instruction");
-
-        } catch (IOException e) {
-            logger.error("Unable to convert JSON instruction");
-        }
-
-        return instruction;
-    }
 }

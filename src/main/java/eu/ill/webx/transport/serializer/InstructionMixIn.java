@@ -10,12 +10,6 @@ import eu.ill.webx.transport.instruction.*;
         property = "type")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = ConnectInstruction.class, name = "1"),
-        @JsonSubTypes.Type(value = WindowsInstruction.class, name = "2"),
-        @JsonSubTypes.Type(value = ImageInstruction.class, name = "3"),
-        @JsonSubTypes.Type(value = ScreenInstruction.class, name = "4"),
-        @JsonSubTypes.Type(value = MouseInstruction.class, name = "5"),
-        @JsonSubTypes.Type(value = KeyboardInstruction.class, name = "6"),
-        @JsonSubTypes.Type(value = CursorImageInstruction.class, name = "7"),
 })
 public class InstructionMixIn {
 

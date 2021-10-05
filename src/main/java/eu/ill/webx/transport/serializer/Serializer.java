@@ -8,7 +8,5 @@ public interface Serializer {
     String getType();
 
     byte[] serializeInstruction(Instruction instruction);
-    byte[] serializeMessage(Message message);
     Message deserializeMessage(byte[] data);
-    Instruction deserializeInstruction(byte[] data);
 }

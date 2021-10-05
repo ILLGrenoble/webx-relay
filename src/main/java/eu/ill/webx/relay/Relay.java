@@ -2,15 +2,12 @@ package eu.ill.webx.relay;
 
 import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.connector.WebXMessageListener;
-import eu.ill.webx.transport.instruction.Instruction;
 import eu.ill.webx.transport.serializer.Serializer;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingDeque;
 
 public class Relay implements WebXMessageListener {
@@ -136,16 +133,8 @@ public class Relay implements WebXMessageListener {
                     }
 
                 } else {
-                    // Determine if the instruction is synchronous or not: has an id if it is synchronous
-                    Instruction instruction = this.serializer.deserializeInstruction(instructionData);
-
-                    if (instruction.isSynchronous()) {
-                        byte[] responseData = this.connector.sendRequestData(instructionData);
-                        this.activeEndpointCommunicator.sendData(responseData);
-
-                    } else {
-                        this.connector.getCommandPublisher().sendCommandData(instructionData);
-                    }
+                    byte[] responseData = this.connector.sendRequestData(instructionData);
+                    this.activeEndpointCommunicator.sendData(responseData);
                 }
 
             } catch (InterruptedException ie) {

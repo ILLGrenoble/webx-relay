@@ -3,10 +3,10 @@ package eu.ill.webx.transport.serializer;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import eu.ill.webx.domain.Size;
-import eu.ill.webx.domain.WindowProperties;
 import eu.ill.webx.transport.instruction.Instruction;
-import eu.ill.webx.transport.message.*;
+import eu.ill.webx.transport.message.ConnectionMessage;
+import eu.ill.webx.transport.message.Message;
+import eu.ill.webx.transport.message.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,11 +48,6 @@ public class BinarySerializer implements Serializer {
     }
 
     @Override
-    public byte[] serializeMessage(Message message) {
-        return null;
-    }
-
-    @Override
     public Message deserializeMessage(byte[] data) {
         BinaryBuffer buffer = new BinaryBuffer(data);
         int messageType = buffer.getHeader().getMessageTypeId();
@@ -60,11 +55,9 @@ public class BinarySerializer implements Serializer {
 
         if (messageType == MessageType.CONNECTION) {
             int publisherPort = buffer.getInt();
-            int collectorPort = buffer.getInt();
 
             ConnectionMessage connectionMessage = new ConnectionMessage(commandId);
             connectionMessage.setPublisherPort(publisherPort);
-            connectionMessage.setCollectorPort(collectorPort);
 
             return connectionMessage;
         }
@@ -72,19 +65,4 @@ public class BinarySerializer implements Serializer {
         return null;
     }
 
-    @Override
-    public Instruction deserializeInstruction(byte[] data) {
-        Instruction instruction = null;
-        try {
-            instruction = objectMapper.readValue(data, Instruction.class);
-
-        } catch (JsonMappingException e) {
-            logger.error("Error mapping JSON instruction");
-
-        } catch (IOException e) {
-            logger.error("Unable to convert JSON instruction");
-        }
-
-        return instruction;
-    }
 }
