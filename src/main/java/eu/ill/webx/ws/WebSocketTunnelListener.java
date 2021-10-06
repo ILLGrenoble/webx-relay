@@ -36,7 +36,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
             return;
         }
 
-        logger.debug("Received command: {}", message);
+//        logger.debug("Received command: {}", message);
 
         this.relay.queueCommand(message.getBytes());
     }
