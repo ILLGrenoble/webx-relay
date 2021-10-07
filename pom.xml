@@ -16,7 +16,7 @@
         <slf4j.version>1.6.1</slf4j.version>
         <jcommander.version>1.72</jcommander.version>
         <commons-io.version>2.6</commons-io.version>
-        <jeromq.version>0.5.0</jeromq.version>
+        <jeromq.version>0.5.2</jeromq.version>
         <jackson.version>2.9.8</jackson.version>
         <junit.version>4.12</junit.version>
     </properties>
