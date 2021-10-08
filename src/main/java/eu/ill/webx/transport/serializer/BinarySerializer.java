@@ -21,7 +21,6 @@ public class BinarySerializer implements Serializer {
 
     public BinarySerializer() {
         logger.info("JSON serializer instantiated");
-        objectMapper.addMixInAnnotations(Instruction.class, InstructionMixIn.class);
     }
 
     public String getType() {
@@ -55,9 +54,11 @@ public class BinarySerializer implements Serializer {
 
         if (messageType == MessageType.CONNECTION) {
             int publisherPort = buffer.getInt();
+            int collectorPort = buffer.getInt();
 
             ConnectionMessage connectionMessage = new ConnectionMessage(commandId);
             connectionMessage.setPublisherPort(publisherPort);
+            connectionMessage.setCollectorPort(collectorPort);
 
             return connectionMessage;
         }
@@ -65,4 +66,19 @@ public class BinarySerializer implements Serializer {
         return null;
     }
 
+    @Override
+    public Instruction deserializeInstruction(byte[] data) {
+        Instruction instruction = null;
+        try {
+            instruction = objectMapper.readValue(data, Instruction.class);
+
+        } catch (JsonMappingException e) {
+            logger.error("Error mapping JSON instruction: " + e.getMessage());
+
+        } catch (IOException e) {
+            logger.error("Unable to convert JSON instruction: " + e.getMessage());
+        }
+
+        return instruction;
+    }
 }

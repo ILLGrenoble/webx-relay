@@ -1,9 +1,13 @@
 package eu.ill.webx.transport.instruction;
 
-public abstract class Instruction {
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class Instruction {
 
     private long id;
     private int type;
+    private boolean synchronous;
 
     public Instruction() {
     }
@@ -26,5 +30,13 @@ public abstract class Instruction {
 
     public int getType() {
         return type;
+    }
+
+    public boolean isSynchronous() {
+        return synchronous;
+    }
+
+    public void setSynchronous(boolean synchronous) {
+        this.synchronous = synchronous;
     }
 }

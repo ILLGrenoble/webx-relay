@@ -2,7 +2,7 @@ package eu.ill.webx.transport.serializer;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import eu.ill.webx.transport.instruction.*;
+import eu.ill.webx.transport.instruction.ConnectInstruction;
 
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,

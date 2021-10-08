@@ -62,4 +62,20 @@ public class JsonSerializer implements Serializer {
         return message;
     }
 
+    @Override
+    public Instruction deserializeInstruction(byte[] data) {
+        Instruction instruction = null;
+        try {
+            instruction = objectMapper.readValue(data, Instruction.class);
+
+        } catch (JsonMappingException e) {
+            logger.error("Error mapping JSON instruction");
+
+        } catch (IOException e) {
+            logger.error("Unable to convert JSON instruction");
+        }
+
+        return instruction;
+    }
+
 }

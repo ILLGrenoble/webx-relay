@@ -9,4 +9,5 @@ public interface Serializer {
 
     byte[] serializeInstruction(Instruction instruction);
     Message deserializeMessage(byte[] data);
+    Instruction deserializeInstruction(byte[] data);
 }
