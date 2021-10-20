@@ -1,7 +1,7 @@
 package eu.ill.webx.ws;
 
 import eu.ill.webx.connector.WebXConnector;
-import eu.ill.webx.relay.Relay;
+import eu.ill.webx.relay.WebXRelay;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
 import org.slf4j.Logger;
@@ -12,7 +12,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private static final Logger logger = LoggerFactory.getLogger(WebSocketTunnelListener.class);
     private final WebXConnector connector;
 
-    private Relay relay;
+    private WebXRelay relay;
 
     public WebSocketTunnelListener(final WebXConnector connector) {
         this.connector = connector;
@@ -21,7 +21,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
     @Override
     public void onWebSocketConnect(final Session session) {
         logger.debug("WebSocket connection, creating relay...");
-        this.relay = new Relay(session, connector);
+        this.relay = new WebXRelay(session, connector);
         this.relay.start();
 
         // Add relay as a listener to webx messages
@@ -30,25 +30,23 @@ public class WebSocketTunnelListener implements WebSocketListener {
 
     @Override
     public void onWebSocketText(String message) {
-
-        if (this.relay == null) {
-            logger.error("Received command {} on closed relay", message);
-            return;
-        }
-
-//        logger.debug("Received command: {}", message);
-
-        this.relay.queueCommand(message.getBytes());
+        throw new UnsupportedOperationException("Text WebSocket messages are not supported.");
     }
 
     @Override
     public void onWebSocketBinary(byte[] payload, int offset, int length) {
-        throw new UnsupportedOperationException("Binary WebSocket messages are not supported.");
+        if (this.relay == null) {
+            logger.error("Received instruction on closed relay");
+            return;
+        }
+
+        logger.debug("Received instruction of length: {}", length);
+        this.relay.queueInstruction(payload);
     }
 
     @Override
     public void onWebSocketError(Throwable throwable) {
-        logger.debug("WebSocket tunnel closing due to error: {}", throwable);
+        logger.debug("WebSocket tunnel closing due to error", throwable);
 
         // Remove relay from webx subscriber
         this.connector.getMessageSubscriber().removeListener(relay);

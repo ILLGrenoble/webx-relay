@@ -1,6 +1,6 @@
 package eu.ill.webx.connector;
 
-import eu.ill.webx.transport.serializer.Serializer;
+import eu.ill.webx.transport.serializer.WebXDataSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -12,90 +12,88 @@ import java.util.List;
 
 public class WebXMessageSubscriber {
 
-	private static final Logger logger = LoggerFactory.getLogger(WebXMessageSubscriber.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebXMessageSubscriber.class);
 
+    private final ZContext context;
+    private final String   webXServerAddress;
+    private final int      webXServerPort;
 
-	private Serializer serializer;
+    private WebXDataSerializer serializer;
+    private ZMQ.Socket         socket;
+    private Thread         thread;
+    private boolean        running = false;
 
-	private ZContext context;
-	private ZMQ.Socket socket;
-	private String webXServerAddress;
-	private int webXServerPort;
+    private final List<WebXMessageListener> listeners = new ArrayList<>();
 
-	private Thread thread;
-	private boolean running = false;
+    public WebXMessageSubscriber(WebXDataSerializer serializer, ZContext context, String webXServerAddress, int webXServerPort) {
+        this.serializer = serializer;
+        this.context = context;
+        this.webXServerAddress = webXServerAddress;
+        this.webXServerPort = webXServerPort;
+    }
 
-	private List<WebXMessageListener> listeners = new ArrayList<>();
+    public boolean isRunning() {
+        return running;
+    }
 
-	public WebXMessageSubscriber(Serializer serializer, ZContext context, String webXServerAddress, int webXServerPort) {
-		this.serializer = serializer;
-		this.context = context;
-		this.webXServerAddress = webXServerAddress;
-		this.webXServerPort = webXServerPort;
-	}
+    public synchronized void start() {
+        if (!running) {
+            this.socket = context.createSocket(SocketType.SUB);
+            this.socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
+            String fullAddress = "tcp://" + webXServerAddress + ":" + webXServerPort;
+            socket.connect(fullAddress);
 
-	public boolean isRunning() {
-		return running;
-	}
+            running = true;
 
-	public synchronized void start() {
-		if (!running) {
-			this.socket = context.createSocket(SocketType.SUB);
-			this.socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
-			String fullAddress = "tcp://" + webXServerAddress + ":" + webXServerPort;
-			socket.connect(fullAddress);
+            this.thread = new Thread(this::loop);
+            this.thread.start();
 
-			running = true;
+            logger.info("WebX Message Subscriber started");
+        }
+    }
 
-			this.thread = new Thread(() -> this.loop());
-			this.thread.start();
+    public synchronized void stop() {
+        if (this.running) {
+            try {
+                this.running = false;
 
-			logger.info("WebX Message Subscriber started");
-		}
-	}
+                this.thread.interrupt();
+                this.thread.join();
+                this.thread = null;
 
-	public synchronized void stop() {
-		if (this.running) {
-			try {
-				this.running = false;
+                logger.info("WebX Message Subscriber stopped");
 
-				this.thread.interrupt();
-				this.thread.join();
-				this.thread = null;
+            } catch (InterruptedException exception) {
+                logger.error("Stop of WebX Subscriber thread interrupted");
+            }
+        }
+    }
 
-				logger.info("WebX Message Subscriber stopped");
+    public void loop() {
+        while (this.running) {
+            try {
+                byte[] messageData = socket.recv();
 
-			} catch (InterruptedException e) {
-				logger.error("Stop of WebX Subscriber thread interrupted");
-			}
-		}
-	}
-
-	public void loop() {
-		while (this.running) {
-			try {
-				byte[] messageData = socket.recv();
-
-				// Debug message if needed
+                // Debug message if needed
 //				Message message = serializer.deserializeMessage(messageData);
 
-				this.notifyListeners(messageData);
+                this.notifyListeners(messageData);
 
-			} catch (org.zeromq.ZMQException e) {
-				logger.info("WebX Subscriber thread interrupted");
-			}
-		}
-	}
+            } catch (org.zeromq.ZMQException e) {
+                logger.info("WebX Subscriber thread interrupted");
+            }
+        }
+    }
 
-	synchronized public void addListener(WebXMessageListener listener) {
-		this.listeners.add(listener);
-	}
+    synchronized public void addListener(WebXMessageListener listener) {
+        this.listeners.add(listener);
+    }
 
-	synchronized public void removeListener(WebXMessageListener listener) {
-		this.listeners.remove(listener);
-	}
+    synchronized public void removeListener(WebXMessageListener listener) {
+        this.listeners.remove(listener);
+    }
 
-	synchronized private void notifyListeners(byte[] messageData) {
-		this.listeners.forEach(listener -> listener.onMessage(messageData));
-	}
+    synchronized private void notifyListeners(byte[] messageData) {
+        this.listeners.forEach(listener -> listener.onMessage(messageData));
+    }
 }

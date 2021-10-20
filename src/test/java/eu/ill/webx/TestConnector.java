@@ -1,7 +1,7 @@
 package eu.ill.webx;
 
 import eu.ill.webx.connector.WebXConnector;
-import eu.ill.webx.relay.Relay;
+import eu.ill.webx.relay.WebXRelay;
 
 public class TestConnector {
 
@@ -9,7 +9,7 @@ public class TestConnector {
         WebXConnector connector = new WebXConnector();
         connector.connect("dssdev2.ill.fr", 5555);
 
-        Relay relay = new Relay(null, connector);
+        WebXRelay relay = new WebXRelay(null, connector);
         relay.start();
 
 //        connector.getMessageSubscriber().addListener(messageData -> {
@@ -26,7 +26,7 @@ public class TestConnector {
         for (int i = 0; i < 1000; i++) {
             String message = messages[(int)Math.floor(Math.random() * 4)];
             System.out.println("Sending " + message);
-            relay.queueCommand(message.getBytes());
+            relay.queueInstruction(message.getBytes());
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {

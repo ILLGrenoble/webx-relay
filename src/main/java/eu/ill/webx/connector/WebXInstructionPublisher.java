@@ -6,14 +6,14 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-public class WebXCommandPublisher {
+public class WebXInstructionPublisher {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebXCommandPublisher.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebXInstructionPublisher.class);
 
     private ZContext context;
     private ZMQ.Socket socket;
 
-    public WebXCommandPublisher() {
+    public WebXInstructionPublisher() {
     }
 
     public void connect(ZContext context, String webXServerAddress, int webXServerPort) {
@@ -22,7 +22,7 @@ public class WebXCommandPublisher {
             this.socket = this.context.createSocket(SocketType.PUSH);
             String fullAddress = "tcp://" + webXServerAddress + ":" + webXServerPort;
             socket.connect(fullAddress);
-            logger.info("WebX Command Publisher connected");
+            logger.info("WebX Instruction Publisher connected");
         }
     }
 
@@ -32,11 +32,11 @@ public class WebXCommandPublisher {
             this.socket = null;
 
             this.context = null;
-            logger.info("WebX Command Publisher disconnected");
+            logger.info("WebX Instruction Publisher disconnected");
         }
     }
 
-    public void sendCommandData(byte[] requestData) {
+    public void sendInstructionData(byte[] requestData) {
         this.socket.send(requestData, 0);
     }
 }

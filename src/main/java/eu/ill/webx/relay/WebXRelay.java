@@ -1,0 +1,132 @@
+package eu.ill.webx.relay;
+
+import eu.ill.webx.connector.WebXConnector;
+import eu.ill.webx.connector.WebXMessageListener;
+import eu.ill.webx.transport.instruction.WebXInstruction;
+import eu.ill.webx.transport.serializer.WebXDataSerializer;
+import org.eclipse.jetty.websocket.api.RemoteEndpoint;
+import org.eclipse.jetty.websocket.api.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.LinkedBlockingDeque;
+
+public class WebXRelay implements WebXMessageListener {
+
+    private static final Logger                      logger           = LoggerFactory.getLogger(WebXRelay.class);
+    private final        WebXConnector               connector;
+    private final        WebXDataSerializer          serializer;
+    private final        LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
+    private final        LinkedBlockingDeque<byte[]> messageQueue     = new LinkedBlockingDeque<>();
+
+    private Thread               webXListenerThread;
+    private Thread               clientInstructionThread;
+    private WebXDataCommunicator dataCommunicator;
+    private boolean              running = false;
+
+    private RemoteEndpoint remoteEndpoint;
+
+
+    public WebXRelay(Session session, WebXConnector connector) {
+        this.connector = connector;
+        this.serializer = connector.getSerializer();
+        if (session != null) {
+            this.remoteEndpoint = session.getRemote();
+            this.dataCommunicator = new WebXDataCommunicator(this.remoteEndpoint);
+        }
+    }
+
+    public Thread getWebXListenerThread() {
+        return webXListenerThread;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public synchronized void start() {
+        if (!running) {
+            running = true;
+
+            this.webXListenerThread = new Thread(this::webXListenerLoop);
+            this.webXListenerThread.start();
+
+            this.clientInstructionThread = new Thread(this::clientInstructionLoop);
+            this.clientInstructionThread.start();
+        }
+    }
+
+    public synchronized void stop() {
+        if (running) {
+            try {
+                running = false;
+                if (this.webXListenerThread != null) {
+                    this.webXListenerThread.interrupt();
+                    this.webXListenerThread.join();
+                    this.webXListenerThread = null;
+                }
+
+                if (this.clientInstructionThread != null) {
+                    this.clientInstructionThread.interrupt();
+                    this.clientInstructionThread.join();
+                    this.clientInstructionThread = null;
+                }
+
+            } catch (InterruptedException exception) {
+                logger.error("Stop of relay message listener and client instruction threads interrupted", exception);
+            }
+        }
+    }
+
+    @Override
+    public void onMessage(byte[] messageData) {
+        try {
+            this.messageQueue.put(messageData);
+
+        } catch (InterruptedException exception) {
+            logger.error("Interrupted when adding message to relay message queue");
+        }
+    }
+
+    public void queueInstruction(byte[] instructionData) {
+        try {
+            this.instructionQueue.put(instructionData);
+
+        } catch (InterruptedException exception) {
+            logger.error("Interrupted when adding instruction to instruction queue");
+        }
+    }
+
+    private void webXListenerLoop() {
+        while (this.running) {
+            try {
+                byte[] messageData = this.messageQueue.take();
+                this.dataCommunicator.sendData(messageData);
+
+            } catch (InterruptedException exception) {
+                logger.info("Relay message listener thread interrupted");
+            }
+        }
+    }
+
+    private void clientInstructionLoop() {
+        while (this.running) {
+            try {
+                byte[] instructionData = this.instructionQueue.take();
+                // Determine if the instruction is synchronous or not: has an id if it is synchronous
+                WebXInstruction instruction = this.serializer.deserializeInstruction(instructionData);
+
+                if (instruction.isSynchronous()) {
+                    byte[] responseData = this.connector.sendRequestData(instructionData);
+                    this.dataCommunicator.sendData(responseData);
+
+                } else {
+                    this.connector.getInstructionPublisher().sendInstructionData(instructionData);
+                }
+
+            } catch (InterruptedException exception) {
+                logger.info("Relay message listener thread interrupted");
+            }
+        }
+    }
+}

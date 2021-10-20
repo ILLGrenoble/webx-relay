@@ -1,13 +1,13 @@
 package eu.ill.webx.transport.message;
 
-public abstract class Message {
+public abstract class WebXMessage {
 
     private long commandId;
 
-    public Message() {
+    public WebXMessage() {
     }
 
-    public Message(long commandId) {
+    public WebXMessage(long commandId) {
         this.commandId = commandId;
     }
 

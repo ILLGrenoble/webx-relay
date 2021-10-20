@@ -1,12 +1,10 @@
 package eu.ill.webx.connector;
 
-import eu.ill.webx.transport.instruction.ConnectInstruction;
-import eu.ill.webx.transport.instruction.Instruction;
-import eu.ill.webx.transport.message.ConnectionMessage;
-import eu.ill.webx.transport.message.Message;
-import eu.ill.webx.transport.serializer.BinarySerializer;
-import eu.ill.webx.transport.serializer.JsonSerializer;
-import eu.ill.webx.transport.serializer.Serializer;
+import eu.ill.webx.transport.instruction.WebXConnectWebXInstruction;
+import eu.ill.webx.transport.instruction.WebXInstruction;
+import eu.ill.webx.transport.message.WebXConnectionMessage;
+import eu.ill.webx.transport.message.WebXMessage;
+import eu.ill.webx.transport.serializer.WebXDataSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -23,15 +21,15 @@ public class WebXConnector {
     private int webXPublisherPort;
     private int webXCollectorPort;
 
-    private Serializer serializer;
+    private WebXDataSerializer serializer;
 
-    private WebXMessageSubscriber messageSubscriber;
-    private WebXCommandPublisher commandPublisher;
+    private WebXMessageSubscriber    messageSubscriber;
+    private WebXInstructionPublisher instructionPublisher;
 
     public WebXConnector() {
     }
 
-    public Serializer getSerializer() {
+    public WebXDataSerializer getSerializer() {
         return serializer;
     }
 
@@ -39,8 +37,8 @@ public class WebXConnector {
         return messageSubscriber;
     }
 
-    public WebXCommandPublisher getCommandPublisher() {
-        return commandPublisher;
+    public WebXInstructionPublisher getInstructionPublisher() {
+        return instructionPublisher;
     }
 
     public void connect(String webXServerAddress, int webXServerPort) {
@@ -51,17 +49,9 @@ public class WebXConnector {
             this.socket = context.createSocket(SocketType.REQ);
             String fullAddress = "tcp://" + webXServerAddress + ":" + webXServerPort;
             socket.connect(fullAddress);
+            this.serializer = new WebXDataSerializer();
 
-            // Send connection request
-            String serializerType = this.sendCommRequest();
-            if (serializerType.equals("json")) {
-                this.serializer = new JsonSerializer();
-
-            } else if (serializerType.equals("binary")) {
-                this.serializer = new BinarySerializer();
-            }
-
-            ConnectionMessage connectionResponse = (ConnectionMessage) this.sendRequest(new ConnectInstruction());
+            WebXConnectionMessage connectionResponse = (WebXConnectionMessage) this.sendRequest(new WebXConnectWebXInstruction());
             if (connectionResponse != null) {
                 this.webXCollectorPort = connectionResponse.getCollectorPort();
                 this.webXPublisherPort = connectionResponse.getPublisherPort();
@@ -69,8 +59,8 @@ public class WebXConnector {
                 this.messageSubscriber = new WebXMessageSubscriber(this.serializer, this.context, this.webXServerAddress, this.webXPublisherPort);
                 this.messageSubscriber.start();
 
-                this.commandPublisher = new WebXCommandPublisher();
-                this.commandPublisher.connect(this.context, this.webXServerAddress, this.webXCollectorPort);
+                this.instructionPublisher = new WebXInstructionPublisher();
+                this.instructionPublisher.connect(this.context, this.webXServerAddress, this.webXCollectorPort);
 
                 logger.info("WebX Connector started");
             } else {
@@ -91,9 +81,9 @@ public class WebXConnector {
                 this.messageSubscriber = null;
             }
 
-            if (this.commandPublisher != null) {
-                this.commandPublisher.disconnect();
-                this.commandPublisher = null;
+            if (this.instructionPublisher != null) {
+                this.instructionPublisher.disconnect();
+                this.instructionPublisher = null;
             }
 
             this.context.destroy();
@@ -106,17 +96,9 @@ public class WebXConnector {
         return this.socket != null;
     }
 
-    public String sendCommRequest() {
-        this.socket.send("comm", 0);
 
-        byte[] responseData = socket.recv();
-        String serializerType = new String(responseData);
-
-        return serializerType;
-    }
-
-    public Message sendRequest(Instruction instruction) {
-        Message response = null;
+    public WebXMessage sendRequest(WebXInstruction instruction) {
+        WebXMessage response = null;
         byte[] requestData = serializer.serializeInstruction(instruction);
 
         if (requestData != null) {
@@ -132,8 +114,6 @@ public class WebXConnector {
     public byte[] sendRequestData(byte[] requestData) {
         this.socket.send(requestData, 0);
 
-        byte[] responseData = socket.recv(0);
-
-        return responseData;
+        return socket.recv(0);
     }
 }

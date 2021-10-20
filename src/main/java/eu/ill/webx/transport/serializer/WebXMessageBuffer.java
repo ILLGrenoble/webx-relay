@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
-public class BinaryBuffer {
+public class WebXMessageBuffer {
 
     private ByteBuffer buffer;
     private Header header;
@@ -13,7 +13,7 @@ public class BinaryBuffer {
     private int readOffset;
 
 
-    public BinaryBuffer(byte[] bytes) {
+    public WebXMessageBuffer(byte[] bytes) {
         this.buffer = ByteBuffer.wrap(bytes);
         this.buffer.order(LITTLE_ENDIAN);
         this.bufferLength = bytes.length;
@@ -40,7 +40,6 @@ public class BinaryBuffer {
     public String getString(int length) {
         return new String(this.buffer.array(), this.readOffset, length);
     }
-
 
     private int getNextWriteOffset(int sizeOfData) {
         // Ensure alignment

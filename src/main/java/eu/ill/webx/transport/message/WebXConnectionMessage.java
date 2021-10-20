@@ -1,14 +1,14 @@
 package eu.ill.webx.transport.message;
 
-public class ConnectionMessage extends Message {
+public class WebXConnectionMessage extends WebXMessage {
 
     private int publisherPort;
     private int collectorPort;
 
-    public ConnectionMessage() {
+    public WebXConnectionMessage() {
     }
 
-    public ConnectionMessage(long commandId) {
+    public WebXConnectionMessage(long commandId) {
         super(commandId);
     }
 

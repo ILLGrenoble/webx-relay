@@ -1,5 +1,5 @@
 package eu.ill.webx.transport.instruction;
 
-public class InstructionType {
+public class WebXInstructionType {
     public static int CONNECT = 1;
 }

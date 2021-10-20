@@ -3,16 +3,16 @@ package eu.ill.webx.transport.instruction;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Instruction {
+public class WebXInstruction {
 
     private long id;
     private int type;
     private boolean synchronous;
 
-    public Instruction() {
+    public WebXInstruction() {
     }
 
-    public Instruction(int type) {
+    public WebXInstruction(int type) {
         this.type = type;
     }
 

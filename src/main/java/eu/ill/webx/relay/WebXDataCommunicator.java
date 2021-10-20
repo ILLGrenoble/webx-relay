@@ -7,25 +7,24 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public class BinaryEndpointCommunicator implements EndpointCommunicator {
+public class WebXDataCommunicator {
 
-    private static final Logger logger = LoggerFactory.getLogger(BinaryEndpointCommunicator.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebXDataCommunicator.class);
 
-    private RemoteEndpoint remoteEndpoint;
+    private final RemoteEndpoint remoteEndpoint;
 
-    public BinaryEndpointCommunicator(RemoteEndpoint remoteEndpoint) {
+    public WebXDataCommunicator(RemoteEndpoint remoteEndpoint) {
         this.remoteEndpoint = remoteEndpoint;
     }
 
-    @Override
     public synchronized void sendData(byte[] data) {
         try {
             if (this.remoteEndpoint != null) {
                 this.remoteEndpoint.sendBytes(ByteBuffer.wrap(data));
             }
 
-        } catch (IOException e) {
-            logger.error("Failed to write binary data to web socket");
+        } catch (IOException exception) {
+            logger.error("Failed to write binary data to web socket", exception);
         }
     }
 }

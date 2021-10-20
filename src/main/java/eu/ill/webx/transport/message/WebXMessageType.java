@@ -1,6 +1,6 @@
 package eu.ill.webx.transport.message;
 
-public class MessageType {
+public class WebXMessageType {
     public static int CONNECTION = 1;
 }
 
