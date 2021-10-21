@@ -17,7 +17,6 @@
         <jcommander.version>1.72</jcommander.version>
         <commons-io.version>2.6</commons-io.version>
         <jeromq.version>0.5.2</jeromq.version>
-        <jackson.version>2.9.8</jackson.version>
         <junit.version>4.12</junit.version>
     </properties>
 
@@ -66,21 +65,6 @@
             <groupId>org.zeromq</groupId>
             <artifactId>jeromq</artifactId>
             <version>${jeromq.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

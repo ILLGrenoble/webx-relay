@@ -1,10 +1,5 @@
 package eu.ill.webx.connector;
 
-import eu.ill.webx.transport.instruction.WebXConnectWebXInstruction;
-import eu.ill.webx.transport.instruction.WebXInstruction;
-import eu.ill.webx.transport.message.WebXConnectionMessage;
-import eu.ill.webx.transport.message.WebXMessage;
-import eu.ill.webx.transport.serializer.WebXDataSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -17,11 +12,7 @@ public class WebXConnector {
 
     private ZContext context;
     private ZMQ.Socket socket;
-    private String webXServerAddress;
-    private int webXPublisherPort;
-    private int webXCollectorPort;
 
-    private WebXDataSerializer serializer;
 
     private WebXMessageSubscriber    messageSubscriber;
     private WebXInstructionPublisher instructionPublisher;
@@ -29,9 +20,6 @@ public class WebXConnector {
     public WebXConnector() {
     }
 
-    public WebXDataSerializer getSerializer() {
-        return serializer;
-    }
 
     public WebXMessageSubscriber getMessageSubscriber() {
         return messageSubscriber;
@@ -42,32 +30,26 @@ public class WebXConnector {
     }
 
     public void connect(String webXServerAddress, int webXServerPort) {
-        this.webXServerAddress = webXServerAddress;
 
         if (this.context == null) {
             this.context = new ZContext();
             this.socket = context.createSocket(SocketType.REQ);
             String fullAddress = "tcp://" + webXServerAddress + ":" + webXServerPort;
             socket.connect(fullAddress);
-            this.serializer = new WebXDataSerializer();
+            String commResponse = this.sendCommRequest();
+            String[] ports = commResponse.split(",");
 
-            WebXConnectionMessage connectionResponse = (WebXConnectionMessage) this.sendRequest(new WebXConnectWebXInstruction());
-            if (connectionResponse != null) {
-                this.webXCollectorPort = connectionResponse.getCollectorPort();
-                this.webXPublisherPort = connectionResponse.getPublisherPort();
+            final int publisherPort = Integer.parseInt(ports[0]);
+            final int collectorPort = Integer.parseInt(ports[1]);
 
-                this.messageSubscriber = new WebXMessageSubscriber(this.serializer, this.context, this.webXServerAddress, this.webXPublisherPort);
-                this.messageSubscriber.start();
+            this.messageSubscriber = new WebXMessageSubscriber(this.context, webXServerAddress, publisherPort);
+            this.messageSubscriber.start();
 
-                this.instructionPublisher = new WebXInstructionPublisher();
-                this.instructionPublisher.connect(this.context, this.webXServerAddress, this.webXCollectorPort);
+            this.instructionPublisher = new WebXInstructionPublisher();
+            this.instructionPublisher.connect(this.context, webXServerAddress, collectorPort);
 
-                logger.info("WebX Connector started");
-            } else {
-                logger.error("Unable to establish connection to WebX server");
+            logger.info("WebX Connector started");
 
-                this.disconnect();
-            }
         }
     }
 
@@ -92,23 +74,9 @@ public class WebXConnector {
         }
     }
 
-    public boolean isConnected() {
-        return this.socket != null;
-    }
-
-
-    public WebXMessage sendRequest(WebXInstruction instruction) {
-        WebXMessage response = null;
-        byte[] requestData = serializer.serializeInstruction(instruction);
-
-        if (requestData != null) {
-            this.socket.send(requestData, 0);
-
-            byte[] responseData = socket.recv(0);
-            response = serializer.deserializeMessage(responseData);
-        }
-
-        return response;
+    public String sendCommRequest() {
+        this.socket.send("comm", 0);
+        return new String(socket.recv());
     }
 
     public byte[] sendRequestData(byte[] requestData) {
@@ -116,4 +84,5 @@ public class WebXConnector {
 
         return socket.recv(0);
     }
+
 }

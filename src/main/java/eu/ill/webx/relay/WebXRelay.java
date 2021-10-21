@@ -2,20 +2,20 @@ package eu.ill.webx.relay;
 
 import eu.ill.webx.connector.WebXConnector;
 import eu.ill.webx.connector.WebXMessageListener;
-import eu.ill.webx.transport.instruction.WebXInstruction;
-import eu.ill.webx.transport.serializer.WebXDataSerializer;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingDeque;
+
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 public class WebXRelay implements WebXMessageListener {
 
     private static final Logger                      logger           = LoggerFactory.getLogger(WebXRelay.class);
     private final        WebXConnector               connector;
-    private final        WebXDataSerializer          serializer;
     private final        LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
     private final        LinkedBlockingDeque<byte[]> messageQueue     = new LinkedBlockingDeque<>();
 
@@ -29,7 +29,6 @@ public class WebXRelay implements WebXMessageListener {
 
     public WebXRelay(Session session, WebXConnector connector) {
         this.connector = connector;
-        this.serializer = connector.getSerializer();
         if (session != null) {
             this.remoteEndpoint = session.getRemote();
             this.dataCommunicator = new WebXDataCommunicator(this.remoteEndpoint);
@@ -112,11 +111,9 @@ public class WebXRelay implements WebXMessageListener {
     private void clientInstructionLoop() {
         while (this.running) {
             try {
-                byte[] instructionData = this.instructionQueue.take();
+                final byte[] instructionData = this.instructionQueue.take();
                 // Determine if the instruction is synchronous or not: has an id if it is synchronous
-                WebXInstruction instruction = this.serializer.deserializeInstruction(instructionData);
-
-                if (instruction.isSynchronous()) {
+                if (isSynchronousInstruction(instructionData)) {
                     byte[] responseData = this.connector.sendRequestData(instructionData);
                     this.dataCommunicator.sendData(responseData);
 
@@ -128,5 +125,12 @@ public class WebXRelay implements WebXMessageListener {
                 logger.info("Relay message listener thread interrupted");
             }
         }
+    }
+
+    private boolean isSynchronousInstruction(byte[] data) {
+        final ByteBuffer buffer = ByteBuffer.wrap(data);
+        buffer.order(LITTLE_ENDIAN);
+        int details = buffer.asIntBuffer().get();
+        return (details & 0x80000000) != 0;
     }
 }

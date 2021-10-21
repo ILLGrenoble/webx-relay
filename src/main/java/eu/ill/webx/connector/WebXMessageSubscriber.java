@@ -1,6 +1,5 @@
 package eu.ill.webx.connector;
 
-import eu.ill.webx.transport.serializer.WebXDataSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -18,15 +17,13 @@ public class WebXMessageSubscriber {
     private final String   webXServerAddress;
     private final int      webXServerPort;
 
-    private WebXDataSerializer serializer;
     private ZMQ.Socket         socket;
     private Thread         thread;
     private boolean        running = false;
 
     private final List<WebXMessageListener> listeners = new ArrayList<>();
 
-    public WebXMessageSubscriber(WebXDataSerializer serializer, ZContext context, String webXServerAddress, int webXServerPort) {
-        this.serializer = serializer;
+    public WebXMessageSubscriber(ZContext context, String webXServerAddress, int webXServerPort) {
         this.context = context;
         this.webXServerAddress = webXServerAddress;
         this.webXServerPort = webXServerPort;
@@ -73,10 +70,6 @@ public class WebXMessageSubscriber {
         while (this.running) {
             try {
                 byte[] messageData = socket.recv();
-
-                // Debug message if needed
-//				Message message = serializer.deserializeMessage(messageData);
-
                 this.notifyListeners(messageData);
 
             } catch (org.zeromq.ZMQException e) {
