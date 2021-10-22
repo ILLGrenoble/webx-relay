@@ -40,7 +40,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
             return;
         }
 
-        logger.debug("Received instruction of length: {}", length);
+//        logger.debug("Received instruction of length: {}", length);
         this.relay.queueInstruction(payload);
     }
 
