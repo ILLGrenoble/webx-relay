@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
@@ -97,10 +98,23 @@ public class WebXRelay implements WebXMessageListener {
     }
 
     private void webXListenerLoop() {
+        // Create a POLL message (messageType 8)
+        ByteBuffer pollMessageBuffer = ByteBuffer.allocate(16).order(LITTLE_ENDIAN)
+            .putInt(8)  // messageType
+            .putInt(0)  // messageId
+            .putInt(16) // messageLength
+            .putInt(0);  // padding
+
         while (this.running) {
             try {
-                byte[] messageData = this.messageQueue.take();
-                this.dataCommunicator.sendData(messageData);
+                byte[] messageData = this.messageQueue.poll(5000, TimeUnit.MILLISECONDS);
+                if (messageData != null) {
+                    this.dataCommunicator.sendData(messageData);
+
+                } else {
+                    // Keep socket alive
+                    this.dataCommunicator.sendData(pollMessageBuffer.array());
+                }
 
             } catch (InterruptedException exception) {
                 logger.info("Relay message listener thread interrupted");
