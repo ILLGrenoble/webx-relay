@@ -126,25 +126,11 @@ public class WebXRelay implements WebXMessageListener {
         while (this.running) {
             try {
                 final byte[] instructionData = this.instructionQueue.take();
-                // Determine if the instruction is synchronous or not: has an id if it is synchronous
-                if (isSynchronousInstruction(instructionData)) {
-                    byte[] responseData = this.connector.sendRequestData(instructionData);
-                    this.dataCommunicator.sendData(responseData);
-
-                } else {
-                    this.connector.getInstructionPublisher().sendInstructionData(instructionData);
-                }
+                this.connector.getInstructionPublisher().sendInstructionData(instructionData);
 
             } catch (InterruptedException exception) {
                 logger.info("Relay message listener thread interrupted");
             }
         }
-    }
-
-    private boolean isSynchronousInstruction(byte[] data) {
-        final ByteBuffer buffer = ByteBuffer.wrap(data);
-        buffer.order(LITTLE_ENDIAN);
-        int details = buffer.asIntBuffer().get();
-        return (details & 0x80000000) != 0;
     }
 }
