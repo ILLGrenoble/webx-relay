@@ -23,9 +23,6 @@ public class WebSocketTunnelListener implements WebSocketListener {
         logger.debug("WebSocket connection, creating relay...");
         this.relay = new WebXRelay(session, connector);
         this.relay.start();
-
-        // Add relay as a listener to webx messages
-        this.connector.getMessageSubscriber().addListener(relay);
     }
 
     @Override
@@ -40,16 +37,12 @@ public class WebSocketTunnelListener implements WebSocketListener {
             return;
         }
 
-//        logger.debug("Received instruction of length: {}", length);
         this.relay.queueInstruction(payload);
     }
 
     @Override
     public void onWebSocketError(Throwable throwable) {
         logger.debug("WebSocket tunnel closing due to error", throwable);
-
-        // Remove relay from webx subscriber
-        this.connector.getMessageSubscriber().removeListener(relay);
 
         this.relay.stop();
         this.relay = null;

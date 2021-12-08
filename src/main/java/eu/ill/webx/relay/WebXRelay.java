@@ -15,15 +15,15 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 public class WebXRelay implements WebXMessageListener {
 
-    private static final Logger                      logger           = LoggerFactory.getLogger(WebXRelay.class);
-    private final        WebXConnector               connector;
-    private final        LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
-    private final        LinkedBlockingDeque<byte[]> messageQueue     = new LinkedBlockingDeque<>();
+    private static final Logger logger = LoggerFactory.getLogger(WebXRelay.class);
+    private final WebXConnector connector;
+    private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
+    private final LinkedBlockingDeque<byte[]> messageQueue = new LinkedBlockingDeque<>();
 
-    private Thread               webXListenerThread;
-    private Thread               clientInstructionThread;
+    private Thread webXListenerThread;
+    private Thread clientInstructionThread;
     private WebXDataCommunicator dataCommunicator;
-    private boolean              running = false;
+    private boolean running = false;
 
     private RemoteEndpoint remoteEndpoint;
 
@@ -48,6 +48,13 @@ public class WebXRelay implements WebXMessageListener {
         if (!running) {
             running = true;
 
+            // Add relay as a listener to webx messages
+            this.connector.getMessageSubscriber().addListener(this);
+
+            // Start WebX session via the router and get a session ID
+            String sessionId = this.connector.getSessionChannel().startSession("username", "password");
+            logger.info("Got session Id \"{}\"", sessionId);
+
             this.webXListenerThread = new Thread(this::webXListenerLoop);
             this.webXListenerThread.start();
 
@@ -60,6 +67,10 @@ public class WebXRelay implements WebXMessageListener {
         if (running) {
             try {
                 running = false;
+
+                // Remove relay from webx subscriber
+                this.connector.getMessageSubscriber().removeListener(this);
+
                 if (this.webXListenerThread != null) {
                     this.webXListenerThread.interrupt();
                     this.webXListenerThread.join();
@@ -100,10 +111,10 @@ public class WebXRelay implements WebXMessageListener {
     private void webXListenerLoop() {
         // Create a POLL message (messageType 8)
         ByteBuffer pollMessageBuffer = ByteBuffer.allocate(16).order(LITTLE_ENDIAN)
-            .putInt(8)  // messageType
-            .putInt(0)  // messageId
-            .putInt(16) // messageLength
-            .putInt(0);  // padding
+                .putInt(8)  // messageType
+                .putInt(0)  // messageId
+                .putInt(16) // messageLength
+                .putInt(0);  // padding
 
         while (this.running) {
             try {

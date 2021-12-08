@@ -16,12 +16,11 @@ public class WebXInstructionPublisher {
     public WebXInstructionPublisher() {
     }
 
-    public void connect(ZContext context, String webXServerAddress, int webXServerPort) {
+    public void connect(ZContext context, String address) {
         if (this.context == null) {
             this.context = context;
             this.socket = this.context.createSocket(SocketType.PUB);
-            String fullAddress = "tcp://" + webXServerAddress + ":" + webXServerPort;
-            socket.connect(fullAddress);
+            socket.connect(address);
             logger.info("WebX Instruction Publisher connected");
         }
     }

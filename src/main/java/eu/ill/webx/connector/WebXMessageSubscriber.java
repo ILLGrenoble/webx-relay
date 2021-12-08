@@ -13,32 +13,21 @@ public class WebXMessageSubscriber {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXMessageSubscriber.class);
 
-    private final ZContext context;
-    private final String   webXServerAddress;
-    private final int      webXServerPort;
+    private ZMQ.Socket socket;
 
-    private ZMQ.Socket         socket;
-    private Thread         thread;
-    private boolean        running = false;
+    private Thread thread;
+    private boolean running = false;
 
     private final List<WebXMessageListener> listeners = new ArrayList<>();
 
-    public WebXMessageSubscriber(ZContext context, String webXServerAddress, int webXServerPort) {
-        this.context = context;
-        this.webXServerAddress = webXServerAddress;
-        this.webXServerPort = webXServerPort;
+    public WebXMessageSubscriber() {
     }
 
-    public boolean isRunning() {
-        return running;
-    }
-
-    public synchronized void start() {
+    public synchronized void start(ZContext context, String address) {
         if (!running) {
             this.socket = context.createSocket(SocketType.SUB);
             this.socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
-            String fullAddress = "tcp://" + webXServerAddress + ":" + webXServerPort;
-            socket.connect(fullAddress);
+            socket.connect(address);
 
             running = true;
 
@@ -57,6 +46,8 @@ public class WebXMessageSubscriber {
                 this.thread.interrupt();
                 this.thread.join();
                 this.thread = null;
+
+                this.socket.close();
 
                 logger.info("WebX Message Subscriber stopped");
 

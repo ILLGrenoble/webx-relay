@@ -13,9 +13,9 @@ public class WebXConnector {
     private ZContext context;
     private ZMQ.Socket socket;
 
-
-    private WebXMessageSubscriber    messageSubscriber;
+    private WebXMessageSubscriber messageSubscriber;
     private WebXInstructionPublisher instructionPublisher;
+    private WebXSessionChannel sessionChannel;
 
     public WebXConnector() {
     }
@@ -29,26 +29,43 @@ public class WebXConnector {
         return instructionPublisher;
     }
 
+    public WebXSessionChannel getSessionChannel() {
+        return sessionChannel;
+    }
+
     public void connect(String webXServerAddress, int webXServerPort) {
 
         if (this.context == null) {
             this.context = new ZContext();
             this.socket = context.createSocket(SocketType.REQ);
             String fullAddress = "tcp://" + webXServerAddress + ":" + webXServerPort;
+
             socket.connect(fullAddress);
-            String commResponse = this.sendCommRequest();
-            String[] ports = commResponse.split(",");
 
-            final int publisherPort = Integer.parseInt(ports[0]);
-            final int collectorPort = Integer.parseInt(ports[1]);
+            try {
+                String commResponse = this.sendCommRequest();
+                String[] data = commResponse.split(",");
 
-            this.messageSubscriber = new WebXMessageSubscriber(this.context, webXServerAddress, publisherPort);
-            this.messageSubscriber.start();
+                final int publisherPort = Integer.parseInt(data[0]);
+                final int collectorPort = Integer.parseInt(data[1]);
+                final int sessionPort = Integer.parseInt(data[2]);
+                final String publicKey = data[3];
 
-            this.instructionPublisher = new WebXInstructionPublisher();
-            this.instructionPublisher.connect(this.context, webXServerAddress, collectorPort);
+                this.messageSubscriber = new WebXMessageSubscriber();
+                this.messageSubscriber.start(this.context, "tcp://" + webXServerAddress + ":" + publisherPort);
 
-            logger.info("WebX Connector started");
+                this.instructionPublisher = new WebXInstructionPublisher();
+                this.instructionPublisher.connect(this.context, "tcp://" + webXServerAddress + ":" + collectorPort);
+
+                this.sessionChannel = new WebXSessionChannel();
+                this.sessionChannel.connect(this.context, "tcp://" + webXServerAddress + ":" + sessionPort, publicKey);
+
+                logger.info("WebX Connector started");
+
+            } catch (Exception e) {
+                logger.error("Failed to connect: {}", e.getMessage());
+                System.exit(1);
+            }
 
         }
     }
