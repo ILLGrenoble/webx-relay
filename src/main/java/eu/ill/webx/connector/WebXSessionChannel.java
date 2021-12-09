@@ -1,10 +1,12 @@
 package eu.ill.webx.connector;
 
+import eu.ill.webx.model.SocketResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
 import zmq.util.Z85;
 
 public class WebXSessionChannel {
@@ -21,6 +23,8 @@ public class WebXSessionChannel {
         if (this.context == null) {
             this.context = context;
             this.socket = this.context.createSocket(SocketType.REQ);
+            this.socket.setReceiveTimeOut(15000);
+            this.socket.setLinger(0);
 
             ZMQ.Curve.KeyPair keypair = ZMQ.Curve.generateKeyPair();
             this.socket.setCurveServerKey(Z85.decode(serverPublicKey));
@@ -42,21 +46,25 @@ public class WebXSessionChannel {
         }
     }
 
-    public byte[] sendRequest(String requestData) {
-        this.socket.send(requestData, 0);
+    public synchronized SocketResponse sendRequest(String request) throws DisconnectedException {
+        try {
+            if (this.socket != null) {
+                this.socket.send(request);
+                return new SocketResponse(socket.recv());
 
-        return socket.recv(0);
+            } else {
+                throw new DisconnectedException();
+            }
+
+        } catch (ZMQException e) {
+            logger.error("Caught ZMQ Exception: {}", e.getMessage());
+            throw new DisconnectedException();
+        }
     }
 
-    public byte[] sendRequest(byte[] requestData) {
-        this.socket.send(requestData, 0);
-
-        return socket.recv(0);
-    }
-
-    public String startSession(String username, String password) {
+    public synchronized String startSession(String username, String password) throws DisconnectedException {
         String request = "create," + username + "," + password;
-        String sessionId = new String(this.sendRequest(request));
+        String sessionId = this.sendRequest(request).toString();
 
         return sessionId;
     }

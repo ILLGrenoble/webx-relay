@@ -1,6 +1,6 @@
 package eu.ill.webx.ws;
 
-import eu.ill.webx.connector.WebXConnector;
+import eu.ill.webx.relay.WebXClient;
 import eu.ill.webx.relay.WebXRelay;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
@@ -10,19 +10,26 @@ import org.slf4j.LoggerFactory;
 public class WebSocketTunnelListener implements WebSocketListener {
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketTunnelListener.class);
-    private final WebXConnector connector;
+    private final WebXRelay relay;
 
-    private WebXRelay relay;
+    private WebXClient client;
 
-    public WebSocketTunnelListener(final WebXConnector connector) {
-        this.connector = connector;
+    public WebSocketTunnelListener(final WebXRelay relay) {
+        this.relay = relay;
     }
 
     @Override
     public void onWebSocketConnect(final Session session) {
-        logger.debug("WebSocket connection, creating relay...");
-        this.relay = new WebXRelay(session, connector);
-        this.relay.start();
+        logger.debug("WebSocket connection, creating client...");
+        this.client = new WebXClient(session);
+
+        if (this.relay.addClient(this.client)) {
+            logger.info("... client created.");
+
+        } else {
+            logger.warn("... not connected to server. Client not created.");
+            session.close();
+        }
     }
 
     @Override
@@ -32,31 +39,34 @@ public class WebSocketTunnelListener implements WebSocketListener {
 
     @Override
     public void onWebSocketBinary(byte[] payload, int offset, int length) {
-        if (this.relay == null) {
-            logger.error("Received instruction on closed relay");
+        if (this.client == null) {
+            logger.error("Received instruction on closed client");
             return;
         }
 
-        this.relay.queueInstruction(payload);
+        this.client.queueInstruction(payload);
     }
 
     @Override
     public void onWebSocketError(Throwable throwable) {
         logger.debug("WebSocket tunnel closing due to error", throwable);
 
-        this.relay.stop();
-        this.relay = null;
+        this.disconnect();
     }
 
     @Override
     public void onWebSocketClose(int statusCode, String reason) {
-        logger.debug("WebSocket closing with reason: {}", reason);
+        logger.debug("WebSocket closing{}", reason != null ? " with reason " + reason : "");
 
-        // Remove relay from webx subscriber
-        this.connector.getMessageSubscriber().removeListener(relay);
+        this.disconnect();
+    }
 
-        this.relay.stop();
-        this.relay = null;
+    private void disconnect() {
+        if (this.client != null) {
+            this.relay.removeClient(client);
+
+            this.client = null;
+        }
     }
 
 }

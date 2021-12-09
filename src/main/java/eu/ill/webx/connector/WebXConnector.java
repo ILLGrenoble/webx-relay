@@ -1,10 +1,12 @@
 package eu.ill.webx.connector;
 
+import eu.ill.webx.model.SocketResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
 
 public class WebXConnector {
 
@@ -12,6 +14,7 @@ public class WebXConnector {
 
     private ZContext context;
     private ZMQ.Socket socket;
+    private boolean connected;
 
     private WebXMessageSubscriber messageSubscriber;
     private WebXInstructionPublisher instructionPublisher;
@@ -33,17 +36,24 @@ public class WebXConnector {
         return sessionChannel;
     }
 
-    public void connect(String webXServerAddress, int webXServerPort) {
+    public boolean isConnected() {
+        return this.connected;
+    }
+
+    public void connect(String webXServerAddress, int webXServerPort) throws DisconnectedException {
 
         if (this.context == null) {
+            this.connected = false;
             this.context = new ZContext();
             this.socket = context.createSocket(SocketType.REQ);
+            this.socket.setLinger(0);
+            this.socket.setReceiveTimeOut(15000);
             String fullAddress = "tcp://" + webXServerAddress + ":" + webXServerPort;
 
-            socket.connect(fullAddress);
+            this.socket.connect(fullAddress);
 
             try {
-                String commResponse = this.sendCommRequest();
+                String commResponse = this.sendRequest("comm").toString();
                 String[] data = commResponse.split(",");
 
                 final int publisherPort = Integer.parseInt(data[0]);
@@ -60,11 +70,16 @@ public class WebXConnector {
                 this.sessionChannel = new WebXSessionChannel();
                 this.sessionChannel.connect(this.context, "tcp://" + webXServerAddress + ":" + sessionPort, publicKey);
 
-                logger.info("WebX Connector started");
+                logger.info("WebX Connector connected");
+                this.connected = true;
+
+            } catch (DisconnectedException e) {
+                this.disconnect();
+                throw e;
 
             } catch (Exception e) {
-                logger.error("Failed to connect: {}", e.getMessage());
-                System.exit(1);
+                this.disconnect();
+                throw new DisconnectedException();
             }
 
         }
@@ -85,21 +100,34 @@ public class WebXConnector {
                 this.instructionPublisher = null;
             }
 
+            if (this.sessionChannel != null) {
+                this.sessionChannel.disconnect();
+                this.sessionChannel = null;
+            }
+
+            if (this.connected) {
+                logger.info("WebX Connector disconnected");
+                this.connected = false;
+            }
+
             this.context.destroy();
             this.context = null;
-            logger.info("WebX Connector stopped");
         }
     }
 
-    public String sendCommRequest() {
-        this.socket.send("comm", 0);
-        return new String(socket.recv());
+    public synchronized SocketResponse sendRequest(String request) throws DisconnectedException {
+        try {
+            if (this.socket != null) {
+                this.socket.send(request);
+                return new SocketResponse(socket.recv());
+
+            } else {
+                throw new DisconnectedException();
+            }
+
+        } catch (ZMQException e) {
+            logger.error("Caught ZMQ Exception: {}", e.getMessage());
+            throw new DisconnectedException();
+        }
     }
-
-    public byte[] sendRequestData(byte[] requestData) {
-        this.socket.send(requestData, 0);
-
-        return socket.recv(0);
-    }
-
 }

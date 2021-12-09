@@ -1,16 +1,16 @@
 package eu.ill.webx;
 
 import eu.ill.webx.connector.WebXConnector;
-import eu.ill.webx.relay.WebXRelay;
+import eu.ill.webx.relay.WebXClient;
 
 public class TestConnector {
 
-    public static void main(String args[]) {
+    public static void main(String args[]) throws Exception {
         WebXConnector connector = new WebXConnector();
         connector.connect("dssdev2.ill.fr", 5555);
 
-        WebXRelay relay = new WebXRelay(null, connector);
-        relay.start();
+        WebXClient relay = new WebXClient(null);
+        relay.start(connector);
 
 //        connector.getMessageSubscriber().addListener(messageData -> {
 //            System.out.println("Received message of length " + messageData.length);

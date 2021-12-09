@@ -20,7 +20,8 @@ public class WebXInstructionPublisher {
         if (this.context == null) {
             this.context = context;
             this.socket = this.context.createSocket(SocketType.PUB);
-            socket.connect(address);
+            this.socket.setLinger(0);
+            this.socket.connect(address);
             logger.info("WebX Instruction Publisher connected");
         }
     }

@@ -1,13 +1,13 @@
-package eu.ill.webx.connector;
+package eu.ill.webx;
 
-public class WebXConnectorConfiguration {
+public class Configuration {
 
 
     private String webXHost;
 
     private Integer webXPort;
 
-    public WebXConnectorConfiguration(String webXHost, Integer webXPort) {
+    public Configuration(String webXHost, Integer webXPort) {
         this.webXHost = webXHost;
         this.webXPort = webXPort;
     }

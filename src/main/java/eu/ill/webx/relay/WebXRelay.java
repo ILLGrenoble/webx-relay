@@ -1,147 +1,102 @@
 package eu.ill.webx.relay;
 
+import eu.ill.webx.connector.DisconnectedException;
 import eu.ill.webx.connector.WebXConnector;
-import eu.ill.webx.connector.WebXMessageListener;
-import org.eclipse.jetty.websocket.api.RemoteEndpoint;
-import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.ByteBuffer;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 
-import static java.nio.ByteOrder.LITTLE_ENDIAN;
-
-public class WebXRelay implements WebXMessageListener {
+public class WebXRelay {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXRelay.class);
+
     private final WebXConnector connector;
-    private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
-    private final LinkedBlockingDeque<byte[]> messageQueue = new LinkedBlockingDeque<>();
 
-    private Thread webXListenerThread;
-    private Thread clientInstructionThread;
-    private WebXDataCommunicator dataCommunicator;
-    private boolean running = false;
+    private final String webXServerAddress;
+    private final int webXServerPort;
 
-    private RemoteEndpoint remoteEndpoint;
+    // Todo: change to map when we have xsession IDs
+    private final List<WebXClient> clients = new ArrayList();
+
+    private Thread thread;
+
+    public WebXRelay(String webXServerAddress, int webXServerPort) {
+        this.webXServerAddress = webXServerAddress;
+        this.webXServerPort = webXServerPort;
+
+        this.connector = new WebXConnector();
+
+        // Todo: make the main filtering of messages from the server occur here: redirect to correct clients
+    }
 
 
-    public WebXRelay(Session session, WebXConnector connector) {
-        this.connector = connector;
-        if (session != null) {
-            this.remoteEndpoint = session.getRemote();
-            this.dataCommunicator = new WebXDataCommunicator(this.remoteEndpoint);
+    public WebXConnector getConnector() {
+        return connector;
+    }
+
+    public void run() {
+        // Start connection checker
+        this.thread = new Thread(this::connectionCheck);
+        this.thread.start();
+    }
+
+    public synchronized boolean addClient(WebXClient client) {
+        if (this.connector.isConnected()) {
+            this.clients.add(client);
+
+            return client.start(this.connector);
         }
+
+        return false;
     }
 
-    public Thread getWebXListenerThread() {
-        return webXListenerThread;
+    public synchronized void removeClient(WebXClient client) {
+        client.stop();
+        this.clients.remove(client);
     }
 
-    public boolean isRunning() {
-        return running;
-    }
+    private void connectionCheck() {
+        boolean running = true;
+        while (running) {
+            if (this.connector.isConnected()) {
+                try {
+                    // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
+                    this.connector.getSessionChannel().sendRequest("ping");
 
-    public synchronized void start() {
-        if (!running) {
-            running = true;
+                } catch (DisconnectedException e) {
+                    logger.error("Failed to get response from connector ping");
 
-            // Add relay as a listener to webx messages
-            this.connector.getMessageSubscriber().addListener(this);
+                    this.connector.disconnect();
+                    this.disconnectClients();
+                }
 
-            // Start WebX session via the router and get a session ID
-            String sessionId = this.connector.getSessionChannel().startSession("username", "password");
-            logger.info("Got session Id \"{}\"", sessionId);
+            } else {
+                try {
+                    logger.info("Connecting to WebX server...");
+                    this.connector.connect(this.webXServerAddress, this.webXServerPort);
+                    logger.info("... connected");
 
-            this.webXListenerThread = new Thread(this::webXListenerLoop);
-            this.webXListenerThread.start();
+                } catch (DisconnectedException e) {
+                    // Failed to connect again
+                }
+            }
 
-            this.clientInstructionThread = new Thread(this::clientInstructionLoop);
-            this.clientInstructionThread.start();
-        }
-    }
-
-    public synchronized void stop() {
-        if (running) {
             try {
-                running = false;
+                Thread.sleep(1000);
 
-                // Remove relay from webx subscriber
-                this.connector.getMessageSubscriber().removeListener(this);
-
-                if (this.webXListenerThread != null) {
-                    this.webXListenerThread.interrupt();
-                    this.webXListenerThread.join();
-                    this.webXListenerThread = null;
-                }
-
-                if (this.clientInstructionThread != null) {
-                    this.clientInstructionThread.interrupt();
-                    this.clientInstructionThread.join();
-                    this.clientInstructionThread = null;
-                }
-
-            } catch (InterruptedException exception) {
-                logger.error("Stop of relay message listener and client instruction threads interrupted", exception);
+            } catch (InterruptedException e) {
+                logger.warn("WebXRelay sleep connection check sleep interrupted");
             }
         }
     }
 
-    @Override
-    public void onMessage(byte[] messageData) {
-        try {
-            this.messageQueue.put(messageData);
-
-        } catch (InterruptedException exception) {
-            logger.error("Interrupted when adding message to relay message queue");
+    private void disconnectClients() {
+        for (WebXClient client : clients) {
+            client.getSession().close();
         }
-    }
 
-    public void queueInstruction(byte[] instructionData) {
-        try {
-            this.instructionQueue.put(instructionData);
-
-        } catch (InterruptedException exception) {
-            logger.error("Interrupted when adding instruction to instruction queue");
-        }
-    }
-
-    private void webXListenerLoop() {
-        // Create a POLL message (messageType 8)
-        ByteBuffer pollMessageBuffer = ByteBuffer.allocate(16).order(LITTLE_ENDIAN)
-                .putInt(8)  // messageType
-                .putInt(0)  // messageId
-                .putInt(16) // messageLength
-                .putInt(0);  // padding
-
-        while (this.running) {
-            try {
-                byte[] messageData = this.messageQueue.poll(5000, TimeUnit.MILLISECONDS);
-                if (messageData != null) {
-                    this.dataCommunicator.sendData(messageData);
-
-                } else {
-                    // Keep socket alive
-                    this.dataCommunicator.sendData(pollMessageBuffer.array());
-                }
-
-            } catch (InterruptedException exception) {
-                logger.info("Relay message listener thread interrupted");
-            }
-        }
-    }
-
-    private void clientInstructionLoop() {
-        while (this.running) {
-            try {
-                final byte[] instructionData = this.instructionQueue.take();
-                this.connector.getInstructionPublisher().sendInstructionData(instructionData);
-
-            } catch (InterruptedException exception) {
-                logger.info("Relay message listener thread interrupted");
-            }
-        }
+        logger.info("Disconnected all clients");
     }
 }

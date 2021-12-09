@@ -26,8 +26,9 @@ public class WebXMessageSubscriber {
     public synchronized void start(ZContext context, String address) {
         if (!running) {
             this.socket = context.createSocket(SocketType.SUB);
+            this.socket.setLinger(0);
             this.socket.subscribe(ZMQ.SUBSCRIPTION_ALL);
-            socket.connect(address);
+            this.socket.connect(address);
 
             running = true;
 
@@ -49,7 +50,7 @@ public class WebXMessageSubscriber {
 
                 this.socket.close();
 
-                logger.info("WebX Message Subscriber stopped");
+                logger.info("WebX Message Subscriber disconnected");
 
             } catch (InterruptedException exception) {
                 logger.error("Stop of WebX Subscriber thread interrupted");
@@ -64,7 +65,9 @@ public class WebXMessageSubscriber {
                 this.notifyListeners(messageData);
 
             } catch (org.zeromq.ZMQException e) {
-                logger.info("WebX Subscriber thread interrupted");
+                if (this.running) {
+                    logger.info("WebX Subscriber thread interrupted");
+                }
             }
         }
     }

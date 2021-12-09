@@ -6,9 +6,8 @@ import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
-import eu.ill.webx.connector.WebXConnectorConfiguration;
-import eu.ill.webx.connector.WebXConnector;
-import eu.ill.webx.providers.WebXConnectorProvider;
+import eu.ill.webx.providers.WebXRelayProvider;
+import eu.ill.webx.relay.WebXRelay;
 import eu.ill.webx.ws.WebSocketTunnelServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -48,8 +47,8 @@ public class Application {
                 return createInjector(new ServletModule() {
                     @Override
                     public void configureServlets() {
-                        bind(WebXConnectorConfiguration.class).toInstance(new WebXConnectorConfiguration(webXHost, webXPort));
-                        bind(WebXConnector.class).toProvider(WebXConnectorProvider.class).in(Singleton.class);
+                        bind(Configuration.class).toInstance(new Configuration(webXHost, webXPort));
+                        bind(WebXRelay.class).toProvider(WebXRelayProvider.class).in(Singleton.class);
                         serve("/").with(WebSocketTunnelServlet.class);
                     }
                 });
