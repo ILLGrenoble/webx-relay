@@ -1,6 +1,8 @@
 package eu.ill.webx.relay;
 
-import eu.ill.webx.connector.*;
+import eu.ill.webx.transport.*;
+import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.model.MessageListener;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,13 +14,13 @@ import java.util.concurrent.TimeUnit;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
-public class WebXClient implements WebXMessageListener {
+public class Client implements MessageListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebXClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(Client.class);
 
     private final Session session;
-    private WebXMessageSubscriber messageSubscriber;
-    private WebXInstructionPublisher instructionPublisher;
+    private MessageSubscriber messageSubscriber;
+    private InstructionPublisher instructionPublisher;
 
     private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
     private final LinkedBlockingDeque<byte[]> messageQueue = new LinkedBlockingDeque<>();
@@ -28,7 +30,7 @@ public class WebXClient implements WebXMessageListener {
 
     private boolean running = false;
 
-    public WebXClient(Session session) {
+    public Client(Session session) {
         this.session = session;
     }
 
@@ -40,18 +42,18 @@ public class WebXClient implements WebXMessageListener {
         return session;
     }
 
-    public synchronized boolean start(WebXConnector connector) {
+    public synchronized boolean start(Transport transport) {
         if (!running) {
             running = true;
 
             try {
                 // Add relay as a listener to webx messages
-                this.messageSubscriber = connector.getMessageSubscriber();
-                this.instructionPublisher = connector.getInstructionPublisher();
+                this.messageSubscriber = transport.getMessageSubscriber();
+                this.instructionPublisher = transport.getInstructionPublisher();
                 this.messageSubscriber.addListener(this);
 
                 // Start WebX session via the router and get a session ID
-                String sessionId = connector.getSessionChannel().startSession("username", "password");
+                String sessionId = transport.getSessionChannel().startSession("username", "password");
                 logger.info("Got session Id \"{}\"", sessionId);
 
                 this.webXListenerThread = new Thread(this::webXListenerLoop);

@@ -1,5 +1,6 @@
-package eu.ill.webx.connector;
+package eu.ill.webx.transport;
 
+import eu.ill.webx.model.DisconnectedException;
 import eu.ill.webx.model.SocketResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,21 +10,19 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.util.Z85;
 
-public class WebXSessionChannel {
+public class SessionChannel {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebXSessionChannel.class);
+    private static final Logger logger = LoggerFactory.getLogger(SessionChannel.class);
 
-    private ZContext context;
     private ZMQ.Socket socket;
 
-    public WebXSessionChannel() {
+    public SessionChannel() {
     }
 
-    public void connect(ZContext context, String address, String serverPublicKey) {
-        if (this.context == null) {
-            this.context = context;
-            this.socket = this.context.createSocket(SocketType.REQ);
-            this.socket.setReceiveTimeOut(15000);
+    public void connect(ZContext context, String address, int socketTimeoutMs, String serverPublicKey) {
+        if (this.socket == null) {
+            this.socket = context.createSocket(SocketType.REQ);
+            this.socket.setReceiveTimeOut(socketTimeoutMs);
             this.socket.setLinger(0);
 
             ZMQ.Curve.KeyPair keypair = ZMQ.Curve.generateKeyPair();
@@ -37,11 +36,10 @@ public class WebXSessionChannel {
     }
 
     public void disconnect() {
-        if (this.context != null) {
+        if (this.socket != null) {
             this.socket.close();
             this.socket = null;
 
-            this.context = null;
             logger.info("WebX Session Channel disconnected");
         }
     }

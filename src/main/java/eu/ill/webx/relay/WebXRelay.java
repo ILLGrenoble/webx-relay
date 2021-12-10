@@ -1,7 +1,8 @@
 package eu.ill.webx.relay;
 
-import eu.ill.webx.connector.DisconnectedException;
-import eu.ill.webx.connector.WebXConnector;
+import eu.ill.webx.Configuration;
+import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,28 +13,21 @@ public class WebXRelay {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXRelay.class);
 
-    private final WebXConnector connector;
+    private final Transport transport;
 
-    private final String webXServerAddress;
-    private final int webXServerPort;
+    private final Configuration configuration;
 
     // Todo: change to map when we have xsession IDs
-    private final List<WebXClient> clients = new ArrayList();
+    private final List<Client> clients = new ArrayList();
 
     private Thread thread;
 
-    public WebXRelay(String webXServerAddress, int webXServerPort) {
-        this.webXServerAddress = webXServerAddress;
-        this.webXServerPort = webXServerPort;
+    public WebXRelay(Configuration configuration) {
+        this.configuration = configuration;
 
-        this.connector = new WebXConnector();
+        this.transport = new Transport();
 
         // Todo: make the main filtering of messages from the server occur here: redirect to correct clients
-    }
-
-
-    public WebXConnector getConnector() {
-        return connector;
     }
 
     public void run() {
@@ -42,17 +36,17 @@ public class WebXRelay {
         this.thread.start();
     }
 
-    public synchronized boolean addClient(WebXClient client) {
-        if (this.connector.isConnected()) {
+    public synchronized boolean addClient(Client client) {
+        if (this.transport.isConnected()) {
             this.clients.add(client);
 
-            return client.start(this.connector);
+            return client.start(this.transport);
         }
 
         return false;
     }
 
-    public synchronized void removeClient(WebXClient client) {
+    public synchronized void removeClient(Client client) {
         client.stop();
         this.clients.remove(client);
     }
@@ -60,22 +54,22 @@ public class WebXRelay {
     private void connectionCheck() {
         boolean running = true;
         while (running) {
-            if (this.connector.isConnected()) {
+            if (this.transport.isConnected()) {
                 try {
                     // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
-                    this.connector.getSessionChannel().sendRequest("ping");
+                    this.transport.getSessionChannel().sendRequest("ping");
 
                 } catch (DisconnectedException e) {
                     logger.error("Failed to get response from connector ping");
 
-                    this.connector.disconnect();
+                    this.transport.disconnect();
                     this.disconnectClients();
                 }
 
             } else {
                 try {
                     logger.info("Connecting to WebX server...");
-                    this.connector.connect(this.webXServerAddress, this.webXServerPort);
+                    this.transport.connect(this.configuration);
                     logger.info("... connected");
 
                 } catch (DisconnectedException e) {
@@ -93,7 +87,7 @@ public class WebXRelay {
     }
 
     private void disconnectClients() {
-        for (WebXClient client : clients) {
+        for (Client client : clients) {
             client.getSession().close();
         }
 

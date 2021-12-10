@@ -1,4 +1,4 @@
-package eu.ill.webx.connector;
+package eu.ill.webx.transport;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -6,20 +6,18 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-public class WebXInstructionPublisher {
+public class InstructionPublisher {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebXInstructionPublisher.class);
+    private static final Logger logger = LoggerFactory.getLogger(InstructionPublisher.class);
 
-    private ZContext context;
     private ZMQ.Socket socket;
 
-    public WebXInstructionPublisher() {
+    public InstructionPublisher() {
     }
 
     public void connect(ZContext context, String address) {
-        if (this.context == null) {
-            this.context = context;
-            this.socket = this.context.createSocket(SocketType.PUB);
+        if (this.socket == null) {
+            this.socket = context.createSocket(SocketType.PUB);
             this.socket.setLinger(0);
             this.socket.connect(address);
             logger.info("WebX Instruction Publisher connected");
@@ -27,11 +25,10 @@ public class WebXInstructionPublisher {
     }
 
     public void disconnect() {
-        if (this.context != null) {
+        if (this.socket != null) {
             this.socket.close();
             this.socket = null;
 
-            this.context = null;
             logger.info("WebX Instruction Publisher disconnected");
         }
     }

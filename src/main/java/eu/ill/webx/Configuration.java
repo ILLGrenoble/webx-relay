@@ -3,28 +3,27 @@ package eu.ill.webx;
 public class Configuration {
 
 
-    private String webXHost;
+    private final String webXHost;
+    private final Integer webXPort;
+    private final Integer socketTimeoutMs;
 
-    private Integer webXPort;
-
-    public Configuration(String webXHost, Integer webXPort) {
+    public Configuration(final String webXHost,
+                         final Integer webXPort,
+                         final Integer socketTimeoutMs) {
         this.webXHost = webXHost;
         this.webXPort = webXPort;
+        this.socketTimeoutMs = socketTimeoutMs;
     }
 
     public String getWebXHost() {
         return webXHost;
     }
 
-    public void setWebXHost(String webXHost) {
-        this.webXHost = webXHost;
-    }
-
     public Integer getWebXPort() {
         return webXPort;
     }
 
-    public void setWebXPort(Integer webXPort) {
-        this.webXPort = webXPort;
+    public Integer getSocketTimeoutMs() {
+        return socketTimeoutMs;
     }
 }

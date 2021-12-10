@@ -1,5 +1,6 @@
-package eu.ill.webx.connector;
+package eu.ill.webx.transport;
 
+import eu.ill.webx.model.MessageListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -9,18 +10,18 @@ import org.zeromq.ZMQ;
 import java.util.ArrayList;
 import java.util.List;
 
-public class WebXMessageSubscriber {
+public class MessageSubscriber {
 
-    private static final Logger logger = LoggerFactory.getLogger(WebXMessageSubscriber.class);
+    private static final Logger logger = LoggerFactory.getLogger(MessageSubscriber.class);
 
     private ZMQ.Socket socket;
 
     private Thread thread;
     private boolean running = false;
 
-    private final List<WebXMessageListener> listeners = new ArrayList<>();
+    private final List<MessageListener> listeners = new ArrayList<>();
 
-    public WebXMessageSubscriber() {
+    public MessageSubscriber() {
     }
 
     public synchronized void start(ZContext context, String address) {
@@ -72,11 +73,11 @@ public class WebXMessageSubscriber {
         }
     }
 
-    synchronized public void addListener(WebXMessageListener listener) {
+    synchronized public void addListener(MessageListener listener) {
         this.listeners.add(listener);
     }
 
-    synchronized public void removeListener(WebXMessageListener listener) {
+    synchronized public void removeListener(MessageListener listener) {
         this.listeners.remove(listener);
     }
 

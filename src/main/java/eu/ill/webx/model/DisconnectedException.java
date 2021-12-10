@@ -1,4 +1,4 @@
-package eu.ill.webx.connector;
+package eu.ill.webx.model;
 
 public class DisconnectedException extends Exception{
     public DisconnectedException() {

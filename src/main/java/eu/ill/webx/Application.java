@@ -28,6 +28,9 @@ public class Application {
     @Parameter(names = {"--webxport"})
     private Integer webXPort = 5555;
 
+    @Parameter(names = {"--sockettimeoutms"})
+    private Integer socketTimeoutMs = 15000;
+
     public static void main(String... argv) throws Exception {
         final Application application = new Application();
         JCommander.newBuilder()
@@ -47,7 +50,7 @@ public class Application {
                 return createInjector(new ServletModule() {
                     @Override
                     public void configureServlets() {
-                        bind(Configuration.class).toInstance(new Configuration(webXHost, webXPort));
+                        bind(Configuration.class).toInstance(new Configuration(webXHost, webXPort, socketTimeoutMs));
                         bind(WebXRelay.class).toProvider(WebXRelayProvider.class).in(Singleton.class);
                         serve("/").with(WebSocketTunnelServlet.class);
                     }

@@ -1,6 +1,6 @@
 package eu.ill.webx.ws;
 
-import eu.ill.webx.relay.WebXClient;
+import eu.ill.webx.relay.Client;
 import eu.ill.webx.relay.WebXRelay;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
@@ -12,7 +12,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private static final Logger logger = LoggerFactory.getLogger(WebSocketTunnelListener.class);
     private final WebXRelay relay;
 
-    private WebXClient client;
+    private Client client;
 
     public WebSocketTunnelListener(final WebXRelay relay) {
         this.relay = relay;
@@ -21,7 +21,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
     @Override
     public void onWebSocketConnect(final Session session) {
         logger.debug("WebSocket connection, creating client...");
-        this.client = new WebXClient(session);
+        this.client = new Client(session);
 
         if (this.relay.addClient(this.client)) {
             logger.info("... client created.");
