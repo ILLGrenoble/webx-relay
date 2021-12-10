@@ -44,23 +44,33 @@ public class Client implements MessageListener {
 
     public synchronized boolean start(Transport transport) {
         if (!running) {
-            running = true;
-
             try {
-                // Add relay as a listener to webx messages
-                this.messageSubscriber = transport.getMessageSubscriber();
-                this.instructionPublisher = transport.getInstructionPublisher();
-                this.messageSubscriber.addListener(this);
-
                 // Start WebX session via the router and get a session ID
-                String sessionId = transport.getSessionChannel().startSession("username", "password");
-                logger.info("Got session Id \"{}\"", sessionId);
+                String response = transport.getSessionChannel().startSession("username", "password");
+                String[] responseData = response.split(",");
+                int responseCode = Integer.parseInt(responseData[0]);
+                String responseValue = responseData[1];
+                if (responseCode == 0) {
+                    String sessionId = responseValue;
 
-                this.webXListenerThread = new Thread(this::webXListenerLoop);
-                this.webXListenerThread.start();
+                    logger.info("Got session Id \"{}\"", sessionId);
 
-                this.clientInstructionThread = new Thread(this::clientInstructionLoop);
-                this.clientInstructionThread.start();
+                    // Add relay as a listener to webx messages
+                    this.messageSubscriber = transport.getMessageSubscriber();
+                    this.instructionPublisher = transport.getInstructionPublisher();
+                    this.messageSubscriber.addListener(this);
+
+                    this.webXListenerThread = new Thread(this::webXListenerLoop);
+                    this.webXListenerThread.start();
+
+                    this.clientInstructionThread = new Thread(this::clientInstructionLoop);
+                    this.clientInstructionThread.start();
+
+                    running = true;
+
+                } else {
+                    logger.error("Couldn't create WebX session: {}", responseValue);
+                }
 
             } catch (DisconnectedException e) {
                 logger.error("WebX Server is disconnected");
