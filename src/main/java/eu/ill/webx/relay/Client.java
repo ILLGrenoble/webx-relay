@@ -55,6 +55,8 @@ public class Client implements MessageListener {
 
                     logger.info("Got session Id \"{}\"", sessionId);
 
+                    running = true;
+
                     // Add relay as a listener to webx messages
                     this.messageSubscriber = transport.getMessageSubscriber();
                     this.instructionPublisher = transport.getInstructionPublisher();
@@ -65,8 +67,6 @@ public class Client implements MessageListener {
 
                     this.clientInstructionThread = new Thread(this::clientInstructionLoop);
                     this.clientInstructionThread.start();
-
-                    running = true;
 
                 } else {
                     logger.error("Couldn't create WebX session: {}", responseValue);
@@ -111,6 +111,7 @@ public class Client implements MessageListener {
     @Override
     public void onMessage(byte[] messageData) {
         try {
+            logger.trace("Got client message of length {}", messageData.length);
             this.messageQueue.put(messageData);
 
         } catch (InterruptedException exception) {
@@ -120,6 +121,7 @@ public class Client implements MessageListener {
 
     public void queueInstruction(byte[] instructionData) {
         try {
+            logger.trace("Got instruction of length {}", instructionData.length);
             this.instructionQueue.put(instructionData);
 
         } catch (InterruptedException exception) {
@@ -139,6 +141,7 @@ public class Client implements MessageListener {
             try {
                 byte[] messageData = this.messageQueue.poll(5000, TimeUnit.MILLISECONDS);
                 if (messageData != null) {
+                    logger.trace("Sending client message of length {}", messageData.length);
                     this.sendData(messageData);
 
                 } else {

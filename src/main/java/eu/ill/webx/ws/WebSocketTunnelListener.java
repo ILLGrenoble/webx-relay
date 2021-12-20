@@ -39,7 +39,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
 
     @Override
     public void onWebSocketBinary(byte[] payload, int offset, int length) {
-        if (this.client == null) {
+        if (this.client == null && this.client.isRunning()) {
             logger.error("Received instruction on closed client");
             return;
         }

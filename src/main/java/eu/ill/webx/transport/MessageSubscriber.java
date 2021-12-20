@@ -63,6 +63,7 @@ public class MessageSubscriber {
         while (this.running) {
             try {
                 byte[] messageData = socket.recv();
+                logger.trace("Got message of length {}", messageData.length);
                 this.notifyListeners(messageData);
 
             } catch (org.zeromq.ZMQException e) {

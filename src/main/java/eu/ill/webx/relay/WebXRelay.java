@@ -86,7 +86,7 @@ public class WebXRelay {
         }
     }
 
-    private void disconnectClients() {
+    private synchronized void disconnectClients() {
         for (Client client : clients) {
             client.getSession().close();
         }
