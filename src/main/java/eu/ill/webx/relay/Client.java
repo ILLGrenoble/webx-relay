@@ -51,9 +51,13 @@ public class Client implements MessageListener {
                 int responseCode = Integer.parseInt(responseData[0]);
                 String responseValue = responseData[1];
                 if (responseCode == 0) {
-                    String sessionId = responseValue;
+                    String sessionIdString = responseValue;
 
-                    logger.info("Got session Id \"{}\"", sessionId);
+                    logger.info("Got session Id \"{}\"", sessionIdString);
+                    byte[] sessionId = sessionIdToByteArray(sessionIdString);
+
+                    // Put sessionId as first message to send to the client
+                    this.onMessage(sessionId);
 
                     running = true;
 
@@ -131,7 +135,11 @@ public class Client implements MessageListener {
 
     private void webXListenerLoop() {
         // Create a POLL message (messageType 8)
-        ByteBuffer pollMessageBuffer = ByteBuffer.allocate(16).order(LITTLE_ENDIAN)
+        ByteBuffer pollMessageBuffer = ByteBuffer.allocate(32).order(LITTLE_ENDIAN)
+                .putInt(0)  // dummy sessionId (1/4)
+                .putInt(0)  // dummy sessionId (2/4)
+                .putInt(0)  // dummy sessionId (3/4)
+                .putInt(0)  // dummy sessionId (4/4)
                 .putInt(8)  // messageType
                 .putInt(0)  // messageId
                 .putInt(16) // messageLength
@@ -178,5 +186,19 @@ public class Client implements MessageListener {
                 }
             }
         }
+    }
+
+    private byte[] sessionIdToByteArray(String sessionId) {
+        if (sessionId.length() != 32) {
+            logger.error("Received invalid UUID for session Id: {}", sessionId);
+        }
+
+        int length = sessionId.length();
+        byte[] data = new byte[length / 2];
+        int index = 0;
+        for (int i = 0; i < length; i += 2) {
+            data[index++] = (byte) ((Character.digit(sessionId.charAt(i), 16) << 4)  + Character.digit(sessionId.charAt(i + 1), 16));
+        }
+        return data;
     }
 }
