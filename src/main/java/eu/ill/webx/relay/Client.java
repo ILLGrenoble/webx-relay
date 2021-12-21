@@ -1,8 +1,8 @@
 package eu.ill.webx.relay;
 
-import eu.ill.webx.transport.*;
 import eu.ill.webx.model.DisconnectedException;
-import eu.ill.webx.model.MessageListener;
+import eu.ill.webx.transport.InstructionPublisher;
+import eu.ill.webx.transport.Transport;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,12 +14,11 @@ import java.util.concurrent.TimeUnit;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
-public class Client implements MessageListener {
+public class Client {
 
     private static final Logger logger = LoggerFactory.getLogger(Client.class);
 
     private final Session session;
-    private MessageSubscriber messageSubscriber;
     private InstructionPublisher instructionPublisher;
 
     private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
@@ -29,6 +28,8 @@ public class Client implements MessageListener {
     private Thread clientInstructionThread;
 
     private boolean running = false;
+
+    private String webXSessionId;
 
     public Client(Session session) {
         this.session = session;
@@ -42,10 +43,15 @@ public class Client implements MessageListener {
         return session;
     }
 
+    public String getWebXSessionId() {
+        return webXSessionId;
+    }
+
     public synchronized boolean start(Transport transport, boolean standalone) {
         if (!running) {
             String sessionIdString = this.getSessionId(transport, standalone);
             if (sessionIdString != null) {
+                this.webXSessionId = sessionIdString;
                 logger.info("Got session Id \"{}\"", sessionIdString);
                 byte[] sessionId = sessionIdToByteArray(sessionIdString);
 
@@ -55,9 +61,7 @@ public class Client implements MessageListener {
                 running = true;
 
                 // Add relay as a listener to webx messages
-                this.messageSubscriber = transport.getMessageSubscriber();
                 this.instructionPublisher = transport.getInstructionPublisher();
-                this.messageSubscriber.addListener(this);
 
                 this.webXListenerThread = new Thread(this::webXListenerLoop);
                 this.webXListenerThread.start();
@@ -75,8 +79,6 @@ public class Client implements MessageListener {
                 running = false;
 
                 // Remove relay from webx subscriber
-                this.messageSubscriber.removeListener(this);
-                this.messageSubscriber = null;
                 this.instructionPublisher = null;
 
                 if (this.webXListenerThread != null) {
@@ -97,7 +99,6 @@ public class Client implements MessageListener {
         }
     }
 
-    @Override
     public void onMessage(byte[] messageData) {
         try {
             logger.trace("Got client message of length {}", messageData.length);
