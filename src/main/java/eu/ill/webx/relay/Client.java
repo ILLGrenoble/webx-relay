@@ -46,7 +46,7 @@ public class Client implements MessageListener {
         if (!running) {
             try {
                 // Start WebX session via the router and get a session ID
-                String response = transport.getSessionChannel().startSession("username", "password");
+                String response = transport.getSessionChannel().startSession("caunt", "password");
                 String[] responseData = response.split(",");
                 int responseCode = Integer.parseInt(responseData[0]);
                 String responseValue = responseData[1];

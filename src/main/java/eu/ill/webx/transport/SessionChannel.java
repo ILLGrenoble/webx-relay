@@ -10,6 +10,8 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.util.Z85;
 
+import java.util.Base64;
+
 public class SessionChannel {
 
     private static final Logger logger = LoggerFactory.getLogger(SessionChannel.class);
@@ -61,7 +63,9 @@ public class SessionChannel {
     }
 
     public synchronized String startSession(String username, String password) throws DisconnectedException {
-        String request = "create," + username + "," + password;
+        String usernameBase64 = Base64.getEncoder().encodeToString(username.getBytes());
+        String passwordBase64 = Base64.getEncoder().encodeToString(password.getBytes());
+        String request = "create," + usernameBase64 + "," + passwordBase64;
         String sessionId = this.sendRequest(request).toString();
 
         return sessionId;
