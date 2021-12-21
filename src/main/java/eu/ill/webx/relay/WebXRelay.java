@@ -40,7 +40,7 @@ public class WebXRelay {
         if (this.transport.isConnected()) {
             this.clients.add(client);
 
-            return client.start(this.transport);
+            return client.start(this.transport, this.configuration.isStandalone());
         }
 
         return false;
@@ -57,7 +57,12 @@ public class WebXRelay {
             if (this.transport.isConnected()) {
                 try {
                     // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
-                    this.transport.getSessionChannel().sendRequest("ping");
+                    if (configuration.isStandalone()) {
+                        this.transport.getConnector().sendRequest("ping");
+
+                    } else {
+                        this.transport.getSessionChannel().sendRequest("ping");
+                    }
 
                 } catch (DisconnectedException e) {
                     logger.error("Failed to get response from connector ping");

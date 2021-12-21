@@ -42,43 +42,28 @@ public class Client implements MessageListener {
         return session;
     }
 
-    public synchronized boolean start(Transport transport) {
+    public synchronized boolean start(Transport transport, boolean standalone) {
         if (!running) {
-            try {
-                // Start WebX session via the router and get a session ID
-                String response = transport.getSessionChannel().startSession("caunt", "password");
-                String[] responseData = response.split(",");
-                int responseCode = Integer.parseInt(responseData[0]);
-                String responseValue = responseData[1];
-                if (responseCode == 0) {
-                    String sessionIdString = responseValue;
+            String sessionIdString = this.getSessionId(transport, standalone);
+            if (sessionIdString != null) {
+                logger.info("Got session Id \"{}\"", sessionIdString);
+                byte[] sessionId = sessionIdToByteArray(sessionIdString);
 
-                    logger.info("Got session Id \"{}\"", sessionIdString);
-                    byte[] sessionId = sessionIdToByteArray(sessionIdString);
+                // Put sessionId as first message to send to the client
+                this.onMessage(sessionId);
 
-                    // Put sessionId as first message to send to the client
-                    this.onMessage(sessionId);
+                running = true;
 
-                    running = true;
+                // Add relay as a listener to webx messages
+                this.messageSubscriber = transport.getMessageSubscriber();
+                this.instructionPublisher = transport.getInstructionPublisher();
+                this.messageSubscriber.addListener(this);
 
-                    // Add relay as a listener to webx messages
-                    this.messageSubscriber = transport.getMessageSubscriber();
-                    this.instructionPublisher = transport.getInstructionPublisher();
-                    this.messageSubscriber.addListener(this);
+                this.webXListenerThread = new Thread(this::webXListenerLoop);
+                this.webXListenerThread.start();
 
-                    this.webXListenerThread = new Thread(this::webXListenerLoop);
-                    this.webXListenerThread.start();
-
-                    this.clientInstructionThread = new Thread(this::clientInstructionLoop);
-                    this.clientInstructionThread.start();
-
-                } else {
-                    logger.error("Couldn't create WebX session: {}", responseValue);
-                }
-
-            } catch (DisconnectedException e) {
-                logger.error("WebX Server is disconnected");
-                this.stop();
+                this.clientInstructionThread = new Thread(this::clientInstructionLoop);
+                this.clientInstructionThread.start();
             }
         }
         return running;
@@ -186,6 +171,33 @@ public class Client implements MessageListener {
                 }
             }
         }
+    }
+
+    private String getSessionId(Transport transport, boolean standalone) {
+        if (standalone) {
+            return "00000000000000000000000000000000";
+
+        } else {
+            try {
+                // Start WebX session via the router and get a session ID
+                String response = transport.getSessionChannel().startSession("caunt", "password");
+                String[] responseData = response.split(",");
+                int responseCode = Integer.parseInt(responseData[0]);
+                String responseValue = responseData[1];
+                if (responseCode == 0) {
+                    return responseValue;
+
+                } else {
+                    logger.error("Couldn't create WebX session: {}", responseValue);
+                }
+
+            } catch (DisconnectedException e) {
+                logger.error("WebX Server is disconnected");
+                this.stop();
+            }
+        }
+
+        return null;
     }
 
     private byte[] sessionIdToByteArray(String sessionId) {

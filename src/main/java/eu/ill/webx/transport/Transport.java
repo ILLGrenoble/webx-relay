@@ -52,7 +52,7 @@ public class Transport {
 
             try {
                 this.connector = new ClientConnector();
-                ConnectionData connectionData = this.connector.connect(this.context, "tcp://" + webXServerHost + ":" + configuration.getWebXPort(), configuration.getSocketTimeoutMs());
+                ConnectionData connectionData = this.connector.connect(this.context, "tcp://" + webXServerHost + ":" + configuration.getWebXPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone());
 
                 this.messageSubscriber = new MessageSubscriber();
                 this.messageSubscriber.start(this.context, "tcp://" + webXServerHost + ":" + connectionData.getPublisherPort());
@@ -60,8 +60,10 @@ public class Transport {
                 this.instructionPublisher = new InstructionPublisher();
                 this.instructionPublisher.connect(this.context, "tcp://" + webXServerHost + ":" + connectionData.getCollectorPort());
 
-                this.sessionChannel = new SessionChannel();
-                this.sessionChannel.connect(this.context, "tcp://" + webXServerHost + ":" + connectionData.getSessionPort(), configuration.getSocketTimeoutMs(), connectionData.getServerPublicKey());
+                if (!configuration.isStandalone()) {
+                    this.sessionChannel = new SessionChannel();
+                    this.sessionChannel.connect(this.context, "tcp://" + webXServerHost + ":" + connectionData.getSessionPort(), configuration.getSocketTimeoutMs(), connectionData.getServerPublicKey());
+                }
 
                 this.connected = true;
 

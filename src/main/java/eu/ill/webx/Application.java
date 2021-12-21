@@ -31,6 +31,9 @@ public class Application {
     @Parameter(names = {"--sockettimeoutms"})
     private Integer socketTimeoutMs = 15000;
 
+    @Parameter(names = {"--standalone"})
+    private boolean standalone = false;
+
     public static void main(String... argv) throws Exception {
         final Application application = new Application();
         JCommander.newBuilder()
@@ -50,7 +53,7 @@ public class Application {
                 return createInjector(new ServletModule() {
                     @Override
                     public void configureServlets() {
-                        bind(Configuration.class).toInstance(new Configuration(webXHost, webXPort, socketTimeoutMs));
+                        bind(Configuration.class).toInstance(new Configuration(webXHost, webXPort, socketTimeoutMs, standalone));
                         bind(WebXRelay.class).toProvider(WebXRelayProvider.class).in(Singleton.class);
                         serve("/").with(WebSocketTunnelServlet.class);
                     }

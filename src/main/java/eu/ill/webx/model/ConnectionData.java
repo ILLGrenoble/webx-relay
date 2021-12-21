@@ -7,6 +7,11 @@ public class ConnectionData {
     private int sessionPort;
     private String serverPublicKey;
 
+    public ConnectionData(int publisherPort, int collectorPort) {
+        this.publisherPort = publisherPort;
+        this.collectorPort = collectorPort;
+    }
+
     public ConnectionData(int publisherPort, int collectorPort, int sessionPort, String serverPublicKey) {
         this.publisherPort = publisherPort;
         this.collectorPort = collectorPort;

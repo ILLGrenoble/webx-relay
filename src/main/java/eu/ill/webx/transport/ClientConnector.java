@@ -20,7 +20,7 @@ public class ClientConnector {
     public ClientConnector() {
     }
 
-    public ConnectionData connect(ZContext context, String address, int socketTimeoutMs) throws DisconnectedException {
+    public ConnectionData connect(ZContext context, String address, int socketTimeoutMs, boolean standalone) throws DisconnectedException {
 
         if (this.socket == null) {
             this.socket = context.createSocket(SocketType.REQ);
@@ -35,10 +35,16 @@ public class ClientConnector {
 
                 final int publisherPort = Integer.parseInt(data[0]);
                 final int collectorPort = Integer.parseInt(data[1]);
-                final int sessionPort = Integer.parseInt(data[2]);
-                final String publicKey = data[3];
 
-                this.connectionData = new ConnectionData(publisherPort, collectorPort, sessionPort, publicKey);
+                if (standalone) {
+                    this.connectionData = new ConnectionData(publisherPort, collectorPort);
+
+                } else {
+                    final int sessionPort = Integer.parseInt(data[2]);
+                    final String publicKey = data[3];
+                    this.connectionData = new ConnectionData(publisherPort, collectorPort, sessionPort, publicKey);
+                }
+
 
                 logger.info("WebX Connector connected");
 
