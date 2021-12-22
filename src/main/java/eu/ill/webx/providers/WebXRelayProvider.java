@@ -18,7 +18,6 @@ public class WebXRelayProvider implements Provider<WebXRelay> {
     @Override
     public WebXRelay get() {
         final WebXRelay relay = new WebXRelay(configuration);
-        relay.run();
         return relay;
     }
 }

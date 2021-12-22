@@ -1,6 +1,5 @@
 package eu.ill.webx.transport;
 
-import eu.ill.webx.Configuration;
 import eu.ill.webx.model.ConnectionData;
 import eu.ill.webx.model.DisconnectedException;
 import org.slf4j.Logger;
@@ -42,27 +41,25 @@ public class Transport {
         return this.connected;
     }
 
-    public void connect(Configuration configuration) throws DisconnectedException {
+    public void connect(String hostname, int port, int socketTimeoutMs, boolean isStandalone) throws DisconnectedException {
 
         if (this.context == null) {
             this.connected = false;
             this.context = new ZContext();
 
-            String webXServerHost = configuration.getWebXHost();
-
             try {
                 this.connector = new ClientConnector();
-                ConnectionData connectionData = this.connector.connect(this.context, "tcp://" + webXServerHost + ":" + configuration.getWebXPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone());
+                ConnectionData connectionData = this.connector.connect(this.context, "tcp://" + hostname + ":" + port, socketTimeoutMs, isStandalone);
 
                 this.messageSubscriber = new MessageSubscriber();
-                this.messageSubscriber.start(this.context, "tcp://" + webXServerHost + ":" + connectionData.getPublisherPort());
+                this.messageSubscriber.start(this.context, "tcp://" + hostname + ":" + connectionData.getPublisherPort());
 
                 this.instructionPublisher = new InstructionPublisher();
-                this.instructionPublisher.connect(this.context, "tcp://" + webXServerHost + ":" + connectionData.getCollectorPort());
+                this.instructionPublisher.connect(this.context, "tcp://" + hostname + ":" + connectionData.getCollectorPort());
 
-                if (!configuration.isStandalone()) {
+                if (!isStandalone) {
                     this.sessionChannel = new SessionChannel();
-                    this.sessionChannel.connect(this.context, "tcp://" + webXServerHost + ":" + connectionData.getSessionPort(), configuration.getSocketTimeoutMs(), connectionData.getServerPublicKey());
+                    this.sessionChannel.connect(this.context, "tcp://" + hostname + ":" + connectionData.getSessionPort(), socketTimeoutMs, connectionData.getServerPublicKey());
                 }
 
                 this.connected = true;
