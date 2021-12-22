@@ -30,6 +30,7 @@ public class Client {
     private boolean running = false;
 
     private String webXSessionId;
+    private byte[] webXRawSessionId;
 
     public Client(Session session) {
         this.session = session;
@@ -54,9 +55,7 @@ public class Client {
                 this.webXSessionId = sessionIdString;
                 logger.info("Got session Id \"{}\"", sessionIdString);
                 byte[] sessionId = sessionIdToByteArray(sessionIdString);
-
-                // Put sessionId as first message to send to the client
-                this.onMessage(sessionId);
+                this.webXRawSessionId = sessionId;
 
                 running = true;
 
@@ -164,6 +163,10 @@ public class Client {
         while (this.running) {
             try {
                 final byte[] instructionData = this.instructionQueue.take();
+
+                // Set the sessionId at the beginning
+                System.arraycopy(this.webXRawSessionId, 0, instructionData, 0, 16);
+
                 this.instructionPublisher.sendInstructionData(instructionData);
 
             } catch (InterruptedException exception) {
