@@ -37,9 +37,11 @@ public class WebSocketTunnelListener implements WebSocketListener {
             hostname = params.get(WEBX_HOST_PARAM).get(0);
         }
         if (params.containsKey(WEBX_PORT_PARAM)) {
+            String portParam = params.get(WEBX_PORT_PARAM).get(0);
             try {
-                port = Integer.parseInt(params.get(WEBX_PORT_PARAM).get(0));
+                port = Integer.parseInt(portParam);
             } catch (NumberFormatException ignore) {
+                logger.warn("Unable to parse port parameter \"{}\"", portParam);
             }
         }
 
