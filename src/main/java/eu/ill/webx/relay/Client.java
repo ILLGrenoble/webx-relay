@@ -48,14 +48,13 @@ public class Client {
         return webXSessionId;
     }
 
-    public synchronized boolean start(Transport transport, boolean standalone) {
+    public synchronized boolean start(Transport transport, boolean standalone, String username, String password) {
         if (!running) {
-            String sessionIdString = this.getSessionId(transport, standalone);
+            String sessionIdString = this.startSession(transport, standalone,  username,  password);
             if (sessionIdString != null) {
                 this.webXSessionId = sessionIdString;
                 logger.info("Got session Id \"{}\"", sessionIdString);
-                byte[] sessionId = sessionIdToByteArray(sessionIdString);
-                this.webXRawSessionId = sessionId;
+                this.webXRawSessionId = sessionIdToByteArray(sessionIdString);
 
                 running = true;
 
@@ -177,14 +176,14 @@ public class Client {
         }
     }
 
-    private String getSessionId(Transport transport, boolean standalone) {
+    private String startSession(Transport transport, boolean standalone, String username, String password) {
         if (standalone) {
             return "00000000000000000000000000000000";
 
         } else {
             try {
                 // Start WebX session via the router and get a session ID
-                String response = transport.getSessionChannel().startSession("caunt", "password");
+                String response = transport.getSessionChannel().startSession(username, password);
                 String[] responseData = response.split(",");
                 int responseCode = Integer.parseInt(responseData[0]);
                 String responseValue = responseData[1];

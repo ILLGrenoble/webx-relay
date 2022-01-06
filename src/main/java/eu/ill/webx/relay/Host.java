@@ -91,10 +91,10 @@ public class Host implements MessageListener {
         }
     }
 
-    public synchronized boolean addClient(Client client) {
+    public synchronized boolean connectClient(Client client, String username, String password) {
         if (this.transport.isConnected()) {
 
-            if (client.start(this.transport, this.configuration.isStandalone())) {
+            if (client.start(this.transport, this.configuration.isStandalone(), username, password)) {
                 String sessionId = client.getWebXSessionId();
                 List<Client> sessionClients = this.clients.get(sessionId);
                 if (sessionClients == null) {

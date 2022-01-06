@@ -16,6 +16,8 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private static final Logger logger = LoggerFactory.getLogger(WebSocketTunnelListener.class);
     private static final String WEBX_HOST_PARAM = "webxhost";
     private static final String WEBX_PORT_PARAM = "webxport";
+    private static final String USERNAME_PARAM = "username";
+    private static final String PASSWORD_PARAM = "password";
 
     private final WebXRelay relay;
 
@@ -28,16 +30,21 @@ public class WebSocketTunnelListener implements WebSocketListener {
 
     @Override
     public void onWebSocketConnect(final Session session) {
+        Map<String, List<String>> params = session.getUpgradeRequest().getParameterMap();
+
+        String username = params.containsKey(USERNAME_PARAM) ? params.get(USERNAME_PARAM).get(0) : null;
+        String password = params.containsKey(PASSWORD_PARAM) ? params.get(PASSWORD_PARAM).get(0) : null;
+        if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
+            logger.warn("Connection made without username and/or password. Disconnecting");
+            session.close();
+            return;
+        }
 
         // Get host and port from request parameters if they exist
-        String hostname = null;
         Integer port = null;
-        Map<String, List<String>> params = session.getUpgradeRequest().getParameterMap();
-        if (params.containsKey(WEBX_HOST_PARAM)) {
-            hostname = params.get(WEBX_HOST_PARAM).get(0);
-        }
-        if (params.containsKey(WEBX_PORT_PARAM)) {
-            String portParam = params.get(WEBX_PORT_PARAM).get(0);
+        String hostname = params.containsKey(WEBX_HOST_PARAM) ? params.get(WEBX_HOST_PARAM).get(0) : null;
+        String portParam = params.containsKey(WEBX_PORT_PARAM) ? params.get(WEBX_PORT_PARAM).get(0) : null;
+        if (portParam != null) {
             try {
                 port = Integer.parseInt(portParam);
             } catch (NumberFormatException ignore) {
@@ -51,7 +58,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
             logger.debug("Creating client for {}...", this.host.getHostname());
 
             this.client = new Client(session);
-            if (this.host.addClient(this.client)) {
+            if (this.host.connectClient(this.client, username, password)) {
                 logger.info("... client created.");
 
             } else {
