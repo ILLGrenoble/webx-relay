@@ -125,28 +125,30 @@ public class Host implements MessageListener {
 
     private void connectionCheck() {
         while (this.running) {
-            if (this.transport.isConnected()) {
-                try {
-                    // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
-                    if (configuration.isStandalone()) {
-                        this.transport.getConnector().sendRequest("ping");
+            synchronized (this) {
+                if (this.transport.isConnected()) {
+                    try {
+                        // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
+                        if (configuration.isStandalone()) {
+                            this.transport.getConnector().sendRequest("ping");
 
-                    } else {
-                        this.transport.getSessionChannel().sendRequest("ping");
+                        } else {
+                            this.transport.getSessionChannel().sendRequest("ping");
+                        }
+
+                    } catch (DisconnectedException e) {
+                        logger.error("Failed to get response from connector ping at {}", this.hostname);
+
+                        // Remove subscription to messages
+                        this.transport.getMessageSubscriber().removeListener(this);
+
+                        this.transport.disconnect();
+                        this.disconnectClients();
                     }
 
-                } catch (DisconnectedException e) {
-                    logger.error("Failed to get response from connector ping at {}", this.hostname);
-
-                    // Remove subscription to messages
-                    this.transport.getMessageSubscriber().removeListener(this);
-
-                    this.transport.disconnect();
-                    this.disconnectClients();
+                } else {
+                    this.connectToWebXHost();
                 }
-
-            } else {
-                this.connectToWebXHost();
             }
 
             try {
