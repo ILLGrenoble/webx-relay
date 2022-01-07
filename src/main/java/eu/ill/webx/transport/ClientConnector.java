@@ -46,7 +46,7 @@ public class ClientConnector {
                 }
 
 
-                logger.info("WebX Connector connected");
+                logger.debug("WebX Connector connected");
 
             } catch (DisconnectedException e) {
                 this.disconnect();
@@ -68,7 +68,7 @@ public class ClientConnector {
 
             if (this.connectionData != null) {
                 this.connectionData = null;
-                logger.info("WebX Connector disconnected");
+                logger.debug("WebX Connector disconnected");
             }
         }
     }

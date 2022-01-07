@@ -20,7 +20,7 @@ public class InstructionPublisher {
             this.socket = context.createSocket(SocketType.PUB);
             this.socket.setLinger(0);
             this.socket.connect(address);
-            logger.info("WebX Instruction Publisher connected");
+            logger.debug("WebX Instruction Publisher connected");
         }
     }
 
@@ -29,7 +29,7 @@ public class InstructionPublisher {
             this.socket.close();
             this.socket = null;
 
-            logger.info("WebX Instruction Publisher disconnected");
+            logger.debug("WebX Instruction Publisher disconnected");
         }
     }
 

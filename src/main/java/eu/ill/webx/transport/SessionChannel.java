@@ -33,7 +33,7 @@ public class SessionChannel {
             this.socket.setCurvePublicKey(keypair.publicKey.getBytes());
 
             socket.connect(address);
-            logger.info("WebX Session Channel connected");
+            logger.debug("WebX Session Channel connected");
         }
     }
 
@@ -42,7 +42,7 @@ public class SessionChannel {
             this.socket.close();
             this.socket = null;
 
-            logger.info("WebX Session Channel disconnected");
+            logger.debug("WebX Session Channel disconnected");
         }
     }
 

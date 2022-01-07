@@ -36,7 +36,7 @@ public class MessageSubscriber {
             this.thread = new Thread(this::loop);
             this.thread.start();
 
-            logger.info("WebX Message Subscriber started");
+            logger.debug("WebX Message Subscriber started");
         }
     }
 
@@ -51,7 +51,7 @@ public class MessageSubscriber {
 
                 this.socket.close();
 
-                logger.info("WebX Message Subscriber disconnected");
+                logger.debug("WebX Message Subscriber disconnected");
 
             } catch (InterruptedException exception) {
                 logger.error("Stop of WebX Subscriber thread interrupted");
