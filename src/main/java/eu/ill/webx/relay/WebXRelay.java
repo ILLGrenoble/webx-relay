@@ -20,21 +20,7 @@ public class WebXRelay {
         this.configuration = configuration;
     }
 
-    public Host onClientConnect() {
-        return this.onClientConnect(this.configuration.getWebXHost(), this.configuration.getWebXPort());
-    }
-
-    public Host onClientConnect(String hostname) {
-        return this.onClientConnect(hostname, this.configuration.getWebXPort());
-    }
-
     public Host onClientConnect(String hostname, Integer port) {
-        if (hostname == null) {
-            hostname = this.configuration.getWebXHost();
-        }
-        if (port == null) {
-            port = this.configuration.getWebXPort();
-        }
         Host host = this.getHost(hostname, port);
         if (host == null) {
             // Create host
@@ -55,7 +41,7 @@ public class WebXRelay {
 
     public void onClientDisconnect(Host host) {
         if (this.hosts.contains(host)) {
-            if (host.getClientcount() == 0) {
+            if (host.getClientCount() == 0) {
                 // Disconnect from host
                 host.stop();
 

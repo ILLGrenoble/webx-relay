@@ -28,14 +28,6 @@ public class Host implements MessageListener {
     private Thread thread;
     private boolean running = false;
 
-    public Host(final String hostname, final Configuration configuration) {
-        this.hostname = hostname;
-        this.port = configuration.getWebXPort();
-        this.configuration = configuration;
-
-        this.transport = new Transport();
-    }
-
     public Host(final String hostname, int port, final Configuration configuration) {
         this.hostname = hostname;
         this.port = port;
@@ -52,7 +44,7 @@ public class Host implements MessageListener {
         return port;
     }
 
-    public synchronized int getClientcount() {
+    public synchronized int getClientCount() {
         return this.clients.size();
     }
 

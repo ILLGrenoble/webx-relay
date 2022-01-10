@@ -22,12 +22,6 @@ public class Application {
     @Parameter(names = {"--port"})
     private Integer port = 8080;
 
-    @Parameter(names = {"--webxhost"})
-    private String webXHost = "localhost";
-
-    @Parameter(names = {"--webxport"})
-    private Integer webXPort = 5555;
-
     @Parameter(names = {"--sockettimeoutms"})
     private Integer socketTimeoutMs = 15000;
 
@@ -53,7 +47,7 @@ public class Application {
                 return createInjector(new ServletModule() {
                     @Override
                     public void configureServlets() {
-                        bind(Configuration.class).toInstance(new Configuration(webXHost, webXPort, socketTimeoutMs, standalone));
+                        bind(Configuration.class).toInstance(new Configuration(socketTimeoutMs, standalone));
                         bind(WebXRelay.class).toProvider(WebXRelayProvider.class).in(Singleton.class);
                         serve("/").with(WebSocketTunnelServlet.class);
                     }
