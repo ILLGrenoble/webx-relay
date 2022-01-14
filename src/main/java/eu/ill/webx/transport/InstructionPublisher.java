@@ -33,7 +33,7 @@ public class InstructionPublisher {
         }
     }
 
-    public void sendInstructionData(byte[] requestData) {
+    public synchronized void sendInstructionData(byte[] requestData) {
         this.socket.send(requestData, 0);
     }
 }
