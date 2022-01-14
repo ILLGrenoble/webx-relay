@@ -98,7 +98,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <finalName>webx</finalName>
+                            <finalName>webx-relay</finalName>
                             <transformers>
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>

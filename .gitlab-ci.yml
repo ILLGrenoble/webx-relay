@@ -1,0 +1,24 @@
+stages:
+  - build-dev
+
+build-dev:
+  stage: build-dev
+  #  only:
+  #    - dev
+  tags:
+    - debian
+    - dss
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t docker.ill.fr/webx/webx-relay:dev --build-arg MAVEN_OPTS="$JAVA_OPTS" .
+    - docker push docker.ill.fr/webx/webx-relay:dev
+
+#deploy-dev:
+#  stage: deploy-dev
+#  only:
+#    - dev
+#  tags:
+#    - debian
+#    - dss
+#  script:
+#    - ssh visa@visa-dev.ill.fr "cd /data/apps/visa-deploy; ./deploy.sh"
