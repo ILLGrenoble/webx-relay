@@ -83,10 +83,12 @@ public class Host implements MessageListener {
         }
     }
 
-    public synchronized boolean connectClient(Client client, String username, String password) {
+    public synchronized boolean connectClient(Client client, String username, String password, Integer width, Integer height) {
         if (this.transport.isConnected()) {
 
-            if (client.start(this.transport, this.configuration.isStandalone(), username, password)) {
+            int screenWidth = width != null ? width : this.configuration.getDefaultScreenWidth();
+            int screenHeight = height != null ? height : this.configuration.getDefaultScreenHeight();
+            if (client.start(this.transport, this.configuration.isStandalone(), username, password, screenWidth, screenHeight)) {
                 String sessionId = client.getWebXSessionId();
                 List<Client> sessionClients = this.clients.get(sessionId);
                 if (sessionClients == null) {

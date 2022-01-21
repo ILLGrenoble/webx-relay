@@ -58,7 +58,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
             logger.debug("Creating client for {}...", this.host.getHostname());
 
             this.client = new Client(session);
-            if (this.host.connectClient(this.client, username, password)) {
+            if (this.host.connectClient(this.client, username, password, null, null)) {
                 logger.info("... client created.");
 
             } else {

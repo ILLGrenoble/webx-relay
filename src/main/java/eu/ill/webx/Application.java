@@ -28,6 +28,12 @@ public class Application {
     @Parameter(names = {"--standalone"})
     private boolean standalone = false;
 
+    @Parameter(names = {"--width"})
+    private int defaultScreenWidth = 1440;
+
+    @Parameter(names = {"--height"})
+    private int defaultScreenHeight = 900;
+
     public static void main(String... argv) throws Exception {
         final Application application = new Application();
         JCommander.newBuilder()
@@ -47,7 +53,7 @@ public class Application {
                 return createInjector(new ServletModule() {
                     @Override
                     public void configureServlets() {
-                        bind(Configuration.class).toInstance(new Configuration(socketTimeoutMs, standalone));
+                        bind(Configuration.class).toInstance(new Configuration(socketTimeoutMs, standalone, defaultScreenWidth, defaultScreenHeight));
                         bind(WebXRelay.class).toProvider(WebXRelayProvider.class).in(Singleton.class);
                         serve("/").with(WebSocketTunnelServlet.class);
                     }
