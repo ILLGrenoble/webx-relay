@@ -12,7 +12,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <jetty.version>9.4.15.v20190215</jetty.version>
-        <guice.version>4.2.3</guice.version>
+        <guice.version>5.0.1</guice.version>
         <slf4j.version>1.6.1</slf4j.version>
         <jcommander.version>1.72</jcommander.version>
         <commons-io.version>2.6</commons-io.version>
