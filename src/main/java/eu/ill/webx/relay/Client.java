@@ -1,7 +1,9 @@
 package eu.ill.webx.relay;
 
 import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.model.SocketResponse;
 import eu.ill.webx.transport.InstructionPublisher;
+import eu.ill.webx.transport.SessionChannel;
 import eu.ill.webx.transport.Transport;
 import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
@@ -20,19 +22,21 @@ public class Client {
 
     private final Session session;
     private InstructionPublisher instructionPublisher;
+    private SessionChannel sessionChannel;
 
     private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
     private final LinkedBlockingDeque<byte[]> messageQueue = new LinkedBlockingDeque<>();
 
     private Thread webXListenerThread;
     private Thread clientInstructionThread;
+    private Thread connectionCheckThread;
 
     private boolean running = false;
 
     private String webXSessionId;
     private byte[] webXRawSessionId;
 
-    public Client(Session session) {
+    public Client(final Session session) {
         this.session = session;
     }
 
@@ -66,6 +70,13 @@ public class Client {
 
                 this.clientInstructionThread = new Thread(this::clientInstructionLoop);
                 this.clientInstructionThread.start();
+
+                if (!standalone) {
+                    this.sessionChannel = transport.getSessionChannel();
+                    // Start connection checker
+                    this.connectionCheckThread = new Thread(this::connectionCheck);
+                    this.connectionCheckThread.start();
+                }
             }
         }
         return running;
@@ -89,6 +100,12 @@ public class Client {
                     this.clientInstructionThread.interrupt();
                     this.clientInstructionThread.join();
                     this.clientInstructionThread = null;
+                }
+
+                if (this.connectionCheckThread != null) {
+                    this.connectionCheckThread.interrupt();
+                    this.connectionCheckThread.join();
+                    this.connectionCheckThread = null;
                 }
 
             } catch (InterruptedException exception) {
@@ -172,6 +189,34 @@ public class Client {
                 if (this.running) {
                     logger.info("Client instruction listener thread interrupted");
                 }
+            }
+        }
+    }
+
+    private void connectionCheck() {
+        while (this.running) {
+            // Use a variable sleep: if connection is ok, wait 5s, otherwise try every second to reconnect
+            try {
+                logger.trace("Sending ping to session {}", this.webXSessionId);
+                SocketResponse response = this.sessionChannel.sendRequest("ping," + this.webXSessionId);
+
+                String[] responseElements = response.toString().split(",");
+
+                if (responseElements[0].equals("pang")) {
+                    logger.error("Failed to ping webX Session {}: {}", this.webXSessionId, responseElements[2]);
+                    this.session.close();
+                }
+
+            } catch (DisconnectedException e) {
+                logger.error("Failed to get response from connector ping from session {}", this.webXSessionId);
+
+                this.session.close();
+            }
+
+            try {
+                Thread.sleep(15000);
+
+            } catch (InterruptedException ignored) {
             }
         }
     }

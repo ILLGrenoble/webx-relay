@@ -123,6 +123,7 @@ public class Host implements MessageListener {
                 if (this.transport.isConnected()) {
                     try {
                         // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
+                        logger.trace("Sending router ping to {}", this.hostname);
                         if (configuration.isStandalone()) {
                             this.transport.getConnector().sendRequest("ping");
 
