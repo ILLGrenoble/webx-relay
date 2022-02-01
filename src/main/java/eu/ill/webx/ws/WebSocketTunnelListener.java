@@ -18,6 +18,8 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private static final String WEBX_PORT_PARAM = "webxport";
     private static final String USERNAME_PARAM = "username";
     private static final String PASSWORD_PARAM = "password";
+    private static final String WIDTH_PARAM = "width";
+    private static final String HEIGHT_PARAM = "height";
 
     private final WebXRelay relay;
 
@@ -32,8 +34,8 @@ public class WebSocketTunnelListener implements WebSocketListener {
     public void onWebSocketConnect(final Session session) {
         Map<String, List<String>> params = session.getUpgradeRequest().getParameterMap();
 
-        String username = params.containsKey(USERNAME_PARAM) ? params.get(USERNAME_PARAM).get(0) : null;
-        String password = params.containsKey(PASSWORD_PARAM) ? params.get(PASSWORD_PARAM).get(0) : null;
+        String username = this.getStringParam(params, USERNAME_PARAM);
+        String password = this.getStringParam(params, PASSWORD_PARAM);
         if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
             logger.warn("Connection made without username and/or password. Disconnecting");
             session.close();
@@ -41,16 +43,12 @@ public class WebSocketTunnelListener implements WebSocketListener {
         }
 
         // Get host and port from request parameters if they exist
-        Integer port = null;
-        String hostname = params.containsKey(WEBX_HOST_PARAM) ? params.get(WEBX_HOST_PARAM).get(0) : null;
-        String portParam = params.containsKey(WEBX_PORT_PARAM) ? params.get(WEBX_PORT_PARAM).get(0) : null;
-        if (portParam != null) {
-            try {
-                port = Integer.parseInt(portParam);
-            } catch (NumberFormatException ignore) {
-                logger.warn("Unable to parse port parameter \"{}\"", portParam);
-            }
-        }
+        Integer port = this.getIntegerParam(params, WEBX_PORT_PARAM);
+        String hostname = this.getStringParam(params, WEBX_HOST_PARAM);
+
+        // Get width and height
+        Integer width = this.getIntegerParam(params, WIDTH_PARAM);
+        Integer height = this.getIntegerParam(params, HEIGHT_PARAM);
 
         // Connect to host
         this.host = this.relay.onClientConnect(hostname, port);
@@ -58,7 +56,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
             logger.debug("Creating client for {}...", this.host.getHostname());
 
             this.client = new Client(session);
-            if (this.host.connectClient(this.client, username, password, null, null)) {
+            if (this.host.connectClient(this.client, username, password, width, height)) {
                 logger.info("... client created.");
 
             } else {
@@ -112,6 +110,24 @@ public class WebSocketTunnelListener implements WebSocketListener {
             this.relay.onClientDisconnect(host);
             this.host = null;
         }
+    }
+
+    private String getStringParam(Map<String, List<String>> params, String paramName) {
+        return params.containsKey(paramName) ? params.get(paramName).get(0) : null;
+    }
+
+    private Integer getIntegerParam(Map<String, List<String>> params, String paramName) {
+        Integer param = null;
+        String paramString = params.containsKey(paramName) ? params.get(paramName).get(0) : null;
+        if (paramString != null) {
+            try {
+                param = Integer.parseInt(paramString);
+
+            } catch (NumberFormatException ignore) {
+                logger.warn("Unable to parse integer {} parameter (\"{}\")", paramName, paramString);
+            }
+        }
+        return param;
     }
 
 }
