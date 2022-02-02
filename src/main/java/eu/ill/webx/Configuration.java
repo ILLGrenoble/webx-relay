@@ -7,15 +7,18 @@ public class Configuration {
     private final boolean standalone;
     private final int defaultScreenWidth;
     private final int defaultScreenHeight;
+    private final String defaultKeyboardLayout;
 
     public Configuration(final Integer socketTimeoutMs,
                          final boolean standalone,
                          final int defaultScreenWidth,
-                         final int defaultScreenHeight) {
+                         final int defaultScreenHeight,
+                         final String defaultKeyboardLayout) {
         this.socketTimeoutMs = socketTimeoutMs;
         this.standalone = standalone;
         this.defaultScreenWidth = defaultScreenWidth;
         this.defaultScreenHeight = defaultScreenHeight;
+        this.defaultKeyboardLayout = defaultKeyboardLayout;
     }
 
     public Integer getSocketTimeoutMs() {
@@ -32,5 +35,9 @@ public class Configuration {
 
     public int getDefaultScreenHeight() {
         return defaultScreenHeight;
+    }
+
+    public String getDefaultKeyboardLayout() {
+        return defaultKeyboardLayout;
     }
 }

@@ -62,10 +62,10 @@ public class SessionChannel {
         }
     }
 
-    public synchronized String startSession(String username, String password, int width, int height) throws DisconnectedException {
+    public synchronized String startSession(String username, String password, int width, int height, String keyboard) throws DisconnectedException {
         String usernameBase64 = Base64.getEncoder().encodeToString(username.getBytes());
         String passwordBase64 = Base64.getEncoder().encodeToString(password.getBytes());
-        String request = "create," + usernameBase64 + "," + passwordBase64 + "," + width + "," + height;
+        String request = "create," + usernameBase64 + "," + passwordBase64 + "," + width + "," + height + "," + keyboard;
         String sessionId = this.sendRequest(request).toString();
 
         return sessionId;

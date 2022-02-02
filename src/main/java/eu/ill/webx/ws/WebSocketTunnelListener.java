@@ -20,6 +20,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private static final String PASSWORD_PARAM = "password";
     private static final String WIDTH_PARAM = "width";
     private static final String HEIGHT_PARAM = "height";
+    private static final String KEYBOARD_PARAM = "keyboard";
 
     private final WebXRelay relay;
 
@@ -42,13 +43,12 @@ public class WebSocketTunnelListener implements WebSocketListener {
             return;
         }
 
-        // Get host and port from request parameters if they exist
+        // Get all other params
         Integer port = this.getIntegerParam(params, WEBX_PORT_PARAM);
         String hostname = this.getStringParam(params, WEBX_HOST_PARAM);
-
-        // Get width and height
         Integer width = this.getIntegerParam(params, WIDTH_PARAM);
         Integer height = this.getIntegerParam(params, HEIGHT_PARAM);
+        String keyboard = this.getStringParam(params, KEYBOARD_PARAM);
 
         // Connect to host
         this.host = this.relay.onClientConnect(hostname, port);
@@ -56,7 +56,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
             logger.debug("Creating client for {}...", this.host.getHostname());
 
             this.client = new Client(session);
-            if (this.host.connectClient(this.client, username, password, width, height)) {
+            if (this.host.connectClient(this.client, username, password, width, height, keyboard)) {
                 logger.info("... client created.");
 
             } else {
