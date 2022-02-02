@@ -1,5 +1,6 @@
 stages:
   - build-dev
+  - deploy-dev
 
 build-dev:
   stage: build-dev
@@ -13,12 +14,12 @@ build-dev:
     - docker build -t docker.ill.fr/webx/webx-relay:dev --build-arg MAVEN_OPTS="$JAVA_OPTS" .
     - docker push docker.ill.fr/webx/webx-relay:dev
 
-#deploy-dev:
-#  stage: deploy-dev
-#  only:
-#    - dev
-#  tags:
-#    - debian
-#    - dss
-#  script:
-#    - ssh visa@visa-dev.ill.fr "cd /data/apps/visa-deploy; ./deploy.sh"
+deploy-dev:
+  stage: deploy-dev
+  #  only:
+  #    - dev
+  tags:
+    - debian
+    - dss
+  script:
+    - ssh webx@webx-dev.ill.fr "cd /data/apps/webx-deploy; ./deploy.sh"
