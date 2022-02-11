@@ -1,8 +1,10 @@
 package eu.ill.webx.ws;
 
+import eu.ill.webx.model.Credentials;
 import eu.ill.webx.relay.Client;
 import eu.ill.webx.relay.Host;
 import eu.ill.webx.relay.WebXRelay;
+import eu.ill.webx.services.AuthService;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
 import org.slf4j.Logger;
@@ -16,8 +18,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private static final Logger logger = LoggerFactory.getLogger(WebSocketTunnelListener.class);
     private static final String WEBX_HOST_PARAM = "webxhost";
     private static final String WEBX_PORT_PARAM = "webxport";
-    private static final String USERNAME_PARAM = "username";
-    private static final String PASSWORD_PARAM = "password";
+    private static final String TOKEN_PARAM = "token";
     private static final String WIDTH_PARAM = "width";
     private static final String HEIGHT_PARAM = "height";
     private static final String KEYBOARD_PARAM = "keyboard";
@@ -35,15 +36,17 @@ public class WebSocketTunnelListener implements WebSocketListener {
     public void onWebSocketConnect(final Session session) {
         Map<String, List<String>> params = session.getUpgradeRequest().getParameterMap();
 
-        String username = this.getStringParam(params, USERNAME_PARAM);
-        String password = this.getStringParam(params, PASSWORD_PARAM);
-        if (username == null || username.isEmpty() || password == null || password.isEmpty()) {
-            logger.warn("Connection made without username and/or password. Disconnecting");
+        String token = this.getStringParam(params, TOKEN_PARAM);
+        Credentials credentials = AuthService.instance().getCredentials(token);
+        if (!credentials.isValid()) {
+            logger.warn("Connection credentials are invalid. Disconnecting");
             session.close();
             return;
         }
+        String username = credentials.getUsername();
+        String password = credentials.getPassword();
 
-        // Get all other params
+        // Get all the other params
         Integer port = this.getIntegerParam(params, WEBX_PORT_PARAM);
         String hostname = this.getStringParam(params, WEBX_HOST_PARAM);
         Integer width = this.getIntegerParam(params, WIDTH_PARAM);

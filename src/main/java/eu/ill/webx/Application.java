@@ -8,9 +8,12 @@ import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import eu.ill.webx.providers.WebXRelayProvider;
 import eu.ill.webx.relay.WebXRelay;
+import eu.ill.webx.services.AuthService;
 import eu.ill.webx.ws.WebSocketTunnelServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import org.glassfish.jersey.servlet.ServletContainer;
 
 import javax.inject.Singleton;
 
@@ -50,6 +53,11 @@ public class Application {
         final Server server = new Server(port);
         final ServletContextHandler context = new ServletContextHandler(server, "/", NO_SESSIONS);
 
+        ServletHolder servletHolder = context.addServlet(ServletContainer.class, "/api/*");
+        servletHolder.setInitOrder(1);
+        servletHolder.setInitParameter("jersey.config.server.provider.packages", "eu.ill.webx.controllers");
+        servletHolder.setInitParameter("jersey.config.server.wadl.disableWadl", "true");
+
         context.addEventListener(new GuiceServletContextListener() {
             @Override
             protected Injector getInjector() {
@@ -58,12 +66,13 @@ public class Application {
                     public void configureServlets() {
                         bind(Configuration.class).toInstance(new Configuration(socketTimeoutMs, standalone, defaultScreenWidth, defaultScreenHeight, defaultKeyboardLayout));
                         bind(WebXRelay.class).toProvider(WebXRelayProvider.class).in(Singleton.class);
-                        serve("/").with(WebSocketTunnelServlet.class);
+                        serve("/ws").with(WebSocketTunnelServlet.class);
                     }
                 });
             }
         });
         context.addFilter(GuiceFilter.class, "/*", null);
+        AuthService.instance().start();
         server.start();
     }
 }
