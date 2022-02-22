@@ -63,14 +63,16 @@ public class Host implements MessageListener {
         return this.transport.isConnected();
     }
 
-    public synchronized void stop() {
+    public void stop() {
         if (this.running) {
-            try {
+            synchronized (this) {
                 this.running = false;
 
                 // Disconnect from webx server
                 this.transport.disconnect();
+            }
 
+            try {
                 this.thread.interrupt();
                 this.thread.join();
                 this.thread = null;
@@ -121,29 +123,31 @@ public class Host implements MessageListener {
     private void connectionCheck() {
         while (this.running) {
             synchronized (this) {
-                if (this.transport.isConnected()) {
-                    try {
-                        // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
-                        logger.trace("Sending router ping to {}", this.hostname);
-                        if (configuration.isStandalone()) {
-                            this.transport.getConnector().sendRequest("ping");
+                if (this.running) {
+                    if (this.transport.isConnected()) {
+                        try {
+                            // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
+                            logger.trace("Sending router ping to {}", this.hostname);
+                            if (configuration.isStandalone()) {
+                                this.transport.getConnector().sendRequest("ping");
 
-                        } else {
-                            this.transport.getSessionChannel().sendRequest("ping");
+                            } else {
+                                this.transport.getSessionChannel().sendRequest("ping");
+                            }
+
+                        } catch (DisconnectedException e) {
+                            logger.error("Failed to get response from connector ping at {}", this.hostname);
+
+                            // Remove subscription to messages
+                            this.transport.getMessageSubscriber().removeListener(this);
+
+                            this.transport.disconnect();
+                            this.disconnectClients();
                         }
 
-                    } catch (DisconnectedException e) {
-                        logger.error("Failed to get response from connector ping at {}", this.hostname);
-
-                        // Remove subscription to messages
-                        this.transport.getMessageSubscriber().removeListener(this);
-
-                        this.transport.disconnect();
-                        this.disconnectClients();
+                    } else {
+                        this.connectToWebXHost();
                     }
-
-                } else {
-                    this.connectToWebXHost();
                 }
             }
 

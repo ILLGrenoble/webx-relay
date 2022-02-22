@@ -20,7 +20,7 @@ public class WebXRelay {
         this.configuration = configuration;
     }
 
-    public Host onClientConnect(String hostname, Integer port) {
+    public synchronized Host onClientConnect(String hostname, Integer port) {
         Host host = this.getHost(hostname, port);
         if (host == null) {
             // Create host
@@ -39,14 +39,14 @@ public class WebXRelay {
         return host;
     }
 
-    public void onClientDisconnect(Host host) {
+    public synchronized void onClientDisconnect(Host host) {
         if (this.hosts.contains(host)) {
             if (host.getClientCount() == 0) {
-                // Disconnect from host
-                host.stop();
-
                 // Remove from list
                 this.hosts.remove(host);
+
+                // Disconnect from host
+                host.stop();
             }
         }
     }
