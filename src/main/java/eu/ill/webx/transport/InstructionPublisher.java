@@ -1,5 +1,6 @@
 package eu.ill.webx.transport;
 
+import eu.ill.webx.utils.HexString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -34,6 +35,7 @@ public class InstructionPublisher {
     }
 
     public synchronized void sendInstructionData(byte[] requestData) {
+        logger.trace("Sending instruction {}", HexString.toString(requestData, 32));
         this.socket.send(requestData, 0);
     }
 }

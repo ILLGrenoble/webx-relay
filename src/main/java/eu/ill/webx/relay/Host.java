@@ -7,10 +7,7 @@ import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Host implements MessageListener {
 
@@ -21,7 +18,7 @@ public class Host implements MessageListener {
     private final int port;
     private final Configuration configuration;
     private final Transport transport;
-
+    private boolean pingReceived = false;
 
     private final Map<String, List<Client>> clients = new HashMap<>();
 
@@ -48,16 +45,24 @@ public class Host implements MessageListener {
         return this.clients.size();
     }
 
-    public synchronized boolean start() {
-        if (!this.running) {
-            // Initialise transport: verify that the host has a running webx server
-            if (this.connectToWebXHost()) {
-                this.running = true;
+    public boolean start() {
+        synchronized (this) {
+            if (!this.running) {
+                // Initialise transport: verify that the host has a running webx server
+                if (this.connectToWebXHost()) {
+                    this.running = true;
 
-                // Start connection checker
-                this.thread = new Thread(this::connectionCheck);
-                this.thread.start();
+                    // Start connection checker
+                    this.thread = new Thread(this::connectionCheck);
+                    this.thread.start();
+
+                }
             }
+        }
+
+        if (!this.waitForPing()) {
+            logger.error("Timeout will waiting to receive ping from WebX Host {}", this.hostname);
+            return false;
         }
 
         return this.transport.isConnected();
@@ -120,6 +125,22 @@ public class Host implements MessageListener {
         }
     }
 
+    private boolean waitForPing() {
+        // Wait for a ping to ensure comms have been set up
+        long startTime = new Date().getTime();
+        long delay = 0;
+        while (delay < 5000 && !this.pingReceived) {
+            try {
+                Thread.sleep(1000);
+                delay = new Date().getTime() - startTime;
+
+            } catch (InterruptedException ignored) {
+            }
+        }
+
+        return this.pingReceived;
+    }
+
     private void connectionCheck() {
         while (this.running) {
             synchronized (this) {
@@ -134,6 +155,8 @@ public class Host implements MessageListener {
                             } else {
                                 this.transport.getSessionChannel().sendRequest("ping");
                             }
+
+                            this.pingReceived = true;
 
                         } catch (DisconnectedException e) {
                             logger.error("Failed to get response from connector ping at {}", this.hostname);

@@ -31,6 +31,7 @@ public class WebXRelay {
                 this.hosts.add(host);
 
             } else {
+                host.stop();
                 host = null;
                 logger.error("Failed to create WebX host at {}:{}", hostname, port);
             }
