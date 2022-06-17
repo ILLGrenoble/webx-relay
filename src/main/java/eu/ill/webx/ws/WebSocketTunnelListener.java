@@ -1,5 +1,6 @@
 package eu.ill.webx.ws;
 
+import eu.ill.webx.Configuration;
 import eu.ill.webx.model.Credentials;
 import eu.ill.webx.relay.Client;
 import eu.ill.webx.relay.Host;
@@ -24,34 +25,52 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private static final String KEYBOARD_PARAM = "keyboard";
 
     private final WebXRelay relay;
+    private final Configuration configuration;
 
     private Client client;
     private Host host;
 
-    public WebSocketTunnelListener(final WebXRelay relay) {
+    public WebSocketTunnelListener(final WebXRelay relay, final Configuration configuration) {
         this.relay = relay;
+        this.configuration = configuration;
     }
 
     @Override
     public void onWebSocketConnect(final Session session) {
-        Map<String, List<String>> params = session.getUpgradeRequest().getParameterMap();
+        String hostname;
+        Integer port;
 
-        String token = this.getStringParam(params, TOKEN_PARAM);
-        Credentials credentials = AuthService.instance().getCredentials(token);
-        if (!credentials.isValid()) {
-            logger.warn("Connection credentials are invalid. Disconnecting");
-            session.close();
-            return;
+        String username = null;
+        String password = null;
+        Integer width = null;
+        Integer height = null;
+        String keyboard = null;
+
+        if (this.configuration.getStandaloneHost() != null && this.configuration.getStandalonePort() != null) {
+            hostname = this.configuration.getStandaloneHost();
+            port = this.configuration.getStandalonePort();
+
+        } else {
+            Map<String, List<String>> params = session.getUpgradeRequest().getParameterMap();
+
+            String token = this.getStringParam(params, TOKEN_PARAM);
+            Credentials credentials = AuthService.instance().getCredentials(token);
+            if (!credentials.isValid()) {
+                logger.warn("Connection credentials are invalid. Disconnecting");
+                session.close();
+                return;
+            }
+            username = credentials.getUsername();
+            password = credentials.getPassword();
+
+            // Get all the other params
+            port = this.getIntegerParam(params, WEBX_PORT_PARAM);
+            hostname = this.getStringParam(params, WEBX_HOST_PARAM);
+            width = this.getIntegerParam(params, WIDTH_PARAM);
+            height = this.getIntegerParam(params, HEIGHT_PARAM);
+            keyboard = this.getStringParam(params, KEYBOARD_PARAM);
         }
-        String username = credentials.getUsername();
-        String password = credentials.getPassword();
 
-        // Get all the other params
-        Integer port = this.getIntegerParam(params, WEBX_PORT_PARAM);
-        String hostname = this.getStringParam(params, WEBX_HOST_PARAM);
-        Integer width = this.getIntegerParam(params, WIDTH_PARAM);
-        Integer height = this.getIntegerParam(params, HEIGHT_PARAM);
-        String keyboard = this.getStringParam(params, KEYBOARD_PARAM);
 
         // Connect to host
         this.host = this.relay.onClientConnect(hostname, port);

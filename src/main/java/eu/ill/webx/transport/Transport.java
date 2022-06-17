@@ -2,6 +2,7 @@ package eu.ill.webx.transport;
 
 import eu.ill.webx.model.ConnectionData;
 import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.model.SocketResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
@@ -12,6 +13,7 @@ public class Transport {
 
     private ZContext context;
     private boolean connected = false;
+    private boolean isStandalone;
 
     private ClientConnector connector;
     private MessageSubscriber messageSubscriber;
@@ -44,6 +46,7 @@ public class Transport {
     public void connect(String hostname, int port, int socketTimeoutMs, boolean isStandalone) throws DisconnectedException {
 
         if (this.context == null) {
+            this.isStandalone = isStandalone;
             this.connected = false;
             this.context = new ZContext();
 
@@ -103,6 +106,15 @@ public class Transport {
             this.context = null;
 
             this.connected = false;
+        }
+    }
+
+    public SocketResponse sendPing() throws DisconnectedException {
+        if (this.isStandalone) {
+            return this.connector.sendRequest("ping");
+
+        } else {
+            return this.sessionChannel.sendRequest("ping");
         }
     }
 }

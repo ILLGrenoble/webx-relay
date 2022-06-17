@@ -9,6 +9,7 @@ import com.google.inject.servlet.ServletModule;
 import eu.ill.webx.providers.WebXRelayProvider;
 import eu.ill.webx.relay.WebXRelay;
 import eu.ill.webx.services.AuthService;
+import eu.ill.webx.services.ConfigurationService;
 import eu.ill.webx.ws.WebSocketTunnelServlet;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -28,8 +29,11 @@ public class Application {
     @Parameter(names = {"--sockettimeoutms"})
     private Integer socketTimeoutMs = 15000;
 
-    @Parameter(names = {"--standalone"})
-    private boolean standalone = false;
+    @Parameter(names = {"--standalone-host"})
+    private String standaloneHost = null;
+
+    @Parameter(names = {"--standalone-port"})
+    private Integer standalonePort = 5555;
 
     @Parameter(names = {"--width"})
     private int defaultScreenWidth = 1440;
@@ -64,7 +68,9 @@ public class Application {
                 return createInjector(new ServletModule() {
                     @Override
                     public void configureServlets() {
-                        bind(Configuration.class).toInstance(new Configuration(socketTimeoutMs, standalone, defaultScreenWidth, defaultScreenHeight, defaultKeyboardLayout));
+                        Configuration configuration = new Configuration(socketTimeoutMs, standaloneHost, standalonePort, defaultScreenWidth, defaultScreenHeight, defaultKeyboardLayout);
+                        ConfigurationService.instance().setConfiguration(configuration);
+                        bind(Configuration.class).toInstance(configuration);
                         bind(WebXRelay.class).toProvider(WebXRelayProvider.class).in(Singleton.class);
                         serve("/ws").with(WebSocketTunnelServlet.class);
                     }
