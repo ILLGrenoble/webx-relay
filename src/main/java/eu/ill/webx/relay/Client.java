@@ -1,6 +1,7 @@
 package eu.ill.webx.relay;
 
 import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.model.Message;
 import eu.ill.webx.model.SocketResponse;
 import eu.ill.webx.transport.InstructionPublisher;
 import eu.ill.webx.transport.SessionChannel;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
@@ -25,7 +27,7 @@ public class Client {
     private SessionChannel sessionChannel;
 
     private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
-    private final LinkedBlockingDeque<byte[]> messageQueue = new LinkedBlockingDeque<>();
+    private final PriorityBlockingQueue<Message> messageQueue = new PriorityBlockingQueue<>();
 
     private Thread webXListenerThread;
     private Thread clientInstructionThread;
@@ -115,13 +117,9 @@ public class Client {
     }
 
     public void onMessage(byte[] messageData) {
-        try {
-            logger.trace("Got client message of length {}", messageData.length);
-            this.messageQueue.put(messageData);
-
-        } catch (InterruptedException exception) {
-            logger.error("Interrupted when adding message to relay message queue");
-        }
+        logger.trace("Got client message of length {}", messageData.length);
+        Message message = new Message(messageData);
+        this.messageQueue.add(message);
     }
 
     public void queueInstruction(byte[] instructionData) {
@@ -141,16 +139,23 @@ public class Client {
                 .putInt(0)  // dummy sessionId (2/4)
                 .putInt(0)  // dummy sessionId (3/4)
                 .putInt(0)  // dummy sessionId (4/4)
-                .putInt(8)  // messageType
+                .putInt(8)  // message meta data: {Type, empty, relayQueueSize, empty}
                 .putInt(0)  // messageId
                 .putInt(16) // messageLength
                 .putInt(0);  // padding
 
         while (this.running) {
             try {
-                byte[] messageData = this.messageQueue.poll(5000, TimeUnit.MILLISECONDS);
-                if (messageData != null) {
+                Message message = this.messageQueue.poll(5000, TimeUnit.MILLISECONDS);
+                if (message != null) {
+                    byte[] messageData = message.getData();
                     logger.trace("Sending client message of length {}", messageData.length);
+
+                    // Add queue size to message metadata
+                    byte queueSize = (byte)Math.min(messageQueue.size(), 255); // get queue size (limit to 255)
+                    ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(messageData, 18, 1).order(LITTLE_ENDIAN);
+                    messageMetadataWrapper.put(queueSize);
+
                     this.sendData(messageData);
 
                 } else {
@@ -172,6 +177,7 @@ public class Client {
 
         } catch (IOException exception) {
             logger.error("Failed to write binary data to web socket", exception);
+            this.session.close();
         }
     }
 
