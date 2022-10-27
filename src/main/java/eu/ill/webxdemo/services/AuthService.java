@@ -1,6 +1,6 @@
-package eu.ill.webx.services;
+package eu.ill.webxdemo.services;
 
-import eu.ill.webx.model.Credentials;
+import eu.ill.webxdemo.model.Credentials;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

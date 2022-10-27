@@ -1,6 +1,6 @@
 package eu.ill.webx.relay;
 
-import eu.ill.webx.Configuration;
+import eu.ill.webx.WebXConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,19 +12,16 @@ public class WebXRelay {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXRelay.class);
 
-    private final Configuration configuration;
-
     private final List<Host> hosts = new ArrayList<>();
 
-    public WebXRelay(Configuration configuration) {
-        this.configuration = configuration;
+    public WebXRelay() {
     }
 
-    public synchronized Host onClientConnect(String hostname, Integer port) {
-        Host host = this.getHost(hostname, port);
+    public synchronized Host onClientConnect(final WebXConfiguration configuration) {
+        Host host = this.getHost(configuration);
         if (host == null) {
             // Create host
-            host = new Host(hostname, port, configuration);
+            host = new Host(configuration);
 
             // Test connection to the webx server
             if (host.start()) {
@@ -33,7 +30,7 @@ public class WebXRelay {
             } else {
                 host.stop();
                 host = null;
-                logger.error("Failed to create WebX host at {}:{}", hostname, port);
+                logger.error("Failed to create WebX host at {}:{}", configuration.getHostname(), configuration.getPort());
             }
         }
 
@@ -52,10 +49,10 @@ public class WebXRelay {
         }
     }
 
-    private Host getHost(String hostname, int port) {
+    private Host getHost(WebXConfiguration configuration) {
         // Find host that is already running
         Optional<Host> hostOptional = this.hosts.stream()
-                .filter(aHost -> aHost.getHostname().equals(hostname) && aHost.getPort() == port)
+                .filter(aHost -> aHost.getHostname().equals(configuration.getHostname()) && aHost.getPort() == configuration.getPort())
                 .findFirst();
 
         return hostOptional.orElse(null);

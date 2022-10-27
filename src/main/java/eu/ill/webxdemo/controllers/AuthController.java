@@ -1,7 +1,7 @@
-package eu.ill.webx.controllers;
+package eu.ill.webxdemo.controllers;
 
-import eu.ill.webx.model.AuthenticationToken;
-import eu.ill.webx.services.AuthService;
+import eu.ill.webxdemo.model.AuthenticationToken;
+import eu.ill.webxdemo.services.AuthService;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;

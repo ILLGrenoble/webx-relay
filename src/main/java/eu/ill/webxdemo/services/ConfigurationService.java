@@ -1,6 +1,6 @@
-package eu.ill.webx.services;
+package eu.ill.webxdemo.services;
 
-import eu.ill.webx.Configuration;
+import eu.ill.webxdemo.Configuration;
 
 public class ConfigurationService {
 

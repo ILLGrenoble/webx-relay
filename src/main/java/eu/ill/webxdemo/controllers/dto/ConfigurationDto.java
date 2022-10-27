@@ -1,6 +1,6 @@
-package eu.ill.webx.controllers.dto;
+package eu.ill.webxdemo.controllers.dto;
 
-import eu.ill.webx.Configuration;
+import eu.ill.webxdemo.Configuration;
 
 public class ConfigurationDto {
 

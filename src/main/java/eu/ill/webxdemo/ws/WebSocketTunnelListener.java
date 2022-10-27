@@ -1,11 +1,13 @@
-package eu.ill.webx.ws;
+package eu.ill.webxdemo.ws;
 
-import eu.ill.webx.Configuration;
-import eu.ill.webx.model.Credentials;
+import eu.ill.webx.WebXClientInformation;
+import eu.ill.webx.WebXConfiguration;
+import eu.ill.webxdemo.Configuration;
+import eu.ill.webxdemo.model.Credentials;
 import eu.ill.webx.relay.Client;
 import eu.ill.webx.relay.Host;
 import eu.ill.webx.relay.WebXRelay;
-import eu.ill.webx.services.AuthService;
+import eu.ill.webxdemo.services.AuthService;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
 import org.slf4j.Logger;
@@ -72,13 +74,21 @@ public class WebSocketTunnelListener implements WebSocketListener {
         }
 
 
+        WebXConfiguration webXConfiguration = new WebXConfiguration(hostname, port, this.configuration.isStandalone());
+        WebXClientInformation clientInformation = new WebXClientInformation(
+                username,
+                password,
+                width != null ? width : configuration.getDefaultScreenWidth(),
+                height != null ? height : configuration.getDefaultScreenHeight(),
+                keyboard != null ? keyboard : configuration.getDefaultKeyboardLayout());
+
         // Connect to host
-        this.host = this.relay.onClientConnect(hostname, port);
+        this.host = this.relay.onClientConnect(webXConfiguration);
         if (this.host != null) {
             logger.debug("Creating client for {}...", this.host.getHostname());
 
             this.client = new Client(session);
-            if (this.host.connectClient(this.client, username, password, width, height, keyboard)) {
+            if (this.host.connectClient(this.client, clientInformation)) {
                 logger.info("... client created.");
 
             } else {

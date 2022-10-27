@@ -1,7 +1,7 @@
-package eu.ill.webx.controllers;
+package eu.ill.webxdemo.controllers;
 
-import eu.ill.webx.controllers.dto.ConfigurationDto;
-import eu.ill.webx.services.ConfigurationService;
+import eu.ill.webxdemo.controllers.dto.ConfigurationDto;
+import eu.ill.webxdemo.services.ConfigurationService;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;

@@ -1,6 +1,6 @@
-package eu.ill.webx.ws;
+package eu.ill.webxdemo.ws;
 
-import eu.ill.webx.Configuration;
+import eu.ill.webxdemo.Configuration;
 import eu.ill.webx.relay.WebXRelay;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;

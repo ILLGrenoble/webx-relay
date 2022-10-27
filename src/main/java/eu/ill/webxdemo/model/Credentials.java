@@ -1,4 +1,4 @@
-package eu.ill.webx.model;
+package eu.ill.webxdemo.model;
 
 import java.util.Date;
 

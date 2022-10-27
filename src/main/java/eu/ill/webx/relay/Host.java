@@ -1,6 +1,7 @@
 package eu.ill.webx.relay;
 
-import eu.ill.webx.Configuration;
+import eu.ill.webx.WebXClientInformation;
+import eu.ill.webx.WebXConfiguration;
 import eu.ill.webx.model.DisconnectedException;
 import eu.ill.webx.model.MessageListener;
 import eu.ill.webx.transport.Transport;
@@ -14,9 +15,7 @@ public class Host implements MessageListener {
     private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
     private static final Logger logger = LoggerFactory.getLogger(Host.class);
 
-    private final String hostname;
-    private final int port;
-    private final Configuration configuration;
+    private final WebXConfiguration configuration;
     private final Transport transport;
     private boolean pingReceived = false;
 
@@ -25,20 +24,18 @@ public class Host implements MessageListener {
     private Thread thread;
     private boolean running = false;
 
-    public Host(final String hostname, int port, final Configuration configuration) {
-        this.hostname = hostname;
-        this.port = port;
+    public Host(final WebXConfiguration configuration) {
         this.configuration = configuration;
 
         this.transport = new Transport();
     }
 
     public String getHostname() {
-        return hostname;
+        return this.configuration.getHostname();
     }
 
     public int getPort() {
-        return port;
+        return this.configuration.getPort();
     }
 
     public synchronized int getClientCount() {
@@ -61,7 +58,7 @@ public class Host implements MessageListener {
         }
 
         if (!this.waitForPing()) {
-            logger.error("Timeout will waiting to receive ping from WebX Host {}", this.hostname);
+            logger.error("Timeout will waiting to receive ping from WebX Host {}", this.configuration.getHostname());
             return false;
         }
 
@@ -82,21 +79,21 @@ public class Host implements MessageListener {
                 this.thread.join();
                 this.thread = null;
 
-                logger.info("Host disconnected from {} and thread stopped", this.hostname);
+                logger.info("Host disconnected from {} and thread stopped", this.configuration.getHostname());
 
             } catch (InterruptedException exception) {
-                logger.error("Stop of Host thread for {} interrupted", this.hostname);
+                logger.error("Stop of Host thread for {} interrupted", this.configuration.getHostname());
             }
         }
     }
 
-    public synchronized boolean connectClient(Client client, String username, String password, Integer width, Integer height, String keyboard) {
+    public synchronized boolean connectClient(Client client, WebXClientInformation clientInformation) {
         if (this.transport.isConnected()) {
 
-            int screenWidth = width != null ? width : this.configuration.getDefaultScreenWidth();
-            int screenHeight = height != null ? height : this.configuration.getDefaultScreenHeight();
-            String keyboardLayout = keyboard != null ? keyboard : this.configuration.getDefaultKeyboardLayout();
-            if (client.start(this.transport, this.configuration.isStandalone(), username, password, screenWidth, screenHeight, keyboardLayout)) {
+            int screenWidth = clientInformation.getScreenWidth();
+            int screenHeight = clientInformation.getScreenHeight();
+            String keyboardLayout = clientInformation.getKeyboardLayout();
+            if (client.start(this.transport, this.configuration.isStandalone(), clientInformation.getUsername(), clientInformation.getPassword(), screenWidth, screenHeight, keyboardLayout)) {
                 String sessionId = client.getWebXSessionId();
                 List<Client> sessionClients = this.clients.get(sessionId);
                 if (sessionClients == null) {
@@ -148,13 +145,13 @@ public class Host implements MessageListener {
                     if (this.transport.isConnected()) {
                         try {
                             // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
-                            logger.trace("Sending router ping to {}", this.hostname);
+                            logger.trace("Sending router ping to {}", this.configuration.getHostname());
                             this.transport.sendPing();
 
                             this.pingReceived = true;
 
                         } catch (DisconnectedException e) {
-                            logger.error("Failed to get response from connector ping at {}", this.hostname);
+                            logger.error("Failed to get response from connector ping at {}", this.configuration.getHostname());
 
                             // Remove subscription to messages
                             this.transport.getMessageSubscriber().removeListener(this);
@@ -179,9 +176,9 @@ public class Host implements MessageListener {
 
     private boolean connectToWebXHost() {
         try {
-            logger.info("Connecting to WebX server at {}:{}...", this.hostname, this.port);
-            this.transport.connect(this.hostname, this.port, configuration.getSocketTimeoutMs(), configuration.isStandalone());
-            logger.info("... connected to {}", this.hostname);
+            logger.info("Connecting to WebX server at {}:{}...", this.configuration.getHostname(), this.configuration.getPort());
+            this.transport.connect(this.configuration.getHostname(), this.configuration.getPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone());
+            logger.info("... connected to {}", this.configuration.getHostname());
 
             // Subscribe to messages once connected
             this.transport.getMessageSubscriber().addListener(this);
@@ -202,12 +199,12 @@ public class Host implements MessageListener {
             }
         }
 
-        logger.info("Disconnected all clients from {}", this.hostname);
+        logger.info("Disconnected all clients from {}", this.configuration.getHostname());
     }
 
     @Override
     public synchronized void onMessage(byte[] messageData) {
-        logger.trace("Got client message of length {} from {}", messageData.length, this.hostname);
+        logger.trace("Got client message of length {} from {}", messageData.length, this.configuration.getHostname());
 
         // Get session Id
         String uuid = this.sessionIdToHex(messageData);
