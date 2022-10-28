@@ -14,8 +14,8 @@
     </modules>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>14</maven.compiler.source>
+        <maven.compiler.target>14</maven.compiler.target>
         <slf4j.version>1.6.1</slf4j.version>
         <commons-io.version>2.6</commons-io.version>
         <junit.version>4.12</junit.version>
