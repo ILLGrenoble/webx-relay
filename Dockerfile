@@ -13,7 +13,7 @@ FROM openjdk:14-alpine
 WORKDIR /app
 
 # copy built application
-COPY --from=builder /app/target/webx-app/webx-demo.jar /app
+COPY --from=builder /app/webx-app/target/webx-demo.jar /app
 
 CMD java -jar /app/webx-demo.jar
 
