@@ -12,8 +12,14 @@
     <artifactId>webx-relay</artifactId>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <jeromq.version>0.5.2</jeromq.version>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.zeromq</groupId>
+            <artifactId>jeromq</artifactId>
+            <version>${jeromq.version}</version>
+        </dependency>
+    </dependencies>
 </project>
