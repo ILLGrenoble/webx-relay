@@ -9,26 +9,33 @@ public class WebXTunnel {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXTunnel.class);
 
-    private final WebXRelay relay;
-    private final WebXHost host;
+    private WebXHost host;
     private WebXClient client;
 
-    public WebXTunnel(final WebXRelay relay, final WebXHost host) {
-        this.relay = relay;
-        this.host = host;
+    public WebXTunnel() {
     }
 
-    protected boolean connect(final WebXClientInformation clientInformation) {
+    public boolean connect(final WebXConfiguration configuration, final WebXClientInformation clientInformation) {
         if (this.client == null) {
-            this.client = new WebXClient();
-            if (host.connectClient(client, clientInformation)) {
-                logger.info("... client created.");
+            WebXHost host = WebXRelay.getInstance().onClientConnect(configuration, clientInformation);
 
-                return true;
-            } else {
-                logger.warn("... not connected to server {}. Client not created.", host.getHostname());
-                return false;
+            if (host != null) {
+                logger.debug("Creating client for {}...", host.getHostname());
+                WebXClient client;
+                if ((client = host.createClient(clientInformation)) != null) {
+                    logger.info("... client created.");
+
+                    this.client = client;
+                    this.host = host;
+                    return true;
+
+                } else {
+                    logger.warn("... not connected to server {}. Client not created.", host.getHostname());
+                    return false;
+                }
             }
+
+            return false;
 
         } else {
             return this.client.isRunning();
@@ -39,7 +46,8 @@ public class WebXTunnel {
         if (this.client != null) {
             this.client.stop();
             this.host.removeClient(client);
-            this.relay.onClientDisconnect(this.host);
+
+            WebXRelay.getInstance().onClientDisconnect(this.host);
         }
     }
 

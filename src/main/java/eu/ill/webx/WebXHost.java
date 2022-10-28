@@ -1,6 +1,6 @@
 package eu.ill.webx;
 
-import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.MessageListener;
 import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
@@ -85,12 +85,14 @@ public class WebXHost implements MessageListener {
         }
     }
 
-    public synchronized boolean connectClient(WebXClient client, WebXClientInformation clientInformation) {
+    public synchronized WebXClient createClient(WebXClientInformation clientInformation) {
         if (this.transport.isConnected()) {
 
             int screenWidth = clientInformation.getScreenWidth();
             int screenHeight = clientInformation.getScreenHeight();
             String keyboardLayout = clientInformation.getKeyboardLayout();
+
+            WebXClient client = new WebXClient();
             if (client.connect(this.transport, this.configuration.isStandalone(), clientInformation.getUsername(), clientInformation.getPassword(), screenWidth, screenHeight, keyboardLayout)) {
                 String sessionId = client.getWebXSessionId();
                 List<WebXClient> sessionClients = this.clients.get(sessionId);
@@ -100,11 +102,11 @@ public class WebXHost implements MessageListener {
                 }
                 sessionClients.add(client);
 
-                return true;
+                return client;
             }
         }
 
-        return false;
+        return null;
     }
 
     public synchronized void removeClient(WebXClient client) {
@@ -146,7 +148,7 @@ public class WebXHost implements MessageListener {
 
                             this.pingReceived = true;
 
-                        } catch (DisconnectedException e) {
+                        } catch (WebXDisconnectedException e) {
                             logger.error("Failed to get response from connector ping at {}", this.configuration.getHostname());
 
                             // Remove subscription to messages
@@ -179,7 +181,7 @@ public class WebXHost implements MessageListener {
             // Subscribe to messages once connected
             this.transport.getMessageSubscriber().addListener(this);
 
-        } catch (DisconnectedException e) {
+        } catch (WebXDisconnectedException e) {
             // Failed to connect
         }
 

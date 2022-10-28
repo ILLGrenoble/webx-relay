@@ -1,7 +1,7 @@
 package eu.ill.webx.transport;
 
 import eu.ill.webx.model.ConnectionData;
-import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SocketResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +43,7 @@ public class Transport {
         return this.connected;
     }
 
-    public void connect(String hostname, int port, int socketTimeoutMs, boolean isStandalone) throws DisconnectedException {
+    public void connect(String hostname, int port, int socketTimeoutMs, boolean isStandalone) throws WebXDisconnectedException {
 
         if (this.context == null) {
             this.isStandalone = isStandalone;
@@ -67,13 +67,13 @@ public class Transport {
 
                 this.connected = true;
 
-            } catch (DisconnectedException e) {
+            } catch (WebXDisconnectedException e) {
                 this.disconnect();
                 throw e;
 
             } catch (Exception e) {
                 this.disconnect();
-                throw new DisconnectedException();
+                throw new WebXDisconnectedException();
             }
 
         }
@@ -109,7 +109,7 @@ public class Transport {
         }
     }
 
-    public SocketResponse sendPing() throws DisconnectedException {
+    public SocketResponse sendPing() throws WebXDisconnectedException {
         if (this.isStandalone) {
             return this.connector.sendRequest("ping");
 

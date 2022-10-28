@@ -1,7 +1,6 @@
 package eu.ill.webxdemo.ws;
 
 import eu.ill.webxdemo.Configuration;
-import eu.ill.webx.WebXRelay;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 
@@ -11,13 +10,10 @@ import javax.inject.Singleton;
 @Singleton
 public class WebSocketTunnelServlet extends WebSocketServlet {
 
-    private final WebXRelay relay;
     private final Configuration configuration;
 
     @Inject
-    public WebSocketTunnelServlet(final WebXRelay relay,
-                                  final Configuration configuration) {
-        this.relay = relay;
+    public WebSocketTunnelServlet(final Configuration configuration) {
         this.configuration = configuration;
     }
 
@@ -28,6 +24,6 @@ public class WebSocketTunnelServlet extends WebSocketServlet {
         factory.getExtensionFactory().unregister("permessage-deflate");
 
         // Register WebSocket implementation
-        factory.setCreator((request, response) -> new WebSocketTunnelListener(this.relay, this.configuration));
+        factory.setCreator((request, response) -> new WebSocketTunnelListener(this.configuration));
     }
 }

@@ -1,6 +1,6 @@
 package eu.ill.webx.transport;
 
-import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SocketResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,23 +46,23 @@ public class SessionChannel {
         }
     }
 
-    public synchronized SocketResponse sendRequest(String request) throws DisconnectedException {
+    public synchronized SocketResponse sendRequest(String request) throws WebXDisconnectedException {
         try {
             if (this.socket != null) {
                 this.socket.send(request);
                 return new SocketResponse(socket.recv());
 
             } else {
-                throw new DisconnectedException();
+                throw new WebXDisconnectedException();
             }
 
         } catch (ZMQException e) {
             logger.error("Caught ZMQ Exception: {}", e.getMessage());
-            throw new DisconnectedException();
+            throw new WebXDisconnectedException();
         }
     }
 
-    public synchronized String startSession(String username, String password, int width, int height, String keyboard) throws DisconnectedException {
+    public synchronized String startSession(String username, String password, int width, int height, String keyboard) throws WebXDisconnectedException {
         String usernameBase64 = Base64.getEncoder().encodeToString(username.getBytes());
         String passwordBase64 = Base64.getEncoder().encodeToString(password.getBytes());
         String request = "create," + usernameBase64 + "," + passwordBase64 + "," + width + "," + height + "," + keyboard;

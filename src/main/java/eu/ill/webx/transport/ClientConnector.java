@@ -1,7 +1,7 @@
 package eu.ill.webx.transport;
 
 import eu.ill.webx.model.ConnectionData;
-import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SocketResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +20,7 @@ public class ClientConnector {
     public ClientConnector() {
     }
 
-    public ConnectionData connect(ZContext context, String address, int socketTimeoutMs, boolean standalone) throws DisconnectedException {
+    public ConnectionData connect(ZContext context, String address, int socketTimeoutMs, boolean standalone) throws WebXDisconnectedException {
 
         if (this.socket == null) {
             this.socket = context.createSocket(SocketType.REQ);
@@ -48,13 +48,13 @@ public class ClientConnector {
 
                 logger.debug("WebX Connector connected");
 
-            } catch (DisconnectedException e) {
+            } catch (WebXDisconnectedException e) {
                 this.disconnect();
                 throw e;
 
             } catch (Exception e) {
                 this.disconnect();
-                throw new DisconnectedException();
+                throw new WebXDisconnectedException();
             }
         }
 
@@ -73,19 +73,19 @@ public class ClientConnector {
         }
     }
 
-    public synchronized SocketResponse sendRequest(String request) throws DisconnectedException {
+    public synchronized SocketResponse sendRequest(String request) throws WebXDisconnectedException {
         try {
             if (this.socket != null) {
                 this.socket.send(request);
                 return new SocketResponse(socket.recv());
 
             } else {
-                throw new DisconnectedException();
+                throw new WebXDisconnectedException();
             }
 
         } catch (ZMQException e) {
             logger.error("Caught ZMQ Exception: {}", e.getMessage());
-            throw new DisconnectedException();
+            throw new WebXDisconnectedException();
         }
     }
 }

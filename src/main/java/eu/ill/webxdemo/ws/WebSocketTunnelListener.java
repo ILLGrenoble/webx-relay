@@ -2,7 +2,6 @@ package eu.ill.webxdemo.ws;
 
 import eu.ill.webx.WebXClientInformation;
 import eu.ill.webx.WebXConfiguration;
-import eu.ill.webx.WebXRelay;
 import eu.ill.webx.WebXTunnel;
 import eu.ill.webxdemo.Configuration;
 import eu.ill.webxdemo.model.Credentials;
@@ -25,13 +24,11 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private static final String HEIGHT_PARAM = "height";
     private static final String KEYBOARD_PARAM = "keyboard";
 
-    private final WebXRelay relay;
     private final Configuration configuration;
 
     private ConnectionThread connectionThread;
 
-    public WebSocketTunnelListener(final WebXRelay relay, final Configuration configuration) {
-        this.relay = relay;
+    public WebSocketTunnelListener(final Configuration configuration) {
         this.configuration = configuration;
     }
 
@@ -81,8 +78,8 @@ public class WebSocketTunnelListener implements WebSocketListener {
                 keyboard != null ? keyboard : configuration.getDefaultKeyboardLayout());
 
         // Connect to host
-        WebXTunnel tunnel = this.relay.onClientConnect(webXConfiguration, clientInformation);
-        if (tunnel != null) {
+        WebXTunnel tunnel = new WebXTunnel();
+        if (tunnel.connect(webXConfiguration, clientInformation)) {
             // Create thread to read from tunnel
             this.connectionThread = new ConnectionThread(tunnel, session);
             connectionThread.start();

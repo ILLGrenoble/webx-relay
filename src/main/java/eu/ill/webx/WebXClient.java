@@ -2,7 +2,7 @@ package eu.ill.webx;
 
 import eu.ill.webx.exceptions.WebXClientException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
-import eu.ill.webx.model.DisconnectedException;
+import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.Message;
 import eu.ill.webx.model.SocketResponse;
 import eu.ill.webx.transport.InstructionPublisher;
@@ -226,7 +226,7 @@ public class WebXClient {
                     this.messageQueue.add(new Message.InterruptMessage("Failed to ping WebX Session"));
                 }
 
-            } catch (DisconnectedException e) {
+            } catch (WebXDisconnectedException e) {
                 logger.error("Failed to get response from connector ping to session {}", this.webXSessionId);
                 this.messageQueue.add(new Message.InterruptMessage("Failed to get response from connection ping to WebX Session"));
             }
@@ -257,7 +257,7 @@ public class WebXClient {
                     logger.error("Couldn't create WebX session: {}", responseValue);
                 }
 
-            } catch (DisconnectedException e) {
+            } catch (WebXDisconnectedException e) {
                 logger.error("WebX Server is disconnected");
                 this.stop();
             }

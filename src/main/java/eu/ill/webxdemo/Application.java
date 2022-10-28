@@ -6,8 +6,6 @@ import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
-import eu.ill.webxdemo.providers.WebXRelayProvider;
-import eu.ill.webx.WebXRelay;
 import eu.ill.webxdemo.services.AuthService;
 import eu.ill.webxdemo.services.ConfigurationService;
 import eu.ill.webxdemo.ws.WebSocketTunnelServlet;
@@ -15,8 +13,6 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
-
-import javax.inject.Singleton;
 
 import static com.google.inject.Guice.createInjector;
 import static org.eclipse.jetty.servlet.ServletContextHandler.NO_SESSIONS;
@@ -68,7 +64,6 @@ public class Application {
                         Configuration configuration = new Configuration(standaloneHost, standalonePort, defaultScreenWidth, defaultScreenHeight, defaultKeyboardLayout);
                         ConfigurationService.instance().setConfiguration(configuration);
                         bind(Configuration.class).toInstance(configuration);
-                        bind(WebXRelay.class).toProvider(WebXRelayProvider.class).in(Singleton.class);
                         serve("/ws").with(WebSocketTunnelServlet.class);
                     }
                 });

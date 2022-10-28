@@ -13,36 +13,18 @@ public class WebXRelay {
 
     private final List<WebXHost> hosts = new ArrayList<>();
 
-    public WebXRelay() {
+    private WebXRelay(){
     }
 
-    public synchronized WebXTunnel onClientConnect(final WebXConfiguration configuration, final WebXClientInformation clientInformation) {
-        WebXHost host = this.createHost(configuration);
-        if (host != null) {
-            logger.debug("Creating client for {}...", host.getHostname());
-
-            WebXTunnel tunnel = new WebXTunnel(this, host);
-            if (tunnel.connect(clientInformation)) {
-                return tunnel;
-            }
-        }
-
-        return null;
+    private static class Holder {
+        private static final WebXRelay INSTANCE = new WebXRelay();
     }
 
-    public synchronized void onClientDisconnect(WebXHost host) {
-        if (this.hosts.contains(host)) {
-            if (host.getClientCount() == 0) {
-                // Remove from list
-                this.hosts.remove(host);
-
-                // Disconnect from host
-                host.stop();
-            }
-        }
+    public static WebXRelay getInstance() {
+        return Holder.INSTANCE;
     }
 
-    private WebXHost createHost(final WebXConfiguration configuration) {
+    public synchronized WebXHost onClientConnect(final WebXConfiguration configuration, final WebXClientInformation clientInformation) {
         WebXHost host = this.getHost(configuration);
         if (host == null) {
             // Create host
@@ -59,6 +41,18 @@ public class WebXRelay {
             }
         }
         return host;
+    }
+
+    public synchronized void onClientDisconnect(WebXHost host) {
+        if (this.hosts.contains(host)) {
+            if (host.getClientCount() == 0) {
+                // Remove from list
+                this.hosts.remove(host);
+
+                // Disconnect from host
+                host.stop();
+            }
+        }
     }
 
     private WebXHost getHost(WebXConfiguration configuration) {
