@@ -13,8 +13,8 @@ FROM openjdk:14-alpine
 WORKDIR /app
 
 # copy built application
-COPY --from=builder /app/target/webx-relay.jar /app
+COPY --from=builder /app/target/webx-app/webx-demo.jar /app
 
-CMD java -jar /app/webx-relay.jar
+CMD java -jar /app/webx-demo.jar
 
 EXPOSE 8080
