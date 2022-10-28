@@ -1,7 +1,7 @@
 package eu.ill.webxdemo.providers;
 
 import com.google.inject.Provider;
-import eu.ill.webx.relay.WebXRelay;
+import eu.ill.webx.WebXRelay;
 
 public class WebXRelayProvider implements Provider<WebXRelay> {
 

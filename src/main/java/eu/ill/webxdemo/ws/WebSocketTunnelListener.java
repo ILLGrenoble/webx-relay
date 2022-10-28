@@ -2,11 +2,10 @@ package eu.ill.webxdemo.ws;
 
 import eu.ill.webx.WebXClientInformation;
 import eu.ill.webx.WebXConfiguration;
+import eu.ill.webx.WebXRelay;
+import eu.ill.webx.WebXTunnel;
 import eu.ill.webxdemo.Configuration;
 import eu.ill.webxdemo.model.Credentials;
-import eu.ill.webx.relay.Client;
-import eu.ill.webx.relay.Host;
-import eu.ill.webx.relay.WebXRelay;
 import eu.ill.webxdemo.services.AuthService;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketListener;
@@ -29,8 +28,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
     private final WebXRelay relay;
     private final Configuration configuration;
 
-    private Client client;
-    private Host host;
+    private ConnectionThread connectionThread;
 
     public WebSocketTunnelListener(final WebXRelay relay, final Configuration configuration) {
         this.relay = relay;
@@ -83,18 +81,11 @@ public class WebSocketTunnelListener implements WebSocketListener {
                 keyboard != null ? keyboard : configuration.getDefaultKeyboardLayout());
 
         // Connect to host
-        this.host = this.relay.onClientConnect(webXConfiguration);
-        if (this.host != null) {
-            logger.debug("Creating client for {}...", this.host.getHostname());
-
-            this.client = new Client(session);
-            if (this.host.connectClient(this.client, clientInformation)) {
-                logger.info("... client created.");
-
-            } else {
-                logger.warn("... not connected to server {}. Client not created.", this.host.getHostname());
-                session.close();
-            }
+        WebXTunnel tunnel = this.relay.onClientConnect(webXConfiguration, clientInformation);
+        if (tunnel != null) {
+            // Create thread to read from tunnel
+            this.connectionThread = new ConnectionThread(tunnel, session);
+            connectionThread.start();
 
         } else {
             logger.error("Failed to connect to webx server. Client not created.");
@@ -110,8 +101,8 @@ public class WebSocketTunnelListener implements WebSocketListener {
 
     @Override
     public void onWebSocketBinary(byte[] payload, int offset, int length) {
-        if (this.client != null && this.client.isRunning()) {
-            this.client.queueInstruction(payload);
+        if (this.connectionThread != null && this.connectionThread.isRunning()) {
+            this.connectionThread.getTunnel().write(payload);
 
         } else {
             logger.error("Received instruction on closed client");
@@ -134,13 +125,15 @@ public class WebSocketTunnelListener implements WebSocketListener {
     }
 
     private void disconnect() {
-        if (this.client != null) {
-            this.host.removeClient(client);
+        if (this.connectionThread != null) {
+            this.connectionThread.closeTunnel();
+            try {
+                this.connectionThread.join();
 
-            this.client = null;
-
-            this.relay.onClientDisconnect(host);
-            this.host = null;
+            } catch (InterruptedException e) {
+                logger.error("Failed to join the connection thread");
+            }
+            this.connectionThread = null;
         }
     }
 

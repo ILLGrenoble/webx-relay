@@ -1,16 +1,16 @@
-package eu.ill.webx.relay;
+package eu.ill.webx;
 
+import eu.ill.webx.exceptions.WebXClientException;
+import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.model.DisconnectedException;
 import eu.ill.webx.model.Message;
 import eu.ill.webx.model.SocketResponse;
 import eu.ill.webx.transport.InstructionPublisher;
 import eu.ill.webx.transport.SessionChannel;
 import eu.ill.webx.transport.Transport;
-import org.eclipse.jetty.websocket.api.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -18,70 +18,80 @@ import java.util.concurrent.TimeUnit;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
-public class Client {
+public class WebXClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(Client.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebXClient.class);
+    // Create a POLL message (messageType 8)
+    private static final ByteBuffer pollMessageBuffer = ByteBuffer.allocate(32).order(LITTLE_ENDIAN)
+            .putInt(0)  // dummy sessionId (1/4)
+            .putInt(0)  // dummy sessionId (2/4)
+            .putInt(0)  // dummy sessionId (3/4)
+            .putInt(0)  // dummy sessionId (4/4)
+            .putInt(8)  // message meta data: {Type, empty, relayQueueSize, empty}
+            .putInt(0)  // messageId
+            .putInt(16) // messageLength
+            .putInt(0);  // padding
 
-    private final Session session;
     private InstructionPublisher instructionPublisher;
     private SessionChannel sessionChannel;
 
     private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
     private final PriorityBlockingQueue<Message> messageQueue = new PriorityBlockingQueue<>();
 
-    private Thread webXListenerThread;
     private Thread clientInstructionThread;
     private Thread connectionCheckThread;
 
+    private boolean connected = false;
     private boolean running = false;
 
     private String webXSessionId;
     private byte[] webXRawSessionId;
 
-    public Client(final Session session) {
-        this.session = session;
+    public WebXClient() {
     }
 
     public synchronized boolean isRunning() {
         return running;
     }
 
-    public Session getSession() {
-        return session;
-    }
-
     public String getWebXSessionId() {
         return webXSessionId;
     }
 
-    public synchronized boolean start(Transport transport, boolean standalone, String username, String password, int width, int height, String keyboard) {
-        if (!running) {
+    public synchronized boolean connect(Transport transport, boolean standalone, String username, String password, int width, int height, String keyboard) {
+        if (!connected) {
             String sessionIdString = this.startSession(transport, standalone,  username,  password, width, height, keyboard);
             if (sessionIdString != null) {
                 this.webXSessionId = sessionIdString;
                 logger.info("Got session Id \"{}\"", sessionIdString);
                 this.webXRawSessionId = sessionIdToByteArray(sessionIdString);
 
-                running = true;
-
-                // Add relay as a listener to webx messages
                 this.instructionPublisher = transport.getInstructionPublisher();
-
-                this.webXListenerThread = new Thread(this::webXListenerLoop);
-                this.webXListenerThread.start();
-
-                this.clientInstructionThread = new Thread(this::clientInstructionLoop);
-                this.clientInstructionThread.start();
-
                 if (!standalone) {
                     this.sessionChannel = transport.getSessionChannel();
-                    // Start connection checker
-                    this.connectionCheckThread = new Thread(this::connectionCheck);
-                    this.connectionCheckThread.start();
                 }
+
+                connected = true;
             }
         }
-        return running;
+        return connected;
+    }
+
+    public synchronized void start() {
+        if (!running) {
+            running = true;
+
+            // Add relay as a listener to webx messages
+
+            this.clientInstructionThread = new Thread(this::clientInstructionLoop);
+            this.clientInstructionThread.start();
+
+            if (this.sessionChannel != null) {
+                // Start connection checker
+                this.connectionCheckThread = new Thread(this::connectionCheck);
+                this.connectionCheckThread.start();
+            }
+        }
     }
 
     public synchronized void stop() {
@@ -89,14 +99,10 @@ public class Client {
             try {
                 running = false;
 
+                this.messageQueue.add(new Message.CloseMessage());
+
                 // Remove relay from webx subscriber
                 this.instructionPublisher = null;
-
-                if (this.webXListenerThread != null) {
-                    this.webXListenerThread.interrupt();
-                    this.webXListenerThread.join();
-                    this.webXListenerThread = null;
-                }
 
                 if (this.clientInstructionThread != null) {
                     this.clientInstructionThread.interrupt();
@@ -109,6 +115,8 @@ public class Client {
                     this.connectionCheckThread.join();
                     this.connectionCheckThread = null;
                 }
+
+                logger.debug("Client stopped");
 
             } catch (InterruptedException exception) {
                 logger.error("Stop of relay message listener and client instruction threads interrupted", exception);
@@ -132,53 +140,58 @@ public class Client {
         }
     }
 
-    private void webXListenerLoop() {
-        // Create a POLL message (messageType 8)
-        ByteBuffer pollMessageBuffer = ByteBuffer.allocate(32).order(LITTLE_ENDIAN)
-                .putInt(0)  // dummy sessionId (1/4)
-                .putInt(0)  // dummy sessionId (2/4)
-                .putInt(0)  // dummy sessionId (3/4)
-                .putInt(0)  // dummy sessionId (4/4)
-                .putInt(8)  // message meta data: {Type, empty, relayQueueSize, empty}
-                .putInt(0)  // messageId
-                .putInt(16) // messageLength
-                .putInt(0);  // padding
-
-        while (this.running) {
+    public byte[] getMessage() throws WebXClientException, WebXConnectionInterruptException {
+        if (this.running) {
             try {
+                // Get next message, wait 5 seconds and return poll message if nothing from the server
                 Message message = this.messageQueue.poll(5000, TimeUnit.MILLISECONDS);
+
                 if (message != null) {
+                    if (message.getType().equals(Message.Type.INTERRUPT)) {
+                        throw new WebXConnectionInterruptException(message.getStringData());
+
+                    } else if (message.getType().equals(Message.Type.CLOSE)) {
+                        return null;
+                    }
+
                     byte[] messageData = message.getData();
-                    logger.trace("Sending client message of length {}", messageData.length);
 
-                    // Add queue size to message metadata
-                    byte queueSize = (byte)Math.min(messageQueue.size(), 255); // get queue size (limit to 255)
-                    ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(messageData, 18, 1).order(LITTLE_ENDIAN);
-                    messageMetadataWrapper.put(queueSize);
+                    if (messageData == null) {
+                        // connection closed
+                        return null;
 
-                    this.sendData(messageData);
+                    } else {
+                        logger.trace("Read client message of length {}", messageData.length);
+
+                        if (messageData.length < 32) {
+                            throw new WebXClientException("Invalid message received from the server");
+                        }
+
+                        // Add queue size to message metadata
+                        byte queueSize = (byte)Math.min(messageQueue.size(), 255); // get queue size (limit to 255)
+                        ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(messageData, 18, 1).order(LITTLE_ENDIAN);
+                        messageMetadataWrapper.put(queueSize);
+
+                        return messageData;
+                    }
+
 
                 } else {
                     // Keep socket alive
-                    this.sendData(pollMessageBuffer.array());
+                    return pollMessageBuffer.array();
                 }
 
             } catch (InterruptedException exception) {
-                if (this.running) {
-                    logger.info("Client message listener thread interrupted");
-                }
+                throw new WebXClientException("Client message listener thread interrupted");
+
             }
+        } else {
+            throw new WebXClientException("WebXClient is not running");
         }
     }
 
-    public synchronized void sendData(byte[] data) {
-        try {
-            this.session.getRemote().sendBytes(ByteBuffer.wrap(data));
-
-        } catch (IOException exception) {
-            logger.error("Failed to write binary data to web socket", exception);
-            this.session.close();
-        }
+    public void close() {
+        this.messageQueue.add(new Message.CloseMessage());
     }
 
     private void clientInstructionLoop() {
@@ -210,13 +223,12 @@ public class Client {
 
                 if (responseElements[0].equals("pang")) {
                     logger.error("Failed to ping webX Session {}: {}", this.webXSessionId, responseElements[2]);
-                    this.session.close();
+                    this.messageQueue.add(new Message.InterruptMessage("Failed to ping WebX Session"));
                 }
 
             } catch (DisconnectedException e) {
-                logger.error("Failed to get response from connector ping from session {}", this.webXSessionId);
-
-                this.session.close();
+                logger.error("Failed to get response from connector ping to session {}", this.webXSessionId);
+                this.messageQueue.add(new Message.InterruptMessage("Failed to get response from connection ping to WebX Session"));
             }
 
             try {

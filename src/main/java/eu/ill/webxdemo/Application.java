@@ -7,7 +7,7 @@ import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.servlet.GuiceServletContextListener;
 import com.google.inject.servlet.ServletModule;
 import eu.ill.webxdemo.providers.WebXRelayProvider;
-import eu.ill.webx.relay.WebXRelay;
+import eu.ill.webx.WebXRelay;
 import eu.ill.webxdemo.services.AuthService;
 import eu.ill.webxdemo.services.ConfigurationService;
 import eu.ill.webxdemo.ws.WebSocketTunnelServlet;

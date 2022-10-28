@@ -1,7 +1,5 @@
-package eu.ill.webx.relay;
+package eu.ill.webx;
 
-import eu.ill.webx.WebXClientInformation;
-import eu.ill.webx.WebXConfiguration;
 import eu.ill.webx.model.DisconnectedException;
 import eu.ill.webx.model.MessageListener;
 import eu.ill.webx.transport.Transport;
@@ -10,21 +8,21 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class Host implements MessageListener {
+public class WebXHost implements MessageListener {
 
     private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
-    private static final Logger logger = LoggerFactory.getLogger(Host.class);
+    private static final Logger logger = LoggerFactory.getLogger(WebXHost.class);
 
     private final WebXConfiguration configuration;
     private final Transport transport;
     private boolean pingReceived = false;
 
-    private final Map<String, List<Client>> clients = new HashMap<>();
+    private final Map<String, List<WebXClient>> clients = new HashMap<>();
 
     private Thread thread;
     private boolean running = false;
 
-    public Host(final WebXConfiguration configuration) {
+    public WebXHost(final WebXConfiguration configuration) {
         this.configuration = configuration;
 
         this.transport = new Transport();
@@ -87,15 +85,15 @@ public class Host implements MessageListener {
         }
     }
 
-    public synchronized boolean connectClient(Client client, WebXClientInformation clientInformation) {
+    public synchronized boolean connectClient(WebXClient client, WebXClientInformation clientInformation) {
         if (this.transport.isConnected()) {
 
             int screenWidth = clientInformation.getScreenWidth();
             int screenHeight = clientInformation.getScreenHeight();
             String keyboardLayout = clientInformation.getKeyboardLayout();
-            if (client.start(this.transport, this.configuration.isStandalone(), clientInformation.getUsername(), clientInformation.getPassword(), screenWidth, screenHeight, keyboardLayout)) {
+            if (client.connect(this.transport, this.configuration.isStandalone(), clientInformation.getUsername(), clientInformation.getPassword(), screenWidth, screenHeight, keyboardLayout)) {
                 String sessionId = client.getWebXSessionId();
-                List<Client> sessionClients = this.clients.get(sessionId);
+                List<WebXClient> sessionClients = this.clients.get(sessionId);
                 if (sessionClients == null) {
                     sessionClients = new ArrayList<>();
                     this.clients.put(sessionId, sessionClients);
@@ -109,11 +107,9 @@ public class Host implements MessageListener {
         return false;
     }
 
-    public synchronized void removeClient(Client client) {
-        client.stop();
-
+    public synchronized void removeClient(WebXClient client) {
         String sessionId = client.getWebXSessionId();
-        List<Client> sessionClients = this.clients.get(sessionId);
+        List<WebXClient> sessionClients = this.clients.get(sessionId);
         if (sessionClients != null) {
             sessionClients.remove(client);
             if (sessionClients.size() == 0) {
@@ -191,11 +187,11 @@ public class Host implements MessageListener {
     }
 
     private synchronized void disconnectClients() {
-        for (Map.Entry<String, List<Client>> entry : this.clients.entrySet()) {
-            List<Client> sessionClients = entry.getValue();
+        for (Map.Entry<String, List<WebXClient>> entry : this.clients.entrySet()) {
+            List<WebXClient> sessionClients = entry.getValue();
 
-            for (Client client : sessionClients) {
-                client.getSession().close();
+            for (WebXClient client : sessionClients) {
+                client.close();
             }
         }
 
@@ -208,9 +204,9 @@ public class Host implements MessageListener {
 
         // Get session Id
         String uuid = this.sessionIdToHex(messageData);
-        List<Client> sessionClients = this.clients.get(uuid);
+        List<WebXClient> sessionClients = this.clients.get(uuid);
         if (sessionClients != null) {
-            for (Client client : sessionClients) {
+            for (WebXClient client : sessionClients) {
                 client.onMessage(messageData);
             }
 

@@ -2,6 +2,7 @@ package eu.ill.webx.model;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 public class Message implements Comparable<Message> {
@@ -10,6 +11,20 @@ public class Message implements Comparable<Message> {
     private final Type type;
     private final Long timestamp;
     private final Integer priority;
+
+    protected Message(final Type type, final Integer priority) {
+        this.timestamp = new Date().getTime();
+        this.data = null;
+        this.type = type;
+        this.priority = priority;
+    }
+
+    protected Message(final Type type, final Integer priority, byte[] message) {
+        this.timestamp = new Date().getTime();
+        this.data = message;
+        this.type = type;
+        this.priority = priority;
+    }
 
     public Message(byte[] data) {
         this.timestamp = new Date().getTime();
@@ -31,6 +46,10 @@ public class Message implements Comparable<Message> {
 
     public byte[] getData() {
         return data;
+    }
+
+    public String getStringData() {
+        return new String(data, StandardCharsets.UTF_8);
     }
 
     public Type getType() {
@@ -58,8 +77,22 @@ public class Message implements Comparable<Message> {
     }
 
     public static enum Type {
+        INTERRUPT,
+        CLOSE,
         MOUSE,
         CURSOR,
         OTHER
+    }
+
+    public static class InterruptMessage extends Message {
+        public InterruptMessage(String message) {
+            super(Type.INTERRUPT, 0, message.getBytes(StandardCharsets.UTF_8));
+        }
+    }
+
+    public static class CloseMessage extends Message {
+        public CloseMessage() {
+            super(Type.CLOSE, 0);
+        }
     }
 }
