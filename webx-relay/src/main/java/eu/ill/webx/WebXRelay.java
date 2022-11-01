@@ -1,5 +1,6 @@
 package eu.ill.webx;
 
+import eu.ill.webx.exceptions.WebXConnectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,20 +25,22 @@ public class WebXRelay {
         return Holder.INSTANCE;
     }
 
-    public synchronized WebXHost onClientConnect(final WebXConfiguration configuration, final WebXClientInformation clientInformation) {
+    public synchronized WebXHost onClientConnect(final WebXConfiguration configuration) throws WebXConnectionException {
         WebXHost host = this.getHost(configuration);
         if (host == null) {
             // Create host
             host = new WebXHost(configuration);
 
             // Test connection to the webx server
-            if (host.start()) {
+            try {
+                host.start();
                 this.hosts.add(host);
 
-            } else {
+            } catch (WebXConnectionException exception) {
                 host.stop();
-                host = null;
-                logger.error("Failed to create WebX host at {}:{}", configuration.getHostname(), configuration.getPort());
+                logger.error("Failed to create WebX host at {}:{} : {}", configuration.getHostname(), configuration.getPort(), exception.getMessage());
+
+                throw exception;
             }
         }
         return host;

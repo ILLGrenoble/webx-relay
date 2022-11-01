@@ -1,6 +1,7 @@
 package eu.ill.webx;
 
 import eu.ill.webx.exceptions.WebXClientException;
+import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,30 +16,29 @@ public class WebXTunnel {
     public WebXTunnel() {
     }
 
-    public boolean connect(final WebXConfiguration configuration, final WebXClientInformation clientInformation) {
+    public void connect(final WebXConfiguration configuration) throws WebXConnectionException {
+        this.connect(configuration, null);
+    }
+
+    public void connect(final WebXConfiguration configuration, final WebXClientInformation clientInformation) throws WebXConnectionException {
         if (this.client == null) {
-            WebXHost host = WebXRelay.getInstance().onClientConnect(configuration, clientInformation);
+            WebXHost host = WebXRelay.getInstance().onClientConnect(configuration);
 
-            if (host != null) {
-                logger.debug("Creating client for {}...", host.getHostname());
-                WebXClient client;
-                if ((client = host.createClient(clientInformation)) != null) {
-                    logger.info("... client created.");
+            logger.debug("Creating client for {}...", host.getHostname());
+            WebXClient client = clientInformation == null ? host.createClient() : host.createClient(clientInformation);
 
-                    this.client = client;
-                    this.host = host;
-                    return true;
+            logger.info("... client created.");
+            this.client = client;
+            this.host = host;
+        }
+    }
 
-                } else {
-                    logger.warn("... not connected to server {}. Client not created.", host.getHostname());
-                    return false;
-                }
-            }
-
-            return false;
+    public String getConnectionId() throws WebXClientException {
+        if (this.client != null) {
+            return this.client.getWebXSessionId();
 
         } else {
-            return this.client.isRunning();
+            throw new WebXClientException("Client is not connected");
         }
     }
 
@@ -78,7 +78,12 @@ public class WebXTunnel {
         }
     }
 
-    public void write(byte[] payload) {
-        this.client.queueInstruction(payload);
+    public void write(byte[] payload) throws WebXClientException {
+        if (this.client != null) {
+            this.client.queueInstruction(payload);
+
+        } else {
+            throw new WebXClientException("Client is not connected");
+        }
     }
 }

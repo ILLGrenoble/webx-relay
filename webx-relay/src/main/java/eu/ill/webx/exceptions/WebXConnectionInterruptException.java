@@ -1,6 +1,6 @@
 package eu.ill.webx.exceptions;
 
-public class WebXConnectionInterruptException extends Exception{
+public class WebXConnectionInterruptException extends WebXException {
 
     public WebXConnectionInterruptException() {
     }

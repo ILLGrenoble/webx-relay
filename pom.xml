@@ -16,9 +16,8 @@
     <properties>
         <maven.compiler.source>14</maven.compiler.source>
         <maven.compiler.target>14</maven.compiler.target>
-        <slf4j.version>1.6.1</slf4j.version>
-        <commons-io.version>2.6</commons-io.version>
-        <junit.version>4.12</junit.version>
+        <slf4j.version>2.0.3</slf4j.version>
+        <junit.version>4.13.2</junit.version>
     </properties>
 
     <dependencies>
@@ -27,12 +26,6 @@
             <artifactId>slf4j-log4j12</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-
-<!--        <dependency>-->
-<!--            <groupId>commons-io</groupId>-->
-<!--            <artifactId>commons-io</artifactId>-->
-<!--            <version>${commons-io.version}</version>-->
-<!--        </dependency>-->
 
         <dependency>
             <groupId>junit</groupId>

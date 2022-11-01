@@ -1,5 +1,6 @@
 package eu.ill.webx;
 
+import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.MessageListener;
 import eu.ill.webx.transport.Transport;
@@ -40,27 +41,23 @@ public class WebXHost implements MessageListener {
         return this.clients.size();
     }
 
-    public boolean start() {
+    public void start() throws WebXConnectionException {
         synchronized (this) {
             if (!this.running) {
                 // Initialise transport: verify that the host has a running webx server
-                if (this.connectToWebXHost()) {
-                    this.running = true;
+                this.connectToWebXHost();
+                this.running = true;
 
-                    // Start connection checker
-                    this.thread = new Thread(this::connectionCheck);
-                    this.thread.start();
-
-                }
+                // Start connection checker
+                this.thread = new Thread(this::connectionCheck);
+                this.thread.start();
             }
         }
 
         if (!this.waitForPing()) {
             logger.error("Timeout will waiting to receive ping from WebX Host {}", this.configuration.getHostname());
-            return false;
+            throw new WebXConnectionException("Failed to ping WebX Host after startup");
         }
-
-        return this.transport.isConnected();
     }
 
     public void stop() {
@@ -85,28 +82,43 @@ public class WebXHost implements MessageListener {
         }
     }
 
-    public synchronized WebXClient createClient(WebXClientInformation clientInformation) {
+    public synchronized WebXClient createClient() throws WebXConnectionException {
         if (this.transport.isConnected()) {
 
-            int screenWidth = clientInformation.getScreenWidth();
-            int screenHeight = clientInformation.getScreenHeight();
-            String keyboardLayout = clientInformation.getKeyboardLayout();
-
             WebXClient client = new WebXClient();
-            if (client.connect(this.transport, this.configuration.isStandalone(), clientInformation.getUsername(), clientInformation.getPassword(), screenWidth, screenHeight, keyboardLayout)) {
-                String sessionId = client.getWebXSessionId();
-                List<WebXClient> sessionClients = this.clients.get(sessionId);
-                if (sessionClients == null) {
-                    sessionClients = new ArrayList<>();
-                    this.clients.put(sessionId, sessionClients);
-                }
-                sessionClients.add(client);
+            client.connect(transport);
+            this.addClient(client);
 
-                return client;
-            }
+            return client;
         }
 
-        return null;
+        logger.error("Trying to create client but transport to standalone host is not connected");
+        throw new WebXConnectionException("Transport to standalone host not connected when creating client");
+    }
+
+    public synchronized WebXClient createClient(WebXClientInformation clientInformation) throws WebXConnectionException {
+        if (this.transport.isConnected()) {
+
+            WebXClient client = new WebXClient();
+            client.connect(transport, clientInformation);
+
+            this.addClient(client);
+
+            return client;
+        }
+
+        logger.error("Trying to create client but transport to host is not connected");
+        throw new WebXConnectionException("Transport to host not connected when creating client");
+    }
+
+    private void addClient(WebXClient client) {
+        String sessionId = client.getWebXSessionId();
+        List<WebXClient> sessionClients = this.clients.get(sessionId);
+        if (sessionClients == null) {
+            sessionClients = new ArrayList<>();
+            this.clients.put(sessionId, sessionClients);
+        }
+        sessionClients.add(client);
     }
 
     public synchronized void removeClient(WebXClient client) {
@@ -159,7 +171,12 @@ public class WebXHost implements MessageListener {
                         }
 
                     } else {
-                        this.connectToWebXHost();
+                        try {
+                            this.connectToWebXHost();
+
+                        } catch (WebXConnectionException exception) {
+                            logger.warn("Failed to connect to WebX host {}: {}", this.getHostname(), exception.getMessage());
+                        }
                     }
                 }
             }
@@ -172,7 +189,7 @@ public class WebXHost implements MessageListener {
         }
     }
 
-    private boolean connectToWebXHost() {
+    private void connectToWebXHost() throws WebXConnectionException {
         try {
             logger.info("Connecting to WebX server at {}:{}...", this.configuration.getHostname(), this.configuration.getPort());
             this.transport.connect(this.configuration.getHostname(), this.configuration.getPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone());
@@ -182,10 +199,8 @@ public class WebXHost implements MessageListener {
             this.transport.getMessageSubscriber().addListener(this);
 
         } catch (WebXDisconnectedException e) {
-            // Failed to connect
+            throw new WebXConnectionException("Failed to connect to WebX host");
         }
-
-        return this.transport.isConnected();
     }
 
     private synchronized void disconnectClients() {

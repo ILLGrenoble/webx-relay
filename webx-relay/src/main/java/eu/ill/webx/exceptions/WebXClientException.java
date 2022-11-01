@@ -1,6 +1,6 @@
 package eu.ill.webx.exceptions;
 
-public class WebXClientException extends Exception{
+public class WebXClientException extends WebXException {
 
     public WebXClientException() {
     }

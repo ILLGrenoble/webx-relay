@@ -3,6 +3,7 @@ package eu.ill.webxdemo.ws;
 import eu.ill.webx.WebXClientInformation;
 import eu.ill.webx.WebXConfiguration;
 import eu.ill.webx.WebXTunnel;
+import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webxdemo.Configuration;
 import eu.ill.webxdemo.model.Credentials;
 import eu.ill.webxdemo.services.AuthService;
@@ -34,21 +35,22 @@ public class WebSocketTunnelListener implements WebSocketListener {
 
     @Override
     public void onWebSocketConnect(final Session session) {
-        String hostname;
-        Integer port;
 
-        String username = null;
-        String password = null;
-        Integer width = null;
-        Integer height = null;
-        String keyboard = null;
+        WebXClientInformation clientInformation = null;
+        WebXConfiguration webXConfiguration;
 
         if (this.configuration.getStandaloneHost() != null && this.configuration.getStandalonePort() != null) {
-            hostname = this.configuration.getStandaloneHost();
-            port = this.configuration.getStandalonePort();
+            String hostname = this.configuration.getStandaloneHost();
+            Integer port = this.configuration.getStandalonePort();
+            webXConfiguration = new WebXConfiguration(hostname, port, true);
 
         } else {
             Map<String, List<String>> params = session.getUpgradeRequest().getParameterMap();
+
+            // Get all the other params
+            Integer port = this.getIntegerParam(params, WEBX_PORT_PARAM);
+            String hostname = this.getStringParam(params, WEBX_HOST_PARAM);
+            webXConfiguration = new WebXConfiguration(hostname, port, false);
 
             String token = this.getStringParam(params, TOKEN_PARAM);
             Credentials credentials = AuthService.instance().getCredentials(token);
@@ -57,35 +59,33 @@ public class WebSocketTunnelListener implements WebSocketListener {
                 session.close();
                 return;
             }
-            username = credentials.getUsername();
-            password = credentials.getPassword();
+            String username = credentials.getUsername();
+            String password = credentials.getPassword();
 
-            // Get all the other params
-            port = this.getIntegerParam(params, WEBX_PORT_PARAM);
-            hostname = this.getStringParam(params, WEBX_HOST_PARAM);
-            width = this.getIntegerParam(params, WIDTH_PARAM);
-            height = this.getIntegerParam(params, HEIGHT_PARAM);
-            keyboard = this.getStringParam(params, KEYBOARD_PARAM);
+            Integer width = this.getIntegerParam(params, WIDTH_PARAM);
+            Integer height = this.getIntegerParam(params, HEIGHT_PARAM);
+            String keyboard = this.getStringParam(params, KEYBOARD_PARAM);
+
+            clientInformation = new WebXClientInformation(
+                    username,
+                    password,
+                    width != null ? width : configuration.getDefaultScreenWidth(),
+                    height != null ? height : configuration.getDefaultScreenHeight(),
+                    keyboard != null ? keyboard : configuration.getDefaultKeyboardLayout());
         }
 
 
-        WebXConfiguration webXConfiguration = new WebXConfiguration(hostname, port, this.configuration.isStandalone());
-        WebXClientInformation clientInformation = new WebXClientInformation(
-                username,
-                password,
-                width != null ? width : configuration.getDefaultScreenWidth(),
-                height != null ? height : configuration.getDefaultScreenHeight(),
-                keyboard != null ? keyboard : configuration.getDefaultKeyboardLayout());
-
         // Connect to host
-        WebXTunnel tunnel = new WebXTunnel();
-        if (tunnel.connect(webXConfiguration, clientInformation)) {
+        try {
+            WebXTunnel tunnel = new WebXTunnel();
+            tunnel.connect(webXConfiguration, clientInformation);
+
             // Create thread to read from tunnel
             this.connectionThread = new ConnectionThread(tunnel, session);
             connectionThread.start();
 
-        } else {
-            logger.error("Failed to connect to webx server. Client not created.");
+        } catch (WebXConnectionException exception) {
+            logger.error("Failed to connect to webx server. Client not created: {}", exception.getMessage());
             session.close();
         }
 
@@ -99,7 +99,7 @@ public class WebSocketTunnelListener implements WebSocketListener {
     @Override
     public void onWebSocketBinary(byte[] payload, int offset, int length) {
         if (this.connectionThread != null && this.connectionThread.isRunning()) {
-            this.connectionThread.getTunnel().write(payload);
+            this.connectionThread.write(payload);
 
         } else {
             logger.error("Received instruction on closed client");

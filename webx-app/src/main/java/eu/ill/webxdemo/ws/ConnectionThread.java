@@ -22,8 +22,13 @@ public class ConnectionThread extends Thread {
         this.session = session;
     }
 
-    public WebXTunnel getTunnel() {
-        return tunnel;
+    public void write(byte[] data) {
+        try {
+            this.tunnel.write(data);
+
+        } catch (WebXClientException exception) {
+            logger.debug("Connection to webx server is closed", exception);
+        }
     }
 
     public void run() {

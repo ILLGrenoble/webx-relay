@@ -1,6 +1,7 @@
 package eu.ill.webx;
 
 import eu.ill.webx.exceptions.WebXClientException;
+import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.Message;
@@ -58,23 +59,30 @@ public class WebXClient {
         return webXSessionId;
     }
 
-    public synchronized boolean connect(Transport transport, boolean standalone, String username, String password, int width, int height, String keyboard) {
+    public synchronized void connect(Transport transport) {
         if (!connected) {
-            String sessionIdString = this.startSession(transport, standalone,  username,  password, width, height, keyboard);
-            if (sessionIdString != null) {
-                this.webXSessionId = sessionIdString;
-                logger.info("Got session Id \"{}\"", sessionIdString);
-                this.webXRawSessionId = sessionIdToByteArray(sessionIdString);
+            // Standalone
+            this.webXSessionId = "00000000000000000000000000000000";
+            logger.info("Using standalone session Id \"{}\"", this.webXSessionId);
+            this.webXRawSessionId = sessionIdToByteArray(this.webXSessionId);
 
-                this.instructionPublisher = transport.getInstructionPublisher();
-                if (!standalone) {
-                    this.sessionChannel = transport.getSessionChannel();
-                }
-
-                connected = true;
-            }
+            this.instructionPublisher = transport.getInstructionPublisher();
+            connected = true;
         }
-        return connected;
+    }
+
+    public synchronized void connect(Transport transport, WebXClientInformation clientInformation) throws WebXConnectionException {
+        if (!connected) {
+            String sessionIdString = this.startSession(transport, clientInformation);
+            this.webXSessionId = sessionIdString;
+            logger.info("Got session Id \"{}\"", sessionIdString);
+            this.webXRawSessionId = sessionIdToByteArray(sessionIdString);
+
+            this.instructionPublisher = transport.getInstructionPublisher();
+            this.sessionChannel = transport.getSessionChannel();
+
+            connected = true;
+        }
     }
 
     public synchronized void start() {
@@ -239,31 +247,26 @@ public class WebXClient {
         }
     }
 
-    private String startSession(Transport transport, boolean standalone, String username, String password, int width, int height, String keyboard) {
-        if (standalone) {
-            return "00000000000000000000000000000000";
+    private String startSession(Transport transport, WebXClientInformation clientInformation) throws WebXConnectionException {
+        try {
+            // Start WebX session via the router and get a session ID
+            String response = transport.getSessionChannel().startSession(clientInformation);
+            String[] responseData = response.split(",");
+            int responseCode = Integer.parseInt(responseData[0]);
+            String responseValue = responseData[1];
+            if (responseCode == 0) {
+                return responseValue;
 
-        } else {
-            try {
-                // Start WebX session via the router and get a session ID
-                String response = transport.getSessionChannel().startSession(username, password, width, height, keyboard);
-                String[] responseData = response.split(",");
-                int responseCode = Integer.parseInt(responseData[0]);
-                String responseValue = responseData[1];
-                if (responseCode == 0) {
-                    return responseValue;
-
-                } else {
-                    logger.error("Couldn't create WebX session: {}", responseValue);
-                }
-
-            } catch (WebXDisconnectedException e) {
-                logger.error("WebX Server is disconnected");
-                this.stop();
+            } else {
+                logger.error("Couldn't create WebX session: {}", responseValue);
+                throw new WebXConnectionException("Couldn't create WebX session: session response invalid");
             }
-        }
 
-        return null;
+        } catch (WebXDisconnectedException e) {
+            logger.error("WebX Server is disconnected");
+            this.stop();
+            throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
+        }
     }
 
     private byte[] sessionIdToByteArray(String sessionId) {
