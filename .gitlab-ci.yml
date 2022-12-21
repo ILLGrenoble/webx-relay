@@ -4,8 +4,8 @@ stages:
 
 build-alpha:
   stage: build-alpha
-    only:
-      - alpha
+  only:
+    - alpha
   tags:
     - debian
     - dss
@@ -16,8 +16,8 @@ build-alpha:
 
 deploy-alpha:
   stage: deploy-alpha
-    only:
-      - alpha
+  only:
+    - alpha
   tags:
     - debian
     - dss
