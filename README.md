@@ -1,17 +1,10 @@
 # WebX Relay
 
-A relay server for connecting to WebX
+The WebX Relay library connecting a WebX Engine to a WebX Client.
 
-### Running
-
-Package:
+### Build
 
 ```
 mvn package
 ```
 
-Build:
-
-```
-java -jar target/webx.jar --port 8080
-```
