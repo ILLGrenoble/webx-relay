@@ -72,6 +72,16 @@
                 <role>developer</role>
             </roles>
         </developer>
+        <developer>
+            <id>jamhall</id>
+            <name>Jamie Hall</name>
+            <email>hall@ill.eu</email>
+            <organization>Institut Laue-Langevin</organization>
+            <organizationUrl>https://www.ill.eu</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
     </developers>
 
     <scm>
