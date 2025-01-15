@@ -44,7 +44,7 @@ To build the WebX Relay library run the following command:
 mvn package
 ```
 
-The build `jar` is in the `target` folder.
+The built `jar` is in the `target` folder.
 
 ### Development with the WebX Demo and WebX Dev Workspace
 
@@ -52,7 +52,7 @@ Development of the functionality of the relay is most easily made with the [WebX
 
 To have a fully functional WebX stack, the easiest way is to run the [WebX Dev Workspace](https://github.com/ILLGrenoble/webx-dev-workspace) either with a standalone WebX Engine or a multiuser WebX Router. Please see the README in this project for more details.
 
-#### Setting up Intellij to build the WebX Demo Server with the WebX Relay
+### Setting up IntelliJ to build the WebX Demo Server with the WebX Relay
 
 Open the WebX Demo Server project and the use the <b>File > Project Structure</b> menu to import the WebX Relay module.
 
