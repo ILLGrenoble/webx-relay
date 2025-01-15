@@ -46,7 +46,7 @@ mvn package
 
 The build `jar` is in the `target` folder.
 
-### Development with the WebX Demo Server and WebX Dev Workspace
+### Development with the WebX Demo and WebX Dev Workspace
 
 Development of the functionality of the relay is most easily made with the [WebX Demo Server](https://github.com/ILLGrenoble/webx-demo-server) which provides a fully functional backend server. The [WebX Demo Client](https://github.com/ILLGrenoble/webx-demo-client) also provides an easy way to connect to the server.
 
