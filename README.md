@@ -75,4 +75,71 @@ To integrate WebX Relay into an existing Maven project add the following depende
         <version>${webx-relay.version}</version>
     </dependency>
 </dependencies>
+```
+
+## Design
+
+The WebX Relay is designed as a simple tunnel between a client and a remote desktop (WebX Engine): after connection (via the WebX Router), instructions from clients are sent to the remote desktop and messages from the remote desktop are sent to the client. 
+
+Transport of data should be as efficient as possible. The relay will be handling multiple clients connected to multiple WebX Routers which are can manager multiple WebX Engines.
+
+The connection to the WebX host (either WebX Router or WebX Engine) uses TCP sockets with the ZeroMQ protocol.
+
+Connections to clients is unspecified and should be provided by the user's application. It is in general expected to be a standard websocket.
+
+Public classes are prefixed with `WebX` and are located at the root of the `eu.ill.webx` package.
+
+### WebX Tunnel
+
+The Tunnel provides the main entrypoint to the WebX Relay library. It is used for:
+ - connection and disconnection to a WebX remote desktop
+ - reading messages from the remote desktop
+ - writing instructions to the remote desktop
+
+A `WebXTunnel` is instantiated directly by the user's application.
+
+Connection is made by passing in a `WebXConfiguration` object that contains host and port details and a `WebXClientConnection` object containing login credentials, screen size and keyboard layout.
+
+> Note that for <em>standalone</em> WebX Engines (running in single user mode) there is no need to pass the `WebXClientConnection`: the WebX Engine is already running
+
+The `WebXConfiguration` is used to produce a `WebXHost` object (a single one per host) and the `WebXClientConnection` is used to make a `WebXClient` object (one per client connection). the `WebXTunnel` links these two object and provides a public API to their functionality.
+
+After connection the `WebXTunnel` is used to forward instructions from the client and provides a blocking `read` method that will wait for messages from the WebX Engine.
+
+> Since the `read` method is blocking it is assumed that it is running in a dedicated thread provided by the user's own application.
+
+### WebX Host
+
+The `WebXHost` represents a single connection to a WebX host server. When requested to connect to the server it will:
+ - connect to the Client Connector TCP socket of the server using the ZeroMQ request-response protocol (`ZMQ_REQ`)
+ - start the Message Subscriber, running a new thread and connect to the message publisher TCP socket of the server as a subscriber (`ZMQ_SUB`)
+ - create a Instruction Publisher TCP socket (`ZMQ_PUB`) to publish instructions to the server
+ - connect a secure Session Channel to the server using the request-response protocol (`ZMQ_REQ`)
+ - start a thread to regularly check that the connection to the server is valid
+
+A single `WebXHost` exists for each webx server. Each host maintains connected clients (`WebXClient`).
+
+The `WebXHost` will create a client when a connection request is received. If the client connects successfully it is added to the `WebXHost`. The `WebXHost` groups `WebXClients` by the session Id of the WebX Engine.
+
+Messages received by the Message Subscriber are forwarded to the Host: the host extracts the session Id and obtains the `WebXClient` associated to it. All associated clients then receive the message. 
+
+The <em>connection check</em> thread send <em>ping</em> messages to the WebX Router (or WebX Engine if running in standalone mode). the ping will fail if the router is down or if the encryption changes. It will automatically try to reconnect to the host.
+
+### WebX Client
+
+Each client connection is encapsulated in a new `WebXClient`.
+
+Created by the `WebXHost` after a connection request is received (including login and password) it maintains two lists: a list of instructions from the client and a list of messages from the server.
+
+Instructions from the client are automatically prefixed with the sessionId of the connected WebX Engine (ensuring that the WebX Router forwards them correctly).
+
+Messages from the server are read one-by-one from user's application and forwarded to the client (ie via websocket).
+
+A thread also runs to ensure that the connection to the WebX Engine is valid. If the connection drops a message is sent to the clients to indicate that the connection has been interrupted.
+
+### WebX Relay
+
+The `WebXRelay` is used uniquely as a singleton maintaining a collection of `WebXHosts`. 
+
+Used by the `WebXTunnel`, it provides a means of obtaining a `WebXHost` and initiating the connection and disconnection procedures.
 
