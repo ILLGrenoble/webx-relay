@@ -26,7 +26,6 @@ import eu.ill.webx.model.SocketResponse;
 import eu.ill.webx.transport.InstructionPublisher;
 import eu.ill.webx.transport.SessionChannel;
 import eu.ill.webx.transport.Transport;
-import eu.ill.webx.utils.HexString;
 import eu.ill.webx.utils.SessionId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,8 +67,8 @@ public class WebXClient {
 
     private SessionId sessionId;
 
-    private String clientIdString;
     private long clientIndex;
+    private int clientId;
 
     public WebXClient() {
     }
@@ -270,29 +269,23 @@ public class WebXClient {
                 throw new WebXConnectionException("WebX Server returned an invalid connection response");
             }
 
-            this.clientIdString = responseElements[0];
+            String clientIdString = responseElements[0];
             final String clientIndexString = responseElements[1];
-            logger.info("Got client Id \"{}\" and index \"{}\"", this.clientIdString, clientIndexString);
 
-            byte[] clientIndexBytes = HexString.toByteArray(clientIndexString, 8);
-            ByteBuffer clientIndexBuffer = ByteBuffer.wrap(clientIndexBytes);
-            this.clientIndex = clientIndexBuffer.getLong();
-
-            logger.info("TODO: check that the creation of the \"long clientIndex\" is correct and will match the engine messages");
-
-//            try {
-//                this.clientIndex = Long.parseUnsignedLong(responseElements[1], 16);
-//
-//                byte[] clientIndexBytes = HexString.toByteArray(clientIndexString, 8);
-//                this.clientIndexBuffer.put(0, clientIndexBytes, 0, 8);
-//
-//            } catch (NumberFormatException exception) {
-//                logger.error("Cannot connect client: Failed to parse client index");
-//            }
+            this.clientId = Integer.parseUnsignedInt(responseElements[0], 16);
+            this.clientIndex = Long.parseUnsignedLong(responseElements[1], 16);
 
             // Add the clientId to the instruction prefix
-            byte[] clientId = HexString.toByteArray(this.clientIdString, 4);
-            this.instructionPrefix.put(16, clientId, 0, 4);
+            ByteBuffer clientIdBuffer = ByteBuffer.allocate(4).order(LITTLE_ENDIAN);
+            clientIdBuffer.putInt(clientId);
+            this.instructionPrefix.put(16, clientIdBuffer.array(), 0, 4);
+
+            logger.info("Client connected to WebX session \"{}\":  Got client Id \"{}\" and index \"{}\"", this.sessionId.hexString(), clientIdString, clientIndexString);
+
+        } catch (NumberFormatException exception) {
+            logger.error("Cannot connect client: Failed to parse client id and index");
+            this.stop();
+            throw new WebXConnectionException("Failed to parse client id and index");
 
         } catch (WebXDisconnectedException e) {
             logger.error("Cannot connect client: WebX Server is disconnected");
@@ -303,7 +296,7 @@ public class WebXClient {
 
     private synchronized void disconnectClient(Transport transport) {
         try {
-            final String request = String.format("disconnect,%s,%s", this.sessionId.hexString(), this.clientIdString);
+            final String request = String.format("disconnect,%s,%s", this.sessionId.hexString(), String.format("%08x", clientId));
             SocketResponse response = transport.sendRequest(request);
             if (response == null) {
                 logger.error("Failed to get response from WebX server");
