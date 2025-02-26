@@ -52,7 +52,7 @@ public class WebXTunnel {
 
     public String getConnectionId() throws WebXClientException {
         if (this.client != null) {
-            return this.client.getWebXSessionId();
+            return this.client.getSessionId().hexString();
 
         } else {
             throw new WebXClientException("Client is not connected");

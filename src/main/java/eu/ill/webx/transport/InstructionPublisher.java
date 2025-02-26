@@ -52,7 +52,7 @@ public class InstructionPublisher {
     }
 
     public synchronized void sendInstructionData(byte[] requestData) {
-        logger.trace("Sending instruction {}", HexString.toString(requestData, 32));
+        logger.trace("Sending instruction {}", HexString.toDebugString(requestData, 32));
         this.socket.send(requestData, 0);
     }
 }

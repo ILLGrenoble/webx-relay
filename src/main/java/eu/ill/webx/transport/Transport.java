@@ -60,7 +60,7 @@ public class Transport {
         return this.connected;
     }
 
-    public void connect(String hostname, int port, int socketTimeoutMs, boolean isStandalone) throws WebXDisconnectedException {
+    public synchronized void connect(String hostname, int port, int socketTimeoutMs, boolean isStandalone) throws WebXDisconnectedException {
 
         if (this.context == null) {
             this.isStandalone = isStandalone;
@@ -96,7 +96,7 @@ public class Transport {
         }
     }
 
-    public void disconnect() {
+    public synchronized void disconnect() {
         if (this.context != null) {
 
             if (this.connector != null) {
@@ -126,12 +126,16 @@ public class Transport {
         }
     }
 
-    public SocketResponse sendPing() throws WebXDisconnectedException {
+    public synchronized SocketResponse sendRequest(final String request) throws WebXDisconnectedException {
+        if (!this.connected) {
+             throw new WebXDisconnectedException();
+        }
+
         if (this.isStandalone) {
-            return this.connector.sendRequest("ping");
+            return this.connector.sendRequest(request);
 
         } else {
-            return this.sessionChannel.sendRequest("ping");
+            return this.sessionChannel.sendRequest(request);
         }
     }
 }

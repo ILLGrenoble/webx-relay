@@ -21,6 +21,7 @@ import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.MessageListener;
 import eu.ill.webx.transport.Transport;
+import eu.ill.webx.utils.SessionId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,14 +29,13 @@ import java.util.*;
 
 public class WebXHost implements MessageListener {
 
-    private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
     private static final Logger logger = LoggerFactory.getLogger(WebXHost.class);
 
     private final WebXConfiguration configuration;
     private final Transport transport;
     private boolean pingReceived = false;
 
-    private final Map<String, List<WebXClient>> clients = new HashMap<>();
+    private final Map<SessionId, List<WebXClient>> clients = new HashMap<>();
 
     private Thread thread;
     private boolean running = false;
@@ -129,21 +129,19 @@ public class WebXHost implements MessageListener {
     }
 
     private void addClient(WebXClient client) {
-        String sessionId = client.getWebXSessionId();
-        List<WebXClient> sessionClients = this.clients.get(sessionId);
-        if (sessionClients == null) {
-            sessionClients = new ArrayList<>();
-            this.clients.put(sessionId, sessionClients);
-        }
+        SessionId sessionId = client.getSessionId();
+        List<WebXClient> sessionClients = this.clients.computeIfAbsent(sessionId, k -> new ArrayList<>());
         sessionClients.add(client);
     }
 
     public synchronized void removeClient(WebXClient client) {
-        String sessionId = client.getWebXSessionId();
+        client.disconnect(transport);
+
+        SessionId sessionId = client.getSessionId();
         List<WebXClient> sessionClients = this.clients.get(sessionId);
         if (sessionClients != null) {
             sessionClients.remove(client);
-            if (sessionClients.size() == 0) {
+            if (sessionClients.isEmpty()) {
                 this.clients.remove(sessionId);
             }
         }
@@ -173,7 +171,7 @@ public class WebXHost implements MessageListener {
                         try {
                             // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
                             logger.trace("Sending router ping to {}", this.configuration.getHostname());
-                            this.transport.sendPing();
+                            this.transport.sendRequest("ping");
 
                             this.pingReceived = true;
 
@@ -221,7 +219,7 @@ public class WebXHost implements MessageListener {
     }
 
     private synchronized void disconnectClients() {
-        for (Map.Entry<String, List<WebXClient>> entry : this.clients.entrySet()) {
+        for (Map.Entry<SessionId, List<WebXClient>> entry : this.clients.entrySet()) {
             List<WebXClient> sessionClients = entry.getValue();
 
             for (WebXClient client : sessionClients) {
@@ -237,8 +235,8 @@ public class WebXHost implements MessageListener {
         logger.trace("Got client message of length {} from {}", messageData.length, this.configuration.getHostname());
 
         // Get session Id
-        String uuid = this.sessionIdToHex(messageData);
-        List<WebXClient> sessionClients = this.clients.get(uuid);
+        SessionId sessionId = new SessionId(messageData);
+        List<WebXClient> sessionClients = this.clients.get(sessionId);
         if (sessionClients != null) {
             for (WebXClient client : sessionClients) {
                 client.onMessage(messageData);
@@ -248,15 +246,5 @@ public class WebXHost implements MessageListener {
             // TODO stop engine from sending messages if no client is connected
 //            logger.warn("Message received but no client connected");
         }
-    }
-
-    private String sessionIdToHex(byte[] bytes) {
-        char[] hexChars = new char[32];
-        for (int j = 0; j < 16; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-        }
-        return new String(hexChars);
     }
 }

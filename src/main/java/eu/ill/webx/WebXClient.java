@@ -26,6 +26,8 @@ import eu.ill.webx.model.SocketResponse;
 import eu.ill.webx.transport.InstructionPublisher;
 import eu.ill.webx.transport.SessionChannel;
 import eu.ill.webx.transport.Transport;
+import eu.ill.webx.utils.HexString;
+import eu.ill.webx.utils.SessionId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,8 +64,12 @@ public class WebXClient {
     private boolean connected = false;
     private boolean running = false;
 
-    private String webXSessionId;
-    private byte[] webXRawSessionId;
+    private final ByteBuffer instructionPrefix = ByteBuffer.allocate(20).order(LITTLE_ENDIAN);
+
+    private SessionId sessionId;
+
+    private String clientIdString;
+    private long clientIndex;
 
     public WebXClient() {
     }
@@ -72,16 +78,20 @@ public class WebXClient {
         return running;
     }
 
-    public String getWebXSessionId() {
-        return webXSessionId;
+    public SessionId getSessionId() {
+        return sessionId;
     }
 
-    public synchronized void connect(Transport transport) {
+    public synchronized void connect(Transport transport) throws WebXConnectionException {
         if (!connected) {
             // Standalone
-            this.webXSessionId = "00000000000000000000000000000000";
-            logger.info("Using standalone session Id \"{}\"", this.webXSessionId);
-            this.webXRawSessionId = sessionIdToByteArray(this.webXSessionId);
+            String sessionIdString = "00000000000000000000000000000000";
+            logger.info("Using standalone session Id \"{}\"", sessionIdString);
+
+            this.setSessionId(sessionIdString);
+
+            // Get the client Id
+            this.connectClient(transport);
 
             this.instructionPublisher = transport.getInstructionPublisher();
             connected = true;
@@ -91,14 +101,25 @@ public class WebXClient {
     public synchronized void connect(Transport transport, WebXClientInformation clientInformation) throws WebXConnectionException {
         if (!connected) {
             String sessionIdString = this.startSession(transport, clientInformation);
-            this.webXSessionId = sessionIdString;
             logger.info("Got session Id \"{}\"", sessionIdString);
-            this.webXRawSessionId = sessionIdToByteArray(sessionIdString);
+
+            this.setSessionId(sessionIdString);
+
+            // Get the client Id
+            this.connectClient(transport);
 
             this.instructionPublisher = transport.getInstructionPublisher();
             this.sessionChannel = transport.getSessionChannel();
 
             connected = true;
+        }
+    }
+
+    public synchronized void disconnect(Transport transport) {
+        if (connected) {
+            this.disconnectClient(transport);
+
+            connected = false;
         }
     }
 
@@ -219,13 +240,87 @@ public class WebXClient {
         this.messageQueue.add(new Message.CloseMessage());
     }
 
+    public boolean handlesMessage(final byte[] messageData) {
+        if (messageData.length < 24) {
+            return false;
+        }
+
+        // Test for bitwise and is not zero on the client Index Mask (8 bytes at offset of 16)
+        ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(messageData);
+        long clientIndexMask = messageMetadataWrapper.getLong(2);
+
+        return (clientIndexMask & this.clientIndex) != 0;
+    }
+
+    private void setSessionId(final String sessionIdString) {
+        this.sessionId = new SessionId(sessionIdString);
+
+        // Set the sessionId in the instruction prefix
+        this.instructionPrefix.put(0, sessionId.bytes(), 0, 16);
+    }
+
+    private synchronized void connectClient(Transport transport) throws WebXConnectionException {
+        try {
+            final String request = String.format("connect,%s", this.sessionId.hexString());
+            String response = transport.sendRequest(request).toString();
+            final String[] responseElements = response.split(",");
+
+            if (responseElements.length != 2) {
+                this.stop();
+                throw new WebXConnectionException("WebX Server returned an invalid connection response");
+            }
+
+            this.clientIdString = responseElements[0];
+            final String clientIndexString = responseElements[1];
+            logger.info("Got client Id \"{}\" and index \"{}\"", this.clientIdString, clientIndexString);
+
+            byte[] clientIndexBytes = HexString.toByteArray(clientIndexString, 8);
+            ByteBuffer clientIndexBuffer = ByteBuffer.wrap(clientIndexBytes);
+            this.clientIndex = clientIndexBuffer.getLong();
+
+            logger.info("TODO: check that the creation of the \"long clientIndex\" is correct and will match the engine messages");
+
+//            try {
+//                this.clientIndex = Long.parseUnsignedLong(responseElements[1], 16);
+//
+//                byte[] clientIndexBytes = HexString.toByteArray(clientIndexString, 8);
+//                this.clientIndexBuffer.put(0, clientIndexBytes, 0, 8);
+//
+//            } catch (NumberFormatException exception) {
+//                logger.error("Cannot connect client: Failed to parse client index");
+//            }
+
+            // Add the clientId to the instruction prefix
+            byte[] clientId = HexString.toByteArray(this.clientIdString, 4);
+            this.instructionPrefix.put(16, clientId, 0, 4);
+
+        } catch (WebXDisconnectedException e) {
+            logger.error("Cannot connect client: WebX Server is disconnected");
+            this.stop();
+            throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
+        }
+    }
+
+    private synchronized void disconnectClient(Transport transport) {
+        try {
+            final String request = String.format("disconnect,%s,%s", this.sessionId.hexString(), this.clientIdString);
+            SocketResponse response = transport.sendRequest(request);
+            if (response == null) {
+                logger.error("Failed to get response from WebX server");
+            }
+
+        } catch (WebXDisconnectedException e) {
+            logger.warn("Cannot disconnect client: WebX Server is disconnected");
+        }
+    }
+
     private void clientInstructionLoop() {
         while (this.running) {
             try {
                 final byte[] instructionData = this.instructionQueue.take();
 
-                // Set the sessionId at the beginning
-                System.arraycopy(this.webXRawSessionId, 0, instructionData, 0, 16);
+                // Set the sessionId and clientId at the beginning
+                System.arraycopy(this.instructionPrefix.array(), 0, instructionData, 0, 20);
 
                 this.instructionPublisher.sendInstructionData(instructionData);
 
@@ -241,18 +336,18 @@ public class WebXClient {
         while (this.running) {
             // Use a variable sleep: if connection is ok, wait 5s, otherwise try every second to reconnect
             try {
-                logger.trace("Sending ping to session {}", this.webXSessionId);
-                SocketResponse response = this.sessionChannel.sendRequest("ping," + this.webXSessionId);
+                logger.trace("Sending ping to session {}", this.sessionId.hexString());
+                SocketResponse response = this.sessionChannel.sendRequest("ping," + this.sessionId.hexString());
 
                 String[] responseElements = response.toString().split(",");
 
                 if (responseElements[0].equals("pang")) {
-                    logger.error("Failed to ping webX Session {}: {}", this.webXSessionId, responseElements[2]);
+                    logger.error("Failed to ping webX Session {}: {}", this.sessionId.hexString(), responseElements[2]);
                     this.messageQueue.add(new Message.InterruptMessage("Failed to ping WebX Session"));
                 }
 
             } catch (WebXDisconnectedException e) {
-                logger.error("Failed to get response from connector ping to session {}", this.webXSessionId);
+                logger.error("Failed to get response from connector ping to session {}", this.sessionId.hexString());
                 this.messageQueue.add(new Message.InterruptMessage("Failed to get response from connection ping to WebX Session"));
             }
 
@@ -280,23 +375,9 @@ public class WebXClient {
             }
 
         } catch (WebXDisconnectedException e) {
-            logger.error("WebX Server is disconnected");
+            logger.error("Cannot start session: WebX Server is disconnected");
             this.stop();
             throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
         }
-    }
-
-    private byte[] sessionIdToByteArray(String sessionId) {
-        if (sessionId.length() != 32) {
-            logger.error("Received invalid UUID for session Id: {}", sessionId);
-        }
-
-        int length = sessionId.length();
-        byte[] data = new byte[length / 2];
-        int index = 0;
-        for (int i = 0; i < length; i += 2) {
-            data[index++] = (byte) ((Character.digit(sessionId.charAt(i), 16) << 4)  + Character.digit(sessionId.charAt(i + 1), 16));
-        }
-        return data;
     }
 }
