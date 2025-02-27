@@ -41,11 +41,13 @@ public class WebXClient {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXClient.class);
     // Create a POLL message (messageType 8)
-    private static final ByteBuffer pollMessageBuffer = ByteBuffer.allocate(32).order(LITTLE_ENDIAN)
+    private static final ByteBuffer pollMessageBuffer = ByteBuffer.allocate(40).order(LITTLE_ENDIAN)
             .putInt(0)  // dummy sessionId (1/4)
             .putInt(0)  // dummy sessionId (2/4)
             .putInt(0)  // dummy sessionId (3/4)
             .putInt(0)  // dummy sessionId (4/4)
+            .putInt(0)  // dummy clientIndexMask (1/2)
+            .putInt(0)  // dummy clientIndexMask (2/2)
             .putInt(8)  // message meta data: {Type, empty, relayQueueSize, empty}
             .putInt(0)  // messageId
             .putInt(16) // messageLength
@@ -239,14 +241,16 @@ public class WebXClient {
         this.messageQueue.add(new Message.CloseMessage());
     }
 
-    public boolean handlesMessage(final byte[] messageData) {
+    public boolean matchesMessageIndexMask(final byte[] messageData) {
         if (messageData.length < 24) {
             return false;
         }
 
         // Test for bitwise and is not zero on the client Index Mask (8 bytes at offset of 16)
-        ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(messageData);
-        long clientIndexMask = messageMetadataWrapper.getLong(2);
+        ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(messageData, 16, 8).order(LITTLE_ENDIAN);
+        long clientIndexMask = messageMetadataWrapper.getLong();
+
+//        logger.info("Got mask {} for index {}", String.format("%016x", clientIndexMask), String.format("%016x", this.clientIndex));
 
         return (clientIndexMask & this.clientIndex) != 0;
     }

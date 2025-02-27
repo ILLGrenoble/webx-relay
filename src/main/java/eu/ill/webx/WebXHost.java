@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class WebXHost implements MessageListener {
 
@@ -241,15 +242,16 @@ public class WebXHost implements MessageListener {
 
         // Get session Id
         SessionId sessionId = new SessionId(messageData);
-        List<WebXClient> sessionClients = this.clients.get(sessionId);
-        if (sessionClients != null) {
-            for (WebXClient client : sessionClients) {
+        List<WebXClient> allSessionClients = this.clients.get(sessionId);
+        if (allSessionClients != null) {
+
+            List<WebXClient> indexAssociatedClients = allSessionClients.stream()
+                    .filter(webXClient -> webXClient.matchesMessageIndexMask(messageData))
+                    .collect(Collectors.toList());
+
+            for (WebXClient client : indexAssociatedClients) {
                 client.onMessage(messageData);
             }
-
-        } else {
-            // TODO stop engine from sending messages if no client is connected
-//            logger.warn("Message received but no client connected");
         }
     }
 }
