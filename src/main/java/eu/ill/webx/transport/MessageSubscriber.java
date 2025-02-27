@@ -54,12 +54,6 @@ public class MessageSubscriber {
             this.thread = new Thread(this::loop);
             this.thread.start();
 
-            try {
-                // Add a sleep to ensure that the socket is listening
-                Thread.sleep(200);
-            } catch (InterruptedException ignored) {
-            }
-
             logger.debug("WebX Message Subscriber started");
         }
     }

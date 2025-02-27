@@ -30,6 +30,6 @@ public class SocketResponse {
     }
 
     public String toString() {
-        return new String(this.data);
+        return this.data == null ? null : new String(this.data);
     }
 }

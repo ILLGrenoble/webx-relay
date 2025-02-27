@@ -68,7 +68,7 @@ public class WebXClient {
     private SessionId sessionId;
 
     private long clientIndex;
-    private int clientId;
+    private int clientId = 0;
 
     public WebXClient() {
     }
@@ -161,7 +161,7 @@ public class WebXClient {
                     this.connectionCheckThread = null;
                 }
 
-                logger.debug("Client stopped");
+                logger.debug("Client {} stopped", this.getClientIdString());
 
             } catch (InterruptedException exception) {
                 logger.error("Stop of relay message listener and client instruction threads interrupted", exception);
@@ -262,6 +262,11 @@ public class WebXClient {
         try {
             final String request = String.format("connect,%s", this.sessionId.hexString());
             String response = transport.sendRequest(request).toString();
+            if (response == null) {
+                this.stop();
+                throw new WebXConnectionException("WebX Server returned a null connection response");
+            }
+
             final String[] responseElements = response.split(",");
 
             if (responseElements.length != 2) {
@@ -295,15 +300,17 @@ public class WebXClient {
     }
 
     private synchronized void disconnectClient(Transport transport) {
-        try {
-            final String request = String.format("disconnect,%s,%s", this.sessionId.hexString(), String.format("%08x", clientId));
-            SocketResponse response = transport.sendRequest(request);
-            if (response == null) {
-                logger.error("Failed to get response from WebX server");
-            }
+        if (this.clientId != 0) {
+            try {
+                final String request = String.format("disconnect,%s,%s", this.sessionId.hexString(), this.getClientIdString());
+                SocketResponse response = transport.sendRequest(request);
+                if (response == null) {
+                    logger.error("Failed to get response from WebX server");
+                }
 
-        } catch (WebXDisconnectedException e) {
-            logger.warn("Cannot disconnect client: WebX Server is disconnected");
+            } catch (WebXDisconnectedException e) {
+                logger.warn("Cannot disconnect client {}: WebX Server is disconnected", this.getClientIdString());
+            }
         }
     }
 
@@ -372,5 +379,9 @@ public class WebXClient {
             this.stop();
             throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
         }
+    }
+
+    private String getClientIdString() {
+        return this.clientId == 0 ? "<unconnected>" : String.format("%08x", clientId);
     }
 }

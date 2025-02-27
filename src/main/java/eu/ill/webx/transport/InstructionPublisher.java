@@ -38,6 +38,13 @@ public class InstructionPublisher {
             this.socket = context.createSocket(SocketType.PUB);
             this.socket.setLinger(0);
             this.socket.connect(address);
+
+            try {
+                // Hackityhack Add a sleep to ensure that the socket is connected
+                Thread.sleep(500);
+            } catch (InterruptedException ignored) {
+            }
+
             logger.debug("WebX Instruction Publisher connected");
         }
     }

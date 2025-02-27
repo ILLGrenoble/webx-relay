@@ -30,10 +30,13 @@ import java.util.*;
 public class WebXHost implements MessageListener {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXHost.class);
+    private static final int FAST_PING_MS = 1000;
+    private static final int SLOW_PING_MS = 5000;
 
     private final WebXConfiguration configuration;
     private final Transport transport;
     private boolean pingReceived = false;
+    private int pingInterval = SLOW_PING_MS;
 
     private final Map<SessionId, List<WebXClient>> clients = new HashMap<>();
 
@@ -151,14 +154,16 @@ public class WebXHost implements MessageListener {
         // Wait for a ping to ensure comms have been set up
         long startTime = new Date().getTime();
         long delay = 0;
+        this.pingInterval = FAST_PING_MS;
         while (delay < 5000 && !this.pingReceived) {
             try {
-                Thread.sleep(1000);
+                Thread.sleep(100);
                 delay = new Date().getTime() - startTime;
 
             } catch (InterruptedException ignored) {
             }
         }
+        this.pingInterval = SLOW_PING_MS;
 
         return this.pingReceived;
     }
@@ -197,7 +202,7 @@ public class WebXHost implements MessageListener {
             }
 
             try {
-                Thread.sleep(1000);
+                Thread.sleep(this.pingInterval);
 
             } catch (InterruptedException ignored) {
             }
