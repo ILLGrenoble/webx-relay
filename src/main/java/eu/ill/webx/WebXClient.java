@@ -33,25 +33,12 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 public class WebXClient {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXClient.class);
-    // Create a POLL message (messageType 8)
-    private static final ByteBuffer pollMessageBuffer = ByteBuffer.allocate(40).order(LITTLE_ENDIAN)
-            .putInt(0)  // dummy sessionId (1/4)
-            .putInt(0)  // dummy sessionId (2/4)
-            .putInt(0)  // dummy sessionId (3/4)
-            .putInt(0)  // dummy sessionId (4/4)
-            .putInt(0)  // dummy clientIndexMask (1/2)
-            .putInt(0)  // dummy clientIndexMask (2/2)
-            .putInt(8)  // message meta data: {Type, empty, relayQueueSize, empty}
-            .putInt(0)  // messageId
-            .putInt(16) // messageLength
-            .putInt(0);  // padding
 
     private InstructionPublisher instructionPublisher;
     private SessionChannel sessionChannel;
@@ -190,8 +177,8 @@ public class WebXClient {
     public byte[] getMessage() throws WebXClientException, WebXConnectionInterruptException {
         if (this.running) {
             try {
-                // Get next message, wait 5 seconds and return poll message if nothing from the server
-                Message message = this.messageQueue.poll(5000, TimeUnit.MILLISECONDS);
+                // Get next message, wait for anything
+                Message message = this.messageQueue.take();
 
                 if (message != null) {
                     if (message.getType().equals(Message.Type.INTERRUPT)) {
@@ -222,10 +209,8 @@ public class WebXClient {
                         return messageData;
                     }
 
-
                 } else {
-                    // Keep socket alive
-                    return pollMessageBuffer.array();
+                    throw new WebXClientException("WebXClient returned a null message");
                 }
 
             } catch (InterruptedException exception) {
