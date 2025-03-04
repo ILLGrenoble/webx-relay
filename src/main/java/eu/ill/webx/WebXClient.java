@@ -174,43 +174,43 @@ public class WebXClient {
         }
     }
 
-    public byte[] getMessage() throws WebXClientException, WebXConnectionInterruptException {
+    public byte[] getMessage() throws WebXClientException, WebXConnectionInterruptException, WebXDisconnectedException {
         if (this.running) {
             try {
                 // Get next message, wait for anything
                 Message message = this.messageQueue.take();
 
-                if (message != null) {
-                    if (message.getType().equals(Message.Type.INTERRUPT)) {
-                        throw new WebXConnectionInterruptException(message.getStringData());
+                if (message.getType().equals(Message.Type.INTERRUPT)) {
+                    throw new WebXConnectionInterruptException(message.getStringData());
 
-                    } else if (message.getType().equals(Message.Type.CLOSE)) {
-                        return null;
-                    }
+                } else if (message.getType().equals(Message.Type.DISCONNECT)) {
+                    logger.warn("Received disconnect message from WebX server for client {}", this.getClientIdString());
+                    this.connected = false;
+                    throw new WebXDisconnectedException("Disconnect message received from the server");
 
-                    byte[] messageData = message.getData();
+                } else if (message.getType().equals(Message.Type.CLOSE)) {
+                    return null;
+                }
 
-                    if (messageData == null) {
-                        // connection closed
-                        return null;
+                byte[] messageData = message.getData();
 
-                    } else {
-                        logger.trace("Read client message of length {}", messageData.length);
-
-                        if (messageData.length < 32) {
-                            throw new WebXClientException("Invalid message received from the server");
-                        }
-
-                        // Add queue size to message metadata
-                        byte queueSize = (byte)Math.min(messageQueue.size(), 255); // get queue size (limit to 255)
-                        ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(messageData, 18, 1).order(LITTLE_ENDIAN);
-                        messageMetadataWrapper.put(queueSize);
-
-                        return messageData;
-                    }
+                if (messageData == null) {
+                    // connection closed
+                    return null;
 
                 } else {
-                    throw new WebXClientException("WebXClient returned a null message");
+                    logger.trace("Read client message of length {}", messageData.length);
+
+                    if (messageData.length < 40) {
+                        throw new WebXClientException("Invalid message received from the server");
+                    }
+
+                    // Add queue size to message metadata
+                    byte queueSize = (byte)Math.min(messageQueue.size(), 255); // get queue size (limit to 255)
+                    ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(messageData, 18, 1).order(LITTLE_ENDIAN);
+                    messageMetadataWrapper.put(queueSize);
+
+                    return messageData;
                 }
 
             } catch (InterruptedException exception) {

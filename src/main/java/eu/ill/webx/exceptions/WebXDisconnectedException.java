@@ -21,4 +21,7 @@ public class WebXDisconnectedException extends WebXException {
     public WebXDisconnectedException() {
         super("Not connected to WebX server");
     }
+    public WebXDisconnectedException(String message) {
+        super(String.format("Not connected to WebX server: %s", message));
+    }
 }

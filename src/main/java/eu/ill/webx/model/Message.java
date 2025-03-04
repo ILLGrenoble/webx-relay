@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 public class Message implements Comparable<Message> {
-    private final static int TYPE_OFFSET = 16;
+    private final static int TYPE_OFFSET = 24;
     private final byte[] data;
     private final Type type;
     private final Long timestamp;
@@ -54,6 +54,10 @@ public class Message implements Comparable<Message> {
         } else if (type == 7) {
             this.type = Type.CURSOR;
             this.priority = 2;
+
+        } else if (type == 9) {
+            this.type = Type.DISCONNECT;
+            this.priority = 1;
 
         } else {
             this.type = Type.OTHER;
@@ -98,6 +102,7 @@ public class Message implements Comparable<Message> {
         CLOSE,
         MOUSE,
         CURSOR,
+        DISCONNECT,
         OTHER
     }
 

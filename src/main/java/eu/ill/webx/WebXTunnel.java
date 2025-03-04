@@ -20,6 +20,7 @@ package eu.ill.webx;
 import eu.ill.webx.exceptions.WebXClientException;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
+import eu.ill.webx.exceptions.WebXDisconnectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +89,13 @@ public class WebXTunnel {
 
     public byte[] read() throws WebXClientException, WebXConnectionInterruptException {
         if (this.client != null) {
-            return this.client.getMessage();
+            try {
+                return this.client.getMessage();
+
+            } catch (WebXDisconnectedException exception) {
+                this.disconnect();
+                throw new WebXClientException("Client has been disconnected by the server");
+            }
 
         } else {
             throw new WebXClientException("Client is not connected");
