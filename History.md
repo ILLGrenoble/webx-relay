@@ -1,3 +1,7 @@
+0.3.0 06/03/2025
+================
+ * Allow connections to existing sessions via a sessionId uniquely.
+
 0.2.0 04/03/2025
 ================
  * Handle disconnect message from engine

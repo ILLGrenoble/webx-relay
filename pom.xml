@@ -25,7 +25,7 @@
 
     <groupId>eu.ill</groupId>
     <artifactId>webx-relay</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <packaging>jar</packaging>
     <url>https://github.com/ILLGrenoble/webx-relay</url>
     <name>${project.groupId}:${project.artifactId}</name>
