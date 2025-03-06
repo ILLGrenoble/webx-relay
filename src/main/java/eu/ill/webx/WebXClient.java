@@ -88,8 +88,17 @@ public class WebXClient {
 
     public synchronized void connect(Transport transport, WebXClientInformation clientInformation) throws WebXConnectionException {
         if (!connected) {
-            String sessionIdString = this.startSession(transport, clientInformation);
-            logger.info("Got session Id \"{}\"", sessionIdString);
+            // Check if connection is via sessionId (to existing session) or user authentication (potentially new session)
+            String sessionIdString;
+            if (clientInformation.getSessionId() != null) {
+                logger.info("Connecting to existing WebX session using sessionId \"{}\"", clientInformation.getSessionId());
+                sessionIdString = clientInformation.getSessionId();
+
+            } else {
+                logger.info("Connecting to WebX using password authentication");
+                sessionIdString = this.startSession(transport, clientInformation);
+                logger.info("Authentication successful. Got session Id \"{}\"", sessionIdString);
+            }
 
             this.setSessionId(sessionIdString);
 
@@ -254,6 +263,10 @@ public class WebXClient {
             if (response == null) {
                 this.stop();
                 throw new WebXConnectionException("WebX Server returned a null connection response");
+
+            } else if (response.isEmpty()) {
+                this.stop();
+                throw new WebXConnectionException(String.format("WebX Server refused connection with sessionId %s", this.sessionId.hexString()));
             }
 
             final String[] responseElements = response.split(",");

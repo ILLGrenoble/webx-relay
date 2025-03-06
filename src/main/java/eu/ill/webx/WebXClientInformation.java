@@ -21,13 +21,21 @@ public class WebXClientInformation {
 
     private final String username;
     private final String password;
+    private final String sessionId;
     private Integer screenWidth = 1440;
     private Integer screenHeight = 900;
     private String keyboardLayout = "gb";
 
+    public WebXClientInformation(String sessionId) {
+        this.username = null;
+        this.password = null;
+        this.sessionId = sessionId;
+    }
+
     public WebXClientInformation(String username, String password) {
         this.username = username;
         this.password = password;
+        this.sessionId = null;
     }
 
     public WebXClientInformation(String username, String password, Integer screenWidth, Integer screenHeight) {
@@ -35,6 +43,7 @@ public class WebXClientInformation {
         this.password = password;
         this.screenWidth = screenWidth;
         this.screenHeight = screenHeight;
+        this.sessionId = null;
     }
 
     public WebXClientInformation(String username, String password, Integer screenWidth, Integer screenHeight, String keyboardLayout) {
@@ -43,6 +52,7 @@ public class WebXClientInformation {
         this.screenWidth = screenWidth;
         this.screenHeight = screenHeight;
         this.keyboardLayout = keyboardLayout;
+        this.sessionId = null;
     }
 
     public String getUsername() {
@@ -51,6 +61,10 @@ public class WebXClientInformation {
 
     public String getPassword() {
         return password;
+    }
+
+    public String getSessionId() {
+        return sessionId;
     }
 
     public Integer getScreenWidth() {
