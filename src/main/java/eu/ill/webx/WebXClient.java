@@ -210,7 +210,7 @@ public class WebXClient {
                 } else {
                     logger.trace("Read client message of length {}", messageData.length);
 
-                    if (messageData.length < 40) {
+                    if (messageData.length < Message.MESSAGE_HEADER_LENGTH) {
                         throw new WebXClientException("Invalid message received from the server");
                     }
 

@@ -23,7 +23,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 public class Message implements Comparable<Message> {
-    private final static int TYPE_OFFSET = 24;
+    public final static int MESSAGE_HEADER_LENGTH = 48;
+    private final static int TYPE_OFFSET = 32;
     private final byte[] data;
     private final Type type;
     private final Long timestamp;

@@ -1,3 +1,11 @@
+0.5.0 12/03/2025
+================
+ * Update message header length (include timestamp on each message)
+
+0.4.0 06/03/2025
+================
+ * Update dependencies and include only the slf4j logger api.
+
 0.3.0 06/03/2025
 ================
  * Allow connections to existing sessions via a sessionId uniquely.
