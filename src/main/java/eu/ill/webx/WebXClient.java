@@ -214,11 +214,6 @@ public class WebXClient {
                         throw new WebXClientException("Invalid message received from the server");
                     }
 
-                    // Add queue size to message metadata
-                    byte queueSize = (byte)Math.min(messageQueue.size(), 255); // get queue size (limit to 255)
-                    ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(messageData, 18, 1).order(LITTLE_ENDIAN);
-                    messageMetadataWrapper.put(queueSize);
-
                     return messageData;
                 }
 
