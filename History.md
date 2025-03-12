@@ -1,3 +1,7 @@
+0.6.0 12/03/2025
+================
+ * Remove sending message queue size to client
+
 0.5.0 12/03/2025
 ================
  * Update message header length (include timestamp on each message)
