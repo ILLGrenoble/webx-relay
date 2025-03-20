@@ -37,7 +37,7 @@ public class WebXTunnel {
 
     public void connect(final WebXHostConfiguration configuration, final WebXConnectionConfiguration connectionConfiguration) throws WebXConnectionException {
         if (this.client == null) {
-            WebXHost host = WebXRelay.getInstance().onClientConnection(configuration);
+            WebXHost host = WebXRelay.getInstance().connectToHost(configuration);
 
             logger.debug("Creating client for {}...", host.getHostname());
             WebXClient client = host.onClientConnection(connectionConfiguration);

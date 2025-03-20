@@ -138,6 +138,12 @@ public class WebXSession {
         }
     }
 
+    private void sendMessageToClients(final Message message) {
+        for (WebXClient client : this.clients) {
+            client.onMessage(message);
+        }
+    }
+
     private void instructionLoop() {
         while (this.running) {
             try {
@@ -180,9 +186,4 @@ public class WebXSession {
         }
     }
 
-    private void sendMessageToClients(final Message message) {
-        for (WebXClient client : this.clients) {
-            client.onMessage(message);
-        }
-    }
 }

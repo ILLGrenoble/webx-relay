@@ -42,7 +42,7 @@ public class WebXRelay {
         return Holder.INSTANCE;
     }
 
-    public synchronized WebXHost onClientConnection(final WebXHostConfiguration configuration) throws WebXConnectionException {
+    public synchronized WebXHost connectToHost(final WebXHostConfiguration configuration) throws WebXConnectionException {
         Optional<WebXHost> existingHost = this.getHost(configuration);
         if (existingHost.isPresent()) {
             return existingHost.get();

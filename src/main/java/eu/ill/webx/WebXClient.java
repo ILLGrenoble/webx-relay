@@ -101,7 +101,8 @@ public class WebXClient {
                     throw new WebXConnectionInterruptException(message.getStringData());
 
                 } else if (message.getType().equals(Message.Type.DISCONNECT)) {
-                    logger.warn("Received disconnect message from WebX server for client {}", this.clientIdentifier.clientIdString());
+                    logger.info("Client (Id \"{}\" and index \"{}\") received disconnect message from WebX session \"{}\"", this.getClientIdentifier().clientIdString(), this.getClientIdentifier().clientIndexString(), this.getSessionId().hexString());
+
                     this.connected = false;
                     throw new WebXDisconnectedException("Disconnect message received from the server");
 

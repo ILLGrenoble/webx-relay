@@ -31,7 +31,6 @@ public class WebXHostConnectionChecker extends Thread {
     private static final int SLOW_PING_MS = 5000;
 
     public interface OnErrorHandler { void onError(String error); }
-    public interface OnDisconnectHandler { void onDisconnect(); }
 
     private static final Logger logger = LoggerFactory.getLogger(WebXHostConnectionChecker.class);
 
@@ -41,23 +40,11 @@ public class WebXHostConnectionChecker extends Thread {
     private boolean pingReceived = false;
 
     private final OnErrorHandler onErrorHandler;
-    private final OnDisconnectHandler onDisconnectHandler;
 
 
-    public WebXHostConnectionChecker(final Transport transport, final OnErrorHandler onErrorHandler, final OnDisconnectHandler onDisconnectHandler) {
+    public WebXHostConnectionChecker(final Transport transport, final OnErrorHandler onErrorHandler) {
         this.transport = transport;
-        this.onErrorHandler = onErrorHandler != null ? onErrorHandler : new OnErrorHandler() {
-            @Override
-            public void onError(String error) {
-                // do nothing
-            }
-        };
-        this.onDisconnectHandler = onDisconnectHandler != null ? onDisconnectHandler : new OnDisconnectHandler() {
-            @Override
-            public void onDisconnect() {
-                // do nothing
-            }
-        };
+        this.onErrorHandler = onErrorHandler != null ? onErrorHandler : error -> {};
     }
 
     public void interrupt() {
@@ -68,26 +55,17 @@ public class WebXHostConnectionChecker extends Thread {
     @Override
     public void run() {
         while (this.running) {
-            synchronized (this) {
-                if (this.running) {
-                    if (this.transport.isConnected()) {
-                        try {
-                            // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
-                            logger.trace("Sending router ping to {}", this.transport.getHostname());
-                            this.transport.sendRequest("ping");
+            try {
+                // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
+                logger.trace("Sending router ping to {}", this.transport.getHostname());
+                this.transport.sendRequest("ping");
 
-                            this.pingReceived = true;
+                this.pingReceived = true;
 
-                        } catch (WebXDisconnectedException e) {
-                            logger.error("Failed to get response from connector ping at {}", this.transport.getHostname());
+            } catch (WebXDisconnectedException e) {
+                logger.error("Failed to get response from connector ping at {}", this.transport.getHostname());
 
-                            this.onErrorHandler.onError(e.getMessage());
-                        }
-
-                    } else {
-                        this.onDisconnectHandler.onDisconnect();
-                    }
-                }
+                this.onErrorHandler.onError(e.getMessage());
             }
 
             try {

@@ -61,7 +61,7 @@ public class WebXHost {
             this.connectToWebXHost();
 
             // Start connection checker
-            this.connectionChecker = new WebXHostConnectionChecker(this.transport, this::onConnectionCheckError, this::onConnectionCheckDisconnected);
+            this.connectionChecker = new WebXHostConnectionChecker(this.transport, this::onConnectionCheckError);
             this.connectionChecker.start();
             if (!this.connectionChecker.waitForPing()) {
                 logger.error("Timeout while waiting to receive ping from WebX Host {}", this.configuration.getHostname());
@@ -87,7 +87,6 @@ public class WebXHost {
 
     public synchronized WebXClient onClientConnection(final WebXConnectionConfiguration connectionConfiguration) throws WebXConnectionException {
         if (this.transport.isConnected()) {
-
             SessionId sessionId;
             if (connectionConfiguration instanceof WebXSessionCreationConfiguration createConnectionConfiguration) {
                 logger.info("Connecting to WebX using password authentication");
@@ -125,6 +124,7 @@ public class WebXHost {
             session.disconnectClient(client);
 
             if (session.getClientCount() == 0) {
+                logger.debug("Session with Id \"{}\" has no clients: stopping it", session.getSessionId());
                 session.stop();
 
                 this.sessions.remove(session);
@@ -203,12 +203,15 @@ public class WebXHost {
     }
 
     private void disconnectClient(final Transport transport, final WebXClient client) {
-        if (client != null) {
+        if (client != null && client.isConnected()) {
             try {
                 final String request = String.format("disconnect,%s,%s", client.getSessionId().hexString(), client.getClientIdentifier().clientIdString());
                 SocketResponse response = transport.sendRequest(request);
                 if (response == null) {
                     logger.error("Failed to get response from WebX server");
+
+                } else {
+                    logger.info("Client (Id \"{}\" and index \"{}\") disconnected from WebX session \"{}\"", client.getClientIdentifier().clientIdString(), client.getClientIdentifier().clientIndexString(), client.getSessionId().hexString());
                 }
 
             } catch (WebXDisconnectedException e) {
@@ -233,18 +236,8 @@ public class WebXHost {
     }
 
     private void onConnectionCheckError(final String error) {
-        this.transport.disconnect();
         this.disconnectClients();
-    }
-
-    private void onConnectionCheckDisconnected() {
-        try {
-            // Try to reconnect
-            this.connectToWebXHost();
-
-        } catch (WebXConnectionException exception) {
-            logger.warn("Failed to connect to WebX host {}: {}", this.getHostname(), exception.getMessage());
-        }
+        this.transport.disconnect();
     }
 
     private synchronized void disconnectClients() {
