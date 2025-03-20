@@ -88,7 +88,7 @@ public class WebXClient {
         // Set the sessionId and clientId at the beginning
         System.arraycopy(this.instructionPrefix.array(), 0, instructionData, 0, 20);
 
-        this.session.queueInstruction(instructionData);
+        this.session.sendInstruction(instructionData);
     }
 
     public byte[] getMessage() throws WebXClientException, WebXConnectionInterruptException, WebXDisconnectedException {

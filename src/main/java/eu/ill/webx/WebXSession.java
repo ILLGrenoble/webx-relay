@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingDeque;
 
 public class WebXSession {
 
@@ -42,10 +41,7 @@ public class WebXSession {
 
     private final List<WebXClient> clients = new ArrayList<>();
 
-    private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
-
     private Thread connectionCheckThread;
-    private Thread clientInstructionThread;
 
     private boolean running = false;
 
@@ -63,9 +59,6 @@ public class WebXSession {
         if (!running) {
             running = true;
 
-            this.clientInstructionThread = new Thread(this::instructionLoop);
-            this.clientInstructionThread.start();
-
             if (this.sessionChannel != null) {
                 // Start connection checker
                 this.connectionCheckThread = new Thread(this::connectionCheck);
@@ -78,10 +71,6 @@ public class WebXSession {
         if (running) {
             try {
                 running = false;
-
-                this.clientInstructionThread.interrupt();
-                this.clientInstructionThread.join();
-                this.clientInstructionThread = null;
 
                 if (connectionCheckThread != null) {
                     this.connectionCheckThread.interrupt();
@@ -119,13 +108,8 @@ public class WebXSession {
         return this.clients.size();
     }
 
-    public synchronized void queueInstruction(byte[] instructionData) {
-        try {
-            this.instructionQueue.put(instructionData);
-
-        } catch (InterruptedException exception) {
-            logger.error("Interrupted when adding instruction to instruction queue");
-        }
+    public synchronized void sendInstruction(byte[] instructionData) {
+        this.instructionPublisher.queueInstruction(instructionData);
     }
 
     public synchronized void onMessage(byte[] messageData) {
@@ -141,21 +125,6 @@ public class WebXSession {
     private void sendMessageToClients(final Message message) {
         for (WebXClient client : this.clients) {
             client.onMessage(message);
-        }
-    }
-
-    private void instructionLoop() {
-        while (this.running) {
-            try {
-                final byte[] instructionData = this.instructionQueue.take();
-
-                this.instructionPublisher.sendInstructionData(instructionData);
-
-            } catch (InterruptedException exception) {
-                if (this.running) {
-                    logger.info("Instruction loop thread interrupted");
-                }
-            }
         }
     }
 

@@ -23,20 +23,30 @@ import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
+import java.util.concurrent.LinkedBlockingDeque;
+
 public class InstructionPublisher {
 
     private static final Logger logger = LoggerFactory.getLogger(InstructionPublisher.class);
 
     private ZMQ.Socket socket;
+    private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
+    private Thread instructionThread;
+    private boolean connected = false;
 
     public InstructionPublisher() {
     }
 
-    public void connect(ZContext context, String address) {
+    public synchronized void connect(ZContext context, String address) {
         if (this.socket == null) {
             this.socket = context.createSocket(SocketType.PUB);
             this.socket.setLinger(0);
             this.socket.connect(address);
+
+            this.connected = true;
+
+            this.instructionThread = new Thread(this::instructionLoop);
+            this.instructionThread.start();
 
             try {
                 // Hackityhack Add a sleep to ensure that the socket is connected
@@ -48,16 +58,52 @@ public class InstructionPublisher {
         }
     }
 
-    public void disconnect() {
-        if (this.socket != null) {
-            this.socket.close();
-            this.socket = null;
+    public synchronized void disconnect() {
+        if (this.connected) {
+            try {
+                this.connected = false;
+                this.instructionQueue.clear();
 
-            logger.debug("WebX Instruction Publisher disconnected");
+                this.socket.close();
+                this.socket = null;
+
+                this.instructionThread.interrupt();
+                this.instructionThread.join();
+                this.instructionThread = null;
+
+                logger.debug("WebX Instruction Publisher disconnected");
+
+            } catch (InterruptedException exception) {
+                logger.error("Stop of instruction publisher threads interrupted", exception);
+            }
         }
     }
 
-    public synchronized void sendInstructionData(byte[] requestData) {
-        this.socket.send(requestData, 0);
+
+    public synchronized void queueInstruction(byte[] instructionData) {
+        try {
+            this.instructionQueue.put(instructionData);
+
+        } catch (InterruptedException exception) {
+            logger.error("Interrupted when adding instruction to instruction queue");
+        }
+    }
+
+
+    private void instructionLoop() {
+        while (this.connected) {
+            try {
+                final byte[] instructionData = this.instructionQueue.take();
+
+                if (this.connected) {
+                    this.socket.send(instructionData, 0);
+                }
+
+            } catch (InterruptedException exception) {
+                if (this.connected) {
+                    logger.info("Instruction loop thread interrupted");
+                }
+            }
+        }
     }
 }

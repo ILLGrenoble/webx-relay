@@ -124,7 +124,7 @@ public class WebXHost {
             session.disconnectClient(client);
 
             if (session.getClientCount() == 0) {
-                logger.debug("Session with Id \"{}\" has no clients: stopping it", session.getSessionId());
+                logger.debug("Session with Id \"{}\" has no clients: stopping it", session.getSessionId().hexString());
                 session.stop();
 
                 this.sessions.remove(session);
@@ -236,8 +236,10 @@ public class WebXHost {
     }
 
     private void onConnectionCheckError(final String error) {
-        this.disconnectClients();
-        this.transport.disconnect();
+        if (this.transport.isConnected()) {
+            this.disconnectClients();
+            this.transport.disconnect();
+        }
     }
 
     private synchronized void disconnectClients() {
