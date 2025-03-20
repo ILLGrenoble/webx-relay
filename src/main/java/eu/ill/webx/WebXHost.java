@@ -19,35 +19,32 @@ package eu.ill.webx;
 
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
-import eu.ill.webx.model.MessageListener;
+import eu.ill.webx.model.ClientIdentifier;
+import eu.ill.webx.model.SocketResponse;
+import eu.ill.webx.configuration.WebXConnectionConfiguration;
+import eu.ill.webx.configuration.WebXSessionCreationConfiguration;
+import eu.ill.webx.configuration.WebXSessionJoinConfiguration;
 import eu.ill.webx.transport.Transport;
-import eu.ill.webx.utils.SessionId;
+import eu.ill.webx.model.SessionId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
-public class WebXHost implements MessageListener {
+public class WebXHost {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXHost.class);
-    private static final int FAST_PING_MS = 1000;
-    private static final int SLOW_PING_MS = 5000;
 
-    private final WebXConfiguration configuration;
+    private final WebXHostConfiguration configuration;
     private final Transport transport;
-    private boolean pingReceived = false;
-    private int pingInterval = SLOW_PING_MS;
+    private WebXHostConnectionChecker connectionChecker;
 
-    private final Map<SessionId, List<WebXClient>> clients = new HashMap<>();
+    private final List<WebXSession> sessions = new ArrayList<>();
 
-    private Thread thread;
-    private boolean running = false;
-
-    public WebXHost(final WebXConfiguration configuration) {
+    public WebXHost(final WebXHostConfiguration configuration) {
         this.configuration = configuration;
 
-        this.transport = new Transport();
+        this.transport = new Transport(configuration.getHostname());
     }
 
     public String getHostname() {
@@ -58,200 +55,212 @@ public class WebXHost implements MessageListener {
         return this.configuration.getPort();
     }
 
-    public synchronized int getClientCount() {
-        return this.clients.size();
-    }
+    public synchronized void connect() throws WebXConnectionException {
+        if (!this.transport.isConnected()) {
+            // Initialise transport: verify that the host has a running webx server
+            this.connectToWebXHost();
 
-    public void start() throws WebXConnectionException {
-        synchronized (this) {
-            if (!this.running) {
-                // Initialise transport: verify that the host has a running webx server
-                this.connectToWebXHost();
-                this.running = true;
-
-                // Start connection checker
-                this.thread = new Thread(this::connectionCheck);
-                this.thread.start();
-            }
-        }
-
-        if (!this.waitForPing()) {
-            logger.error("Timeout will waiting to receive ping from WebX Host {}", this.configuration.getHostname());
-            throw new WebXConnectionException("Failed to ping WebX Host after startup");
-        }
-    }
-
-    public void stop() {
-        if (this.running) {
-            synchronized (this) {
-                this.running = false;
-
-                // Disconnect from webx server
-                this.transport.disconnect();
-            }
-
-            try {
-                this.thread.interrupt();
-                this.thread.join();
-                this.thread = null;
-
-                logger.info("Host disconnected from {} and thread stopped", this.configuration.getHostname());
-
-            } catch (InterruptedException exception) {
-                logger.error("Stop of Host thread for {} interrupted", this.configuration.getHostname());
+            // Start connection checker
+            this.connectionChecker = new WebXHostConnectionChecker(this.transport, this::onConnectionCheckError, this::onConnectionCheckDisconnected);
+            this.connectionChecker.start();
+            if (!this.connectionChecker.waitForPing()) {
+                logger.error("Timeout while waiting to receive ping from WebX Host {}", this.configuration.getHostname());
+                throw new WebXConnectionException("Failed to ping WebX Host after startup");
             }
         }
     }
 
-    public synchronized WebXClient createClient() throws WebXConnectionException {
+    public synchronized void disconnect() {
+        // Disconnect from webx server
+        this.transport.disconnect();
+
+        try {
+            this.connectionChecker.interrupt();
+            this.connectionChecker.join();
+
+            logger.info("Host disconnected from {} and thread stopped", this.configuration.getHostname());
+
+        } catch (InterruptedException exception) {
+            logger.error("Stop of Host thread for {} interrupted", this.configuration.getHostname());
+        }
+    }
+
+    public synchronized WebXClient onClientConnection(final WebXConnectionConfiguration connectionConfiguration) throws WebXConnectionException {
         if (this.transport.isConnected()) {
 
-            WebXClient client = new WebXClient();
-            client.connect(transport);
-            this.addClient(client);
+            SessionId sessionId;
+            if (connectionConfiguration instanceof WebXSessionCreationConfiguration createConnectionConfiguration) {
+                logger.info("Connecting to WebX using password authentication");
+                sessionId = this.startSession(transport, createConnectionConfiguration);
+                logger.info("Authentication successful. Got session Id \"{}\"", sessionId.hexString());
 
-            return client;
-        }
+            } else {
+                final WebXSessionJoinConfiguration sessionConnectionConfig = (WebXSessionJoinConfiguration)connectionConfiguration;
+                logger.info("Connecting to existing WebX session using sessionId \"{}\"", sessionConnectionConfig.getSessionId());
+                sessionId = new SessionId(sessionConnectionConfig.getSessionId());
+            }
 
-        logger.error("Trying to create client but transport to standalone host is not connected");
-        throw new WebXConnectionException("Transport to standalone host not connected when creating client");
-    }
+            // Connect to the session and get a client Id
+            final ClientIdentifier clientIdentifier = this.connectClient(transport, sessionId);
 
-    public synchronized WebXClient createClient(WebXClientInformation clientInformation) throws WebXConnectionException {
-        if (this.transport.isConnected()) {
+            final WebXSession session = this.getSession(sessionId).orElseGet(() -> {
+               final WebXSession webXSession = new WebXSession(sessionId, transport);
+               webXSession.start();
 
-            WebXClient client = new WebXClient();
-            client.connect(transport, clientInformation);
+               this.sessions.add(webXSession);
+               return webXSession;
+            });
 
-            this.addClient(client);
-
-            return client;
+            return session.createClient(clientIdentifier);
         }
 
         logger.error("Trying to create client but transport to host is not connected");
         throw new WebXConnectionException("Transport to host not connected when creating client");
     }
 
-    private void addClient(WebXClient client) {
-        SessionId sessionId = client.getSessionId();
-        List<WebXClient> sessionClients = this.clients.computeIfAbsent(sessionId, k -> new ArrayList<>());
-        sessionClients.add(client);
+    public synchronized void onClientDisconnected(WebXClient client) {
+        this.disconnectClient(transport, client.getClientIdentifier(), client.getSessionId());
+
+        this.getSession(client.getSessionId()).ifPresent(session -> {
+            session.removeClient(client);
+
+            if (session.getClientCount() == 0) {
+                this.sessions.remove(session);
+            }
+        });
     }
 
-    public synchronized void removeClient(WebXClient client) {
-        client.disconnect(transport);
 
-        SessionId sessionId = client.getSessionId();
-        List<WebXClient> sessionClients = this.clients.get(sessionId);
-        if (sessionClients != null) {
-            sessionClients.remove(client);
-            if (sessionClients.isEmpty()) {
-                this.clients.remove(sessionId);
+    public synchronized int getClientCount() {
+        return this.sessions.stream()
+                .mapToInt(WebXSession::getClientCount)
+                .reduce(0, Integer::sum);
+    }
+
+    private SessionId startSession(Transport transport, WebXSessionCreationConfiguration createConnectionConfiguration) throws WebXConnectionException {
+        try {
+            // Start WebX session via the router and get a session ID
+            String response = transport.getSessionChannel().startSession(createConnectionConfiguration);
+            String[] responseData = response.split(",");
+            int responseCode = Integer.parseInt(responseData[0]);
+            String sessionIdString = responseData[1];
+            if (responseCode == 0) {
+                return new SessionId(sessionIdString);
+
+            } else {
+                logger.error("Couldn't create WebX session: {}", sessionIdString);
+                throw new WebXConnectionException("Couldn't create WebX session: session response invalid");
             }
+
+        } catch (WebXDisconnectedException e) {
+            logger.error("Cannot start session: WebX Server is disconnected");
+            throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
         }
     }
 
-    private boolean waitForPing() {
-        // Wait for a ping to ensure comms have been set up
-        long startTime = new Date().getTime();
-        long delay = 0;
-        this.pingInterval = FAST_PING_MS;
-        while (delay < 5000 && !this.pingReceived) {
+    private ClientIdentifier connectClient(final Transport transport, final SessionId sessionId) throws WebXConnectionException {
+        try {
+            final String request = String.format("connect,%s", sessionId.hexString());
+            String response = transport.sendRequest(request).toString();
+            if (response == null) {
+                this.disconnect();
+                throw new WebXConnectionException("WebX Server returned a null connection response");
+
+            } else if (response.isEmpty()) {
+                this.disconnect();
+                throw new WebXConnectionException(String.format("WebX Server refused connection with sessionId %s", sessionId.hexString()));
+            }
+
+            final String[] responseElements = response.split(",");
+
+            if (responseElements.length != 2) {
+                this.disconnect();
+                throw new WebXConnectionException("WebX Server returned an invalid connection response");
+            }
+
+            String clientIdString = responseElements[0];
+            final String clientIndexString = responseElements[1];
+
+            int clientId = Integer.parseUnsignedInt(responseElements[0], 16);
+            long clientIndex = Long.parseUnsignedLong(responseElements[1], 16);
+
+            logger.info("Client connected to WebX session \"{}\":  Got client Id \"{}\" and index \"{}\"", sessionId.hexString(), clientIdString, clientIndexString);
+
+            return new ClientIdentifier(clientIndex, clientId);
+
+        } catch (NumberFormatException exception) {
+            logger.error("Cannot connect client: Failed to parse client id and index");
+            this.disconnect();
+            throw new WebXConnectionException("Failed to parse client id and index");
+
+        } catch (WebXDisconnectedException e) {
+            logger.error("Cannot connect client: WebX Server is disconnected");
+            this.disconnect();
+            throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
+        }
+    }
+
+    private void disconnectClient(final Transport transport, final ClientIdentifier clientIdentifier, final SessionId sessionId) {
+        if (clientIdentifier != null) {
             try {
-                Thread.sleep(100);
-                delay = new Date().getTime() - startTime;
-
-            } catch (InterruptedException ignored) {
-            }
-        }
-        this.pingInterval = SLOW_PING_MS;
-
-        return this.pingReceived;
-    }
-
-    private void connectionCheck() {
-        while (this.running) {
-            synchronized (this) {
-                if (this.running) {
-                    if (this.transport.isConnected()) {
-                        try {
-                            // Ping on session channel to ensure all is ok (ensures encryption keys are valid too)
-                            logger.trace("Sending router ping to {}", this.configuration.getHostname());
-                            this.transport.sendRequest("ping");
-
-                            this.pingReceived = true;
-
-                        } catch (WebXDisconnectedException e) {
-                            logger.error("Failed to get response from connector ping at {}", this.configuration.getHostname());
-
-                            // Remove subscription to messages
-                            this.transport.getMessageSubscriber().removeListener(this);
-
-                            this.transport.disconnect();
-                            this.disconnectClients();
-                        }
-
-                    } else {
-                        try {
-                            this.connectToWebXHost();
-
-                        } catch (WebXConnectionException exception) {
-                            logger.warn("Failed to connect to WebX host {}: {}", this.getHostname(), exception.getMessage());
-                        }
-                    }
+                final String request = String.format("disconnect,%s,%s", sessionId.hexString(), clientIdentifier.clientIdString());
+                SocketResponse response = transport.sendRequest(request);
+                if (response == null) {
+                    logger.error("Failed to get response from WebX server");
                 }
-            }
 
-            try {
-                Thread.sleep(this.pingInterval);
-
-            } catch (InterruptedException ignored) {
+            } catch (WebXDisconnectedException e) {
+                logger.warn("Cannot disconnect client {}: WebX Server is disconnected", clientIdentifier.clientIdString());
             }
         }
+    }
+
+    private Optional<WebXSession> getSession(final SessionId sessionId) {
+        return this.sessions.stream().filter(session -> sessionId.equals(session.getSessionId())).findFirst();
     }
 
     private void connectToWebXHost() throws WebXConnectionException {
         try {
             logger.info("Connecting to WebX server at {}:{}...", this.configuration.getHostname(), this.configuration.getPort());
-            this.transport.connect(this.configuration.getHostname(), this.configuration.getPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone());
+            this.transport.connect(this.configuration.getHostname(), this.configuration.getPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone(), this::onMessage);
             logger.info("... connected to {}", this.configuration.getHostname());
-
-            // Subscribe to messages once connected
-            this.transport.getMessageSubscriber().addListener(this);
 
         } catch (WebXDisconnectedException e) {
             throw new WebXConnectionException("Failed to connect to WebX host");
         }
     }
 
-    private synchronized void disconnectClients() {
-        for (Map.Entry<SessionId, List<WebXClient>> entry : this.clients.entrySet()) {
-            List<WebXClient> sessionClients = entry.getValue();
+    private void onConnectionCheckError(final String error) {
+        this.transport.disconnect();
+        this.disconnectClients();
+    }
 
-            for (WebXClient client : sessionClients) {
-                client.close();
-            }
+    private void onConnectionCheckDisconnected() {
+        try {
+            // Try to reconnect
+            this.connectToWebXHost();
+
+        } catch (WebXConnectionException exception) {
+            logger.warn("Failed to connect to WebX host {}: {}", this.getHostname(), exception.getMessage());
+        }
+    }
+
+    private synchronized void disconnectClients() {
+        for (WebXSession session : this.sessions) {
+            session.disconnectClients();
         }
 
+        this.sessions.clear();
         logger.info("Disconnected all clients from {}", this.configuration.getHostname());
     }
 
-    @Override
-    public synchronized void onMessage(byte[] messageData) {
+    private synchronized void onMessage(byte[] messageData) {
         logger.trace("Got client message of length {} from {}", messageData.length, this.configuration.getHostname());
 
         // Get session Id
         SessionId sessionId = new SessionId(messageData);
-        List<WebXClient> allSessionClients = this.clients.get(sessionId);
-        if (allSessionClients != null) {
-
-            List<WebXClient> indexAssociatedClients = allSessionClients.stream()
-                    .filter(webXClient -> webXClient.matchesMessageIndexMask(messageData))
-                    .collect(Collectors.toList());
-
-            for (WebXClient client : indexAssociatedClients) {
-                client.onMessage(messageData);
-            }
-        }
+        this.getSession(sessionId).ifPresent(session -> {
+            session.onMessage(messageData);
+        });
     }
 }

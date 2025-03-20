@@ -21,6 +21,7 @@ import eu.ill.webx.exceptions.WebXClientException;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
+import eu.ill.webx.configuration.WebXConnectionConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,16 +35,12 @@ public class WebXTunnel {
     public WebXTunnel() {
     }
 
-    public void connect(final WebXConfiguration configuration) throws WebXConnectionException {
-        this.connect(configuration, null);
-    }
-
-    public void connect(final WebXConfiguration configuration, final WebXClientInformation clientInformation) throws WebXConnectionException {
+    public void connect(final WebXHostConfiguration configuration, final WebXConnectionConfiguration connectionConfiguration) throws WebXConnectionException {
         if (this.client == null) {
-            WebXHost host = WebXRelay.getInstance().onClientConnect(configuration);
+            WebXHost host = WebXRelay.getInstance().onClientConnection(configuration);
 
             logger.debug("Creating client for {}...", host.getHostname());
-            WebXClient client = clientInformation == null ? host.createClient() : host.createClient(clientInformation);
+            WebXClient client = host.onClientConnection(connectionConfiguration);
 
             logger.info("... client created.");
             this.client = client;
@@ -62,31 +59,27 @@ public class WebXTunnel {
 
     public void disconnect() {
         if (this.client != null) {
-            this.client.stop();
-            this.host.removeClient(client);
+            this.host.onClientDisconnected(client);
 
             WebXRelay.getInstance().onClientDisconnect(this.host);
         }
     }
 
-    public void start() throws WebXClientException {
+    public boolean isConnected() {
         if (this.client != null) {
-            this.client.start();
-
-        } else {
-            throw new WebXClientException("Client is not connected");
-        }
-    }
-
-    public boolean isRunning() {
-        if (this.client != null) {
-            return this.client.isRunning();
+            return this.client.isConnected();
 
         } else {
             return false;
         }
     }
 
+    /**
+     * Blocking call to get next message
+     * @return
+     * @throws WebXClientException
+     * @throws WebXConnectionInterruptException
+     */
     public byte[] read() throws WebXClientException, WebXConnectionInterruptException {
         if (this.client != null) {
             try {
@@ -104,7 +97,7 @@ public class WebXTunnel {
 
     public void write(byte[] payload) throws WebXClientException {
         if (this.client != null) {
-            this.client.queueInstruction(payload);
+            this.client.sendInstruction(payload);
 
         } else {
             throw new WebXClientException("Client is not connected");

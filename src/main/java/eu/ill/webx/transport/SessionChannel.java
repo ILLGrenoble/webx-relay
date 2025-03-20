@@ -17,9 +17,9 @@
  */
 package eu.ill.webx.transport;
 
-import eu.ill.webx.WebXClientInformation;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SocketResponse;
+import eu.ill.webx.configuration.WebXSessionCreationConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -80,18 +80,16 @@ public class SessionChannel {
         }
     }
 
-    public synchronized String startSession(WebXClientInformation clientInformation) throws WebXDisconnectedException {
-        String usernameBase64 = Base64.getEncoder().encodeToString(clientInformation.getUsername().getBytes());
-        String passwordBase64 = Base64.getEncoder().encodeToString(clientInformation.getPassword().getBytes());
+    public synchronized String startSession(WebXSessionCreationConfiguration configuration) throws WebXDisconnectedException {
+        String usernameBase64 = Base64.getEncoder().encodeToString(configuration.getUsername().getBytes());
+        String passwordBase64 = Base64.getEncoder().encodeToString(configuration.getPassword().getBytes());
         String request = "create," +
                 usernameBase64 + "," +
                 passwordBase64 + "," +
-                clientInformation.getScreenWidth() + "," +
-                clientInformation.getScreenHeight() + "," +
-                clientInformation.getKeyboardLayout();
-        String sessionId = this.sendRequest(request).toString();
-
-        return sessionId;
+                configuration.getScreenWidth() + "," +
+                configuration.getScreenHeight() + "," +
+                configuration.getKeyboardLayout();
+        return this.sendRequest(request).toString();
     }
 
 }

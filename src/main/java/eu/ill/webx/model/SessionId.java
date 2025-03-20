@@ -15,8 +15,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package eu.ill.webx.utils;
+package eu.ill.webx.model;
 
+
+import eu.ill.webx.utils.HexString;
 
 import java.nio.ByteBuffer;
 

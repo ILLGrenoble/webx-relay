@@ -17,18 +17,16 @@
  */
 package eu.ill.webx.transport;
 
-import eu.ill.webx.model.MessageListener;
-import eu.ill.webx.utils.HexString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class MessageSubscriber {
+    public interface MessageListener {
+        void onMessage(byte[] messageData);
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(MessageSubscriber.class);
 
@@ -37,9 +35,10 @@ public class MessageSubscriber {
     private Thread thread;
     private boolean running = false;
 
-    private final List<MessageListener> listeners = new ArrayList<>();
+    private final MessageListener messageListener;
 
-    public MessageSubscriber() {
+    public MessageSubscriber(final MessageSubscriber.MessageListener messageListener) {
+        this.messageListener = messageListener;
     }
 
     public synchronized void start(ZContext context, String address) {
@@ -83,8 +82,7 @@ public class MessageSubscriber {
         while (this.running) {
             try {
                 byte[] messageData = socket.recv();
-                logger.trace("Got message of length {}: {}", messageData.length, HexString.toDebugString(messageData, 40));
-                this.notifyListeners(messageData);
+                this.messageListener.onMessage(messageData);
 
             } catch (org.zeromq.ZMQException e) {
                 if (this.running) {
@@ -92,17 +90,5 @@ public class MessageSubscriber {
                 }
             }
         }
-    }
-
-    synchronized public void addListener(MessageListener listener) {
-        this.listeners.add(listener);
-    }
-
-    synchronized public void removeListener(MessageListener listener) {
-        this.listeners.remove(listener);
-    }
-
-    synchronized private void notifyListeners(byte[] messageData) {
-        this.listeners.forEach(listener -> listener.onMessage(messageData));
     }
 }

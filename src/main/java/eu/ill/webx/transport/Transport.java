@@ -28,24 +28,23 @@ public class Transport {
 
     private static final Logger logger = LoggerFactory.getLogger(Transport.class);
 
+    private final String hostname;
     private ZContext context;
     private boolean connected = false;
     private boolean isStandalone;
+
 
     private ClientConnector connector;
     private MessageSubscriber messageSubscriber;
     private InstructionPublisher instructionPublisher;
     private SessionChannel sessionChannel;
 
-    public Transport() {
+    public Transport(final String hostname) {
+        this.hostname = hostname;
     }
 
-    public ClientConnector getConnector() {
-        return connector;
-    }
-
-    public MessageSubscriber getMessageSubscriber() {
-        return messageSubscriber;
+    public String getHostname() {
+        return hostname;
     }
 
     public InstructionPublisher getInstructionPublisher() {
@@ -60,7 +59,7 @@ public class Transport {
         return this.connected;
     }
 
-    public synchronized void connect(String hostname, int port, int socketTimeoutMs, boolean isStandalone) throws WebXDisconnectedException {
+    public synchronized void connect(String hostname, int port, int socketTimeoutMs, boolean isStandalone, final MessageSubscriber.MessageListener messageListener) throws WebXDisconnectedException {
 
         if (this.context == null) {
             this.isStandalone = isStandalone;
@@ -71,7 +70,7 @@ public class Transport {
                 this.connector = new ClientConnector();
                 ConnectionData connectionData = this.connector.connect(this.context, "tcp://" + hostname + ":" + port, socketTimeoutMs, isStandalone);
 
-                this.messageSubscriber = new MessageSubscriber();
+                this.messageSubscriber = new MessageSubscriber(messageListener);
                 this.messageSubscriber.start(this.context, "tcp://" + hostname + ":" + connectionData.getPublisherPort());
 
                 this.instructionPublisher = new InstructionPublisher();

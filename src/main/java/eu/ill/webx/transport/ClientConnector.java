@@ -62,7 +62,6 @@ public class ClientConnector {
                     this.connectionData = new ConnectionData(publisherPort, collectorPort, sessionPort, publicKey);
                 }
 
-
                 logger.debug("WebX Connector connected");
 
             } catch (WebXDisconnectedException e) {

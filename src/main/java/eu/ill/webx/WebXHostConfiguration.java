@@ -17,7 +17,7 @@
  */
 package eu.ill.webx;
 
-public class WebXConfiguration {
+public class WebXHostConfiguration {
 
     private final String hostname;
     private final Integer port;
@@ -25,18 +25,18 @@ public class WebXConfiguration {
 
     private Integer socketTimeoutMs = 15000;
 
-    public WebXConfiguration(final String hostname, final Integer port) {
+    public WebXHostConfiguration(final String hostname, final Integer port) {
         this.hostname = hostname;
         this.port = port;
     }
 
-    public WebXConfiguration(final String hostname, final Integer port, boolean isStandalone) {
+    public WebXHostConfiguration(final String hostname, final Integer port, boolean isStandalone) {
         this.hostname = hostname;
         this.port = port;
         this.isStandalone = isStandalone;
     }
 
-    public WebXConfiguration(final String hostname, final Integer port, final Integer socketTimeoutMs) {
+    public WebXHostConfiguration(final String hostname, final Integer port, final Integer socketTimeoutMs) {
         this.hostname = hostname;
         this.port = port;
         this.socketTimeoutMs = socketTimeoutMs;

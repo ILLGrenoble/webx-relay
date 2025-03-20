@@ -42,25 +42,23 @@ public class WebXRelay {
         return Holder.INSTANCE;
     }
 
-    public synchronized WebXHost onClientConnect(final WebXConfiguration configuration) throws WebXConnectionException {
-        WebXHost host = this.getHost(configuration);
-        if (host == null) {
-            // Create host
-            host = new WebXHost(configuration);
-
-            // Test connection to the webx server
-            try {
-                host.start();
-                this.hosts.add(host);
-
-            } catch (WebXConnectionException exception) {
-                host.stop();
-                logger.error("Failed to create WebX host at {}:{} : {}", configuration.getHostname(), configuration.getPort(), exception.getMessage());
-
-                throw exception;
-            }
+    public synchronized WebXHost onClientConnection(final WebXHostConfiguration configuration) throws WebXConnectionException {
+        Optional<WebXHost> existingHost = this.getHost(configuration);
+        if (existingHost.isPresent()) {
+            return existingHost.get();
         }
-        return host;
+
+        // Create and initialize host
+        WebXHost host = new WebXHost(configuration);
+        try {
+            host.connect();
+            this.hosts.add(host);
+            return host;
+        } catch (WebXConnectionException exception) {
+            host.disconnect();
+            logger.error("Failed to create WebX host at {}:{} : {}", configuration.getHostname(), configuration.getPort(), exception.getMessage());
+            throw exception;
+        }
     }
 
     public synchronized void onClientDisconnect(WebXHost host) {
@@ -70,17 +68,15 @@ public class WebXRelay {
                 this.hosts.remove(host);
 
                 // Disconnect from host
-                host.stop();
+                host.disconnect();
             }
         }
     }
 
-    private WebXHost getHost(WebXConfiguration configuration) {
+    private Optional<WebXHost> getHost(final WebXHostConfiguration configuration) {
         // Find host that is already running
-        Optional<WebXHost> hostOptional = this.hosts.stream()
-                .filter(aHost -> aHost.getHostname().equals(configuration.getHostname()) && aHost.getPort() == configuration.getPort())
+        return this.hosts.stream()
+                .filter(host -> host.getHostname().equals(configuration.getHostname()) && host.getPort() == configuration.getPort())
                 .findFirst();
-
-        return hostOptional.orElse(null);
     }
 }
