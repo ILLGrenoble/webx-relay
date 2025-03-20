@@ -119,12 +119,14 @@ public class WebXHost {
     }
 
     public synchronized void onClientDisconnected(WebXClient client) {
-        this.disconnectClient(transport, client.getClientIdentifier(), client.getSessionId());
+        this.disconnectClient(transport, client);
 
         this.getSession(client.getSessionId()).ifPresent(session -> {
-            session.removeClient(client);
+            session.disconnectClient(client);
 
             if (session.getClientCount() == 0) {
+                session.stop();
+
                 this.sessions.remove(session);
             }
         });
@@ -200,17 +202,17 @@ public class WebXHost {
         }
     }
 
-    private void disconnectClient(final Transport transport, final ClientIdentifier clientIdentifier, final SessionId sessionId) {
-        if (clientIdentifier != null) {
+    private void disconnectClient(final Transport transport, final WebXClient client) {
+        if (client != null) {
             try {
-                final String request = String.format("disconnect,%s,%s", sessionId.hexString(), clientIdentifier.clientIdString());
+                final String request = String.format("disconnect,%s,%s", client.getSessionId().hexString(), client.getClientIdentifier().clientIdString());
                 SocketResponse response = transport.sendRequest(request);
                 if (response == null) {
                     logger.error("Failed to get response from WebX server");
                 }
 
             } catch (WebXDisconnectedException e) {
-                logger.warn("Cannot disconnect client {}: WebX Server is disconnected", clientIdentifier.clientIdString());
+                logger.warn("Cannot disconnect client {}: WebX Server is disconnected", client.getClientIdentifier().clientIdString());
             }
         }
     }
@@ -247,7 +249,7 @@ public class WebXHost {
 
     private synchronized void disconnectClients() {
         for (WebXSession session : this.sessions) {
-            session.disconnectClients();
+            session.disconnectAllClients();
         }
 
         this.sessions.clear();

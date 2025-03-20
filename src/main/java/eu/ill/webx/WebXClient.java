@@ -63,6 +63,11 @@ public class WebXClient {
         return this.session.getSessionId();
     }
 
+    public void disconnect() {
+        this.connected = false;
+        this.onMessage(new Message.CloseMessage());
+    }
+
     public boolean isConnected() {
         return connected;
     }
@@ -127,11 +132,6 @@ public class WebXClient {
         } else {
             throw new WebXClientException("WebXClient is not connected");
         }
-    }
-
-    public void close() {
-        this.connected = false;
-        this.messageQueue.add(new Message.CloseMessage());
     }
 
     public boolean matchesMessageIndexMask(final byte[] messageData) {

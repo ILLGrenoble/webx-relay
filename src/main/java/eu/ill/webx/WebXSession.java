@@ -103,13 +103,14 @@ public class WebXSession {
         return client;
     }
 
-    public synchronized void removeClient(final WebXClient client) {
+    public synchronized void disconnectClient(final WebXClient client) {
+        client.disconnect();
         this.clients.remove(client);
     }
 
-    public synchronized void disconnectClients() {
+    public synchronized void disconnectAllClients() {
         for (WebXClient client : this.clients) {
-            client.close();
+            client.disconnect();
         }
         this.clients.clear();
     }
