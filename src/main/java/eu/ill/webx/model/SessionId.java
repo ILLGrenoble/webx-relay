@@ -25,9 +25,9 @@ import java.nio.ByteBuffer;
 public class SessionId {
     private final long lower;
     private final long upper;
-    byte[] sessionId;
+    private final byte[] sessionId;
 
-    String hexString;
+    private String hexString;
 
     public SessionId(String sessionIdString) {
         this.hexString = sessionIdString;

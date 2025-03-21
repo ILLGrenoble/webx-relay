@@ -34,7 +34,7 @@ public class InstructionPublisher {
     private Thread instructionThread;
     private boolean connected = false;
 
-    public InstructionPublisher() {
+    InstructionPublisher() {
     }
 
     public synchronized void connect(ZContext context, String address) {

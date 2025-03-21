@@ -17,17 +17,7 @@
  */
 package eu.ill.webx.model;
 
-public class SocketResponse {
-
-    private final byte[] data;
-
-    public SocketResponse(final byte[] data) {
-        this.data = data;
-    }
-
-    public byte[] data() {
-        return this.data;
-    }
+public record SocketResponse(byte[] data) {
 
     public String toString() {
         return this.data == null ? null : new String(this.data);

@@ -15,8 +15,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package eu.ill.webx;
+package eu.ill.webx.relay;
 
+import eu.ill.webx.WebXHostConfiguration;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Central creation and storage of WebXHosts
+ */
 public class WebXRelay {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXRelay.class);

@@ -34,7 +34,7 @@ public class ClientConnector {
     private ZMQ.Socket socket;
     private ConnectionData connectionData;
 
-    public ClientConnector() {
+    ClientConnector() {
     }
 
     public ConnectionData connect(ZContext context, String address, int socketTimeoutMs, boolean standalone) throws WebXDisconnectedException {

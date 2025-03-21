@@ -17,34 +17,23 @@
  */
 package eu.ill.webx.transport;
 
-import eu.ill.webx.model.ConnectionData;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
+import eu.ill.webx.model.ConnectionData;
 import eu.ill.webx.model.SocketResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 
 public class Transport {
 
-    private static final Logger logger = LoggerFactory.getLogger(Transport.class);
-
-    private final String hostname;
     private ZContext context;
     private boolean connected = false;
     private boolean isStandalone;
-
 
     private ClientConnector connector;
     private MessageSubscriber messageSubscriber;
     private InstructionPublisher instructionPublisher;
     private SessionChannel sessionChannel;
 
-    public Transport(final String hostname) {
-        this.hostname = hostname;
-    }
-
-    public String getHostname() {
-        return hostname;
+    public Transport() {
     }
 
     public InstructionPublisher getInstructionPublisher() {
@@ -74,7 +63,7 @@ public class Transport {
                 this.messageSubscriber.start(this.context, "tcp://" + hostname + ":" + connectionData.getPublisherPort());
 
                 this.instructionPublisher = new InstructionPublisher();
-                this.instructionPublisher.connect(this.context, "tcp://" + hostname + ":" + connectionData.getCollectorPort());
+                this.instructionPublisher.connect(this.context, "tcp://" + hostname + ":" + connectionData.getSubscriberPort());
 
                 if (!isStandalone) {
                     this.sessionChannel = new SessionChannel();

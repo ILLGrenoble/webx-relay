@@ -36,7 +36,7 @@ public class SessionChannel {
 
     private ZMQ.Socket socket;
 
-    public SessionChannel() {
+    SessionChannel() {
     }
 
     public void connect(ZContext context, String address, int socketTimeoutMs, String serverPublicKey) {

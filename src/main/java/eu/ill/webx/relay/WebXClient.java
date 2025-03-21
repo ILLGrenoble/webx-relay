@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package eu.ill.webx;
+package eu.ill.webx.relay;
 
 import eu.ill.webx.exceptions.WebXClientException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
@@ -31,6 +31,10 @@ import java.util.concurrent.PriorityBlockingQueue;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
+/**
+ * Provides a connection point between specific client and a session.
+ * Messages from the WebXEngine are stored in the messageQueue and read manually from client applications (via the WebXTunnel).
+ */
 public class WebXClient {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXClient.class);
@@ -45,7 +49,7 @@ public class WebXClient {
     private final ByteBuffer instructionPrefix = ByteBuffer.allocate(20).order(LITTLE_ENDIAN);
 
 
-    public WebXClient(final ClientIdentifier clientIdentifier, final WebXSession session) {
+    WebXClient(final ClientIdentifier clientIdentifier, final WebXSession session) {
         this.clientIdentifier = clientIdentifier;
         this.session = session;
 
@@ -67,8 +71,10 @@ public class WebXClient {
     }
 
     public void disconnect() {
-        this.connected = false;
-        this.onMessage(new Message.CloseMessage());
+        if (this.connected) {
+            this.onMessage(new Message.CloseMessage());
+            this.connected = false;
+        }
     }
 
     public boolean isConnected() {
@@ -76,22 +82,28 @@ public class WebXClient {
     }
 
     public void onMessage(byte[] messageData) {
-        logger.trace("Got client message of length {}", messageData.length);
-        Message message = new Message(messageData);
-        this.messageQueue.add(message);
+        if (this.connected) {
+            logger.trace("Got client message of length {}", messageData.length);
+            Message message = new Message(messageData);
+            this.messageQueue.add(message);
+        }
     }
 
     public void onMessage(Message message) {
-        this.messageQueue.add(message);
+        if (this.connected) {
+            this.messageQueue.add(message);
+        }
     }
 
     public void sendInstruction(byte[] instructionData) {
-        logger.trace("Got instruction of length {}", instructionData.length);
+        if (this.connected) {
+            logger.trace("Got instruction of length {}", instructionData.length);
 
-        // Set the sessionId and clientId at the beginning
-        System.arraycopy(this.instructionPrefix.array(), 0, instructionData, 0, 20);
+            // Set the sessionId and clientId at the beginning
+            System.arraycopy(this.instructionPrefix.array(), 0, instructionData, 0, 20);
 
-        this.session.sendInstruction(instructionData);
+            this.session.sendInstruction(instructionData);
+        }
     }
 
     public byte[] getMessage() throws WebXClientException, WebXConnectionInterruptException, WebXDisconnectedException {
@@ -130,7 +142,7 @@ public class WebXClient {
                 }
 
             } catch (InterruptedException exception) {
-                throw new WebXClientException("Client message listener thread interrupted");
+                throw new WebXConnectionInterruptException("Client message listener thread interrupted");
 
             }
         } else {
@@ -138,7 +150,7 @@ public class WebXClient {
         }
     }
 
-    public boolean matchesMessageIndexMask(final byte[] messageData) {
+    boolean matchesMessageIndexMask(final byte[] messageData) {
         if (messageData.length < 24) {
             return false;
         }

@@ -17,6 +17,9 @@
  */
 package eu.ill.webx;
 
+/**
+ * Provides host configuration parameters
+ */
 public class WebXHostConfiguration {
 
     private final String hostname;
@@ -25,18 +28,37 @@ public class WebXHostConfiguration {
 
     private Integer socketTimeoutMs = 15000;
 
+    /**
+     * Standard host connection parameters with hostname and port
+     * @param hostname the name of the host
+     * @param port the port to connect to
+     */
     public WebXHostConfiguration(final String hostname, final Integer port) {
         this.hostname = hostname;
         this.port = port;
         this.isStandalone = false;
     }
 
+    /**
+     * Connection parameters including the standalone flag: Standalone server is not running with a router so connection is direct to a
+     * running WebX-Engine
+     * @param hostname the name of the host
+     * @param port the port to connect to
+     * @param isStandalone True if the host is running a standalone WebX Engine
+     */
     public WebXHostConfiguration(final String hostname, final Integer port, boolean isStandalone) {
         this.hostname = hostname;
         this.port = port;
         this.isStandalone = isStandalone;
     }
 
+    /**
+     * Connection parameters including override for the default socket timeout
+     * running WebX-Engine
+     * @param hostname the name of the host
+     * @param port the port to connect to
+     * @param socketTimeoutMs The timeout in milliseconds for a timeout exception to be thrown when doing blocking ZMQ requests
+     */
     public WebXHostConfiguration(final String hostname, final Integer port, final Integer socketTimeoutMs) {
         this.hostname = hostname;
         this.port = port;
@@ -44,18 +66,30 @@ public class WebXHostConfiguration {
         this.isStandalone = false;
     }
 
+    /**
+     * @return the hostname
+     */
     public String getHostname() {
         return hostname;
     }
 
+    /**
+     * @return The connector port
+     */
     public Integer getPort() {
         return port;
     }
 
+    /**
+     * @return The socket timeout in milliseconds
+     */
     public Integer getSocketTimeoutMs() {
         return socketTimeoutMs;
     }
 
+    /**
+     * @return true if the relay is running in standalone mode
+     */
     public boolean isStandalone() {
         return isStandalone;
     }

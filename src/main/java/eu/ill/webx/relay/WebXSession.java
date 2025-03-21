@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package eu.ill.webx;
+package eu.ill.webx.relay;
 
 import eu.ill.webx.model.ClientIdentifier;
 import eu.ill.webx.model.Message;
@@ -28,6 +28,11 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Encapsulates a particular WebX X11 session, identified by a unique sessionId.
+ * Manages filtering of messages to groups of clients or specific clients in the session.
+ * Pinging of sessions delegated to WebXSessionValidator.
+ */
 public class WebXSession {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXSession.class);
@@ -41,7 +46,7 @@ public class WebXSession {
 
     private boolean running = false;
 
-    public WebXSession(final SessionId sessionId, final Transport transport) {
+    WebXSession(final SessionId sessionId, final Transport transport) {
         this.sessionId = sessionId;
         this.instructionPublisher = transport.getInstructionPublisher();
         this.sessionValidator = new WebXSessionValidator(this.sessionId, transport, (error -> {
@@ -86,13 +91,6 @@ public class WebXSession {
     public synchronized void disconnectClient(final WebXClient client) {
         client.disconnect();
         this.clients.remove(client);
-    }
-
-    public synchronized void disconnectAllClients() {
-        for (WebXClient client : this.clients) {
-            client.disconnect();
-        }
-        this.clients.clear();
     }
 
     public synchronized int getClientCount() {

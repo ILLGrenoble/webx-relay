@@ -15,8 +15,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package eu.ill.webx;
+package eu.ill.webx.relay;
 
+import eu.ill.webx.WebXClientConfiguration;
+import eu.ill.webx.WebXHostConfiguration;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ClientIdentifier;
@@ -30,6 +32,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Provides connection to a WebXRouter or standalone WebXEngine.
+ * WebXTransport management connections to the ZMQ sockets.
+ * WebXHost managed all sessions that are in use on the host. Creation of sessions and connection/creation of clients is handled here.
+ */
 public class WebXHost {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXHost.class);
@@ -39,10 +46,10 @@ public class WebXHost {
 
     private final List<WebXSession> sessions = new ArrayList<>();
 
-    public WebXHost(final WebXHostConfiguration configuration) {
+    WebXHost(final WebXHostConfiguration configuration) {
         this.configuration = configuration;
 
-        this.transport = new Transport(configuration.getHostname());
+        this.transport = new Transport();
     }
 
     public String getHostname() {

@@ -21,9 +21,18 @@ import eu.ill.webx.exceptions.WebXClientException;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
+import eu.ill.webx.relay.WebXClient;
+import eu.ill.webx.relay.WebXHost;
+import eu.ill.webx.relay.WebXRelay;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * The WebXTunnel provides the main entry point to connecting to a WebX Host. Session creation and client connection is handled
+ * through the connect method.
+ * Each client connected to the relay has an individual tunnel through which instructions can be passed to the WebX Engine and
+ * messages can be read from the engine.
+ */
 public class WebXTunnel {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXTunnel.class);
@@ -31,12 +40,32 @@ public class WebXTunnel {
     private WebXHost host;
     private WebXClient client;
 
+    /**
+     * Static method to create a WebXTunnel, connect to the host and create a client.
+     * @param hostConfiguration Configuration for the WebX Host (eg hostname and port)
+     * @param clientConfiguration Configuration for the client (login parameters or session Id)
+     * @return a connected WebXTunnel
+     * @throws WebXConnectionException thrown if the connection fails
+     */
+    public static WebXTunnel Connect(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
+        WebXTunnel tunnel = new WebXTunnel();
+        tunnel.connect(hostConfiguration, clientConfiguration);
+        return tunnel;
+    }
+
     public WebXTunnel() {
     }
 
-    public void connect(final WebXHostConfiguration configuration, final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
+    /**
+     * Connects to a WebX Engine on a specific host/port and connects the client to a WebX Session.
+     * The connection parameters determine whether a new session is created or connection is required to a session that is already running.
+     * @param hostConfiguration Configuration for the WebX Host (eg hostname and port)
+     * @param clientConfiguration Configuration for the client (login parameters or session Id)
+     * @throws WebXConnectionException thrown if the connection fails
+     */
+    public void connect(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
         if (this.client == null) {
-            this.host = WebXRelay.getInstance().connectToHost(configuration);
+            this.host = WebXRelay.getInstance().connectToHost(hostConfiguration);
 
             try {
                 logger.debug("Creating client for {}...", this.host.getHostname());
@@ -53,6 +82,10 @@ public class WebXTunnel {
         }
     }
 
+    /**
+     * @return The connection Id of the client: corresponds to the session Id of the WebX Engine
+     * @throws WebXClientException thrown if the tunnel is not connected
+     */
     public String getConnectionId() throws WebXClientException {
         if (this.client != null) {
             return this.client.getSessionId().hexString();
@@ -62,14 +95,24 @@ public class WebXTunnel {
         }
     }
 
+    /**
+     * Disconnects the client from the WebX Session: message sent to the WebX Engine do disconnect the client.
+     * Client removed from the session.
+     * Session closed if no more connected clients (session pinging will be halted accordingly)
+     * Host disconnected if no sessions are running on the specific host.
+     */
     public void disconnect() {
         if (this.client != null) {
+//            this.client.disconnect();
             this.host.onClientDisconnected(client);
 
             WebXRelay.getInstance().onClientDisconnect(this.host);
         }
     }
 
+    /**
+     * @return True if the client is connected.
+     */
     public boolean isConnected() {
         if (this.client != null) {
             return this.client.isConnected();
@@ -80,19 +123,22 @@ public class WebXTunnel {
     }
 
     /**
-     * Blocking call to get next message
-     * @return
-     * @throws WebXClientException
-     * @throws WebXConnectionInterruptException
+     * Blocking call to get next message from the Client. The client stores all messages in a queue liberating the ZMQ thread as quickly as possible.
+     * Client applications must read the messages from the queue and send them to the client.
+     * The read method is blocking and returns only when a message is available.
+     * @return The byte array data for the next message
+     * @throws WebXClientException thrown when an error occurs with the client or if an error is detected in the message data
+     * @throws WebXConnectionInterruptException thrown when the read is interrupted for example the session doesn't respond to a ping
+     * @throws WebXDisconnectedException thrown when the client is disconnected from the server
      */
-    public byte[] read() throws WebXClientException, WebXConnectionInterruptException {
+    public byte[] read() throws WebXClientException, WebXConnectionInterruptException, WebXDisconnectedException {
         if (this.client != null) {
             try {
                 return this.client.getMessage();
 
             } catch (WebXDisconnectedException exception) {
                 this.disconnect();
-                throw new WebXClientException("Client has been disconnected by the server");
+                throw exception;
             }
 
         } else {
@@ -100,6 +146,13 @@ public class WebXTunnel {
         }
     }
 
+    /**
+     * Writes data to the WebX Engine, sending instructions from the client.
+     * The instruction is queued and the client thread is liberated quickly.
+     * Instruction headers are automatically modified to include the session Id and the Client Id so that they are correctly routed and controlled in the server.
+     * @param payload The instruction data to send to the WebX Engine.
+     * @throws WebXClientException Thrown if the client is in error
+     */
     public void write(byte[] payload) throws WebXClientException {
         if (this.client != null) {
             this.client.sendInstruction(payload);

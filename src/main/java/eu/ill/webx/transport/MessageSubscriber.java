@@ -35,7 +35,7 @@ public class MessageSubscriber {
 
     private final MessageListener messageListener;
 
-    public MessageSubscriber(final MessageSubscriber.MessageListener messageListener) {
+    MessageSubscriber(final MessageSubscriber.MessageListener messageListener) {
         this.messageListener = messageListener;
     }
 
