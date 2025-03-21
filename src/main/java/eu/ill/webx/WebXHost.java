@@ -110,12 +110,23 @@ public class WebXHost {
             session.disconnectClient(client);
 
             if (session.getClientCount() == 0) {
-                logger.debug("Session with Id \"{}\" has no clients: stopping it", session.getSessionId().hexString());
+                logger.debug("Client removed from session with Id \"{}\". Session now has no clients: stopping it", session.getSessionId().hexString());
                 session.stop();
 
                 this.sessions.remove(session);
             }
         });
+    }
+
+    public synchronized void cleanupSessions() {
+        for (final WebXSession session : this.sessions) {
+            if (session.getClientCount() == 0) {
+                logger.debug("Cleanup: Session with Id \"{}\" has no clients: stopping it", session.getSessionId().hexString());
+                session.stop();
+
+                this.sessions.remove(session);
+            }
+        }
     }
 
     private Optional<WebXSession> getSession(final SessionId sessionId) {
@@ -164,18 +175,15 @@ public class WebXHost {
             final String request = String.format("connect,%s", sessionId.hexString());
             String response = transport.sendRequest(request).toString();
             if (response == null) {
-                this.disconnect();
                 throw new WebXConnectionException("WebX Server returned a null connection response");
 
             } else if (response.isEmpty()) {
-                this.disconnect();
                 throw new WebXConnectionException(String.format("WebX Server refused connection with sessionId %s", sessionId.hexString()));
             }
 
             final String[] responseElements = response.split(",");
 
             if (responseElements.length != 2) {
-                this.disconnect();
                 throw new WebXConnectionException("WebX Server returned an invalid connection response");
             }
 
@@ -191,12 +199,10 @@ public class WebXHost {
 
         } catch (NumberFormatException exception) {
             logger.error("Cannot connect client: Failed to parse client id and index");
-            this.disconnect();
             throw new WebXConnectionException("Failed to parse client id and index");
 
         } catch (WebXDisconnectedException e) {
             logger.error("Cannot connect client: WebX Server is disconnected");
-            this.disconnect();
             throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
         }
     }
