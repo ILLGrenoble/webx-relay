@@ -105,6 +105,7 @@ public class WebXClientConfiguration {
     }
 
     /**
+     * Returns the username
      * @return The username
      */
     public String getUsername() {
@@ -112,6 +113,7 @@ public class WebXClientConfiguration {
     }
 
     /**
+     * Returns the password
      * @return The password
      */
     public String getPassword() {
@@ -119,6 +121,7 @@ public class WebXClientConfiguration {
     }
 
     /**
+     * Returns the screen width
      * @return The screen width
      */
     public Integer getScreenWidth() {
@@ -126,6 +129,7 @@ public class WebXClientConfiguration {
     }
 
     /**
+     * Returns the screen height
      * @return The screen height
      */
     public Integer getScreenHeight() {
@@ -133,6 +137,7 @@ public class WebXClientConfiguration {
     }
 
     /**
+     * Returns the keyboard layout
      * @return The keyboard layout
      */
     public String getKeyboardLayout() {
@@ -140,6 +145,7 @@ public class WebXClientConfiguration {
     }
 
     /**
+     * Returns the session Id
      * @return The session Id
      */
     public String getSessionId() {

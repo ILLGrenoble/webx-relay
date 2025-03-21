@@ -67,6 +67,7 @@ public class WebXHostConfiguration {
     }
 
     /**
+     * Returns the hostname
      * @return the hostname
      */
     public String getHostname() {
@@ -74,6 +75,7 @@ public class WebXHostConfiguration {
     }
 
     /**
+     * Returns the connector port
      * @return The connector port
      */
     public Integer getPort() {
@@ -81,6 +83,7 @@ public class WebXHostConfiguration {
     }
 
     /**
+     * Returns the socket timeout in milliseconds
      * @return The socket timeout in milliseconds
      */
     public Integer getSocketTimeoutMs() {
@@ -88,6 +91,7 @@ public class WebXHostConfiguration {
     }
 
     /**
+     * Returns true if the relay is running in standalone mode
      * @return true if the relay is running in standalone mode
      */
     public boolean isStandalone() {

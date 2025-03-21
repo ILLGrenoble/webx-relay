@@ -1,3 +1,8 @@
+0.8.0 21/03/2025
+================
+ * Fix thread blocking issues during host disconnect and message being received at the same time.
+ * Handle null socket response on ping (due to timeout)
+
 0.7.0 21/03/2025
 ================
  * Code documentation

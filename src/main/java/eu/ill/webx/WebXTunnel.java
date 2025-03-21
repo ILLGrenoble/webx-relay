@@ -53,6 +53,9 @@ public class WebXTunnel {
         return tunnel;
     }
 
+    /**
+     * Default constructor of a tunnel
+     */
     public WebXTunnel() {
     }
 
