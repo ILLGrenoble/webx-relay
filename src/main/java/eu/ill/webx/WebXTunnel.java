@@ -17,12 +17,10 @@
  */
 package eu.ill.webx;
 
-import eu.ill.webx.configuration.WebXHostConfiguration;
 import eu.ill.webx.exceptions.WebXClientException;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
-import eu.ill.webx.configuration.WebXConnectionConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,12 +34,12 @@ public class WebXTunnel {
     public WebXTunnel() {
     }
 
-    public void connect(final WebXHostConfiguration configuration, final WebXConnectionConfiguration connectionConfiguration) throws WebXConnectionException {
+    public void connect(final WebXHostConfiguration configuration, final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
         if (this.client == null) {
             WebXHost host = WebXRelay.getInstance().connectToHost(configuration);
 
             logger.debug("Creating client for {}...", host.getHostname());
-            WebXClient client = host.onClientConnection(connectionConfiguration);
+            WebXClient client = host.onClientConnection(clientConfiguration);
 
             logger.info("... client created.");
             this.client = client;

@@ -17,20 +17,18 @@
  */
 package eu.ill.webx;
 
-import eu.ill.webx.configuration.WebXHostConfiguration;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ClientIdentifier;
-import eu.ill.webx.model.SocketResponse;
-import eu.ill.webx.configuration.WebXConnectionConfiguration;
-import eu.ill.webx.configuration.WebXSessionCreationConfiguration;
-import eu.ill.webx.configuration.WebXSessionJoinConfiguration;
-import eu.ill.webx.transport.Transport;
 import eu.ill.webx.model.SessionId;
+import eu.ill.webx.model.SocketResponse;
+import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class WebXHost {
 
@@ -98,18 +96,17 @@ public class WebXHost {
         }
     }
 
-    public synchronized WebXClient onClientConnection(final WebXConnectionConfiguration connectionConfiguration) throws WebXConnectionException {
+    public synchronized WebXClient onClientConnection(final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
         if (this.transport.isConnected()) {
             SessionId sessionId;
-            if (connectionConfiguration instanceof WebXSessionCreationConfiguration createConnectionConfiguration) {
+            if (clientConfiguration.getSessionId() == null) {
                 logger.info("Connecting to WebX using password authentication");
-                sessionId = this.startSession(transport, createConnectionConfiguration);
+                sessionId = this.startSession(transport, clientConfiguration);
                 logger.info("Authentication successful. Got session Id \"{}\"", sessionId.hexString());
 
             } else {
-                final WebXSessionJoinConfiguration sessionConnectionConfig = (WebXSessionJoinConfiguration)connectionConfiguration;
-                logger.info("Connecting to existing WebX session using sessionId \"{}\"", sessionConnectionConfig.getSessionId());
-                sessionId = new SessionId(sessionConnectionConfig.getSessionId());
+                logger.info("Connecting to existing WebX session using sessionId \"{}\"", clientConfiguration.getSessionId());
+                sessionId = new SessionId(clientConfiguration.getSessionId());
             }
 
             // Connect to the session and get a client Id
@@ -165,10 +162,10 @@ public class WebXHost {
                 .reduce(0, Integer::sum);
     }
 
-    private SessionId startSession(Transport transport, WebXSessionCreationConfiguration createConnectionConfiguration) throws WebXConnectionException {
+    private SessionId startSession(Transport transport, WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
         try {
             // Start WebX session via the router and get a session ID
-            String response = transport.getSessionChannel().startSession(createConnectionConfiguration);
+            String response = transport.getSessionChannel().startSession(clientConfiguration);
             String[] responseData = response.split(",");
             int responseCode = Integer.parseInt(responseData[0]);
             String sessionIdString = responseData[1];

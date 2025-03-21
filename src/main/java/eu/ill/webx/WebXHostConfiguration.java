@@ -15,19 +15,20 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package eu.ill.webx.configuration;
+package eu.ill.webx;
 
 public class WebXHostConfiguration {
 
     private final String hostname;
     private final Integer port;
-    private boolean isStandalone;
+    private final boolean isStandalone;
 
     private Integer socketTimeoutMs = 15000;
 
     public WebXHostConfiguration(final String hostname, final Integer port) {
         this.hostname = hostname;
         this.port = port;
+        this.isStandalone = false;
     }
 
     public WebXHostConfiguration(final String hostname, final Integer port, boolean isStandalone) {
@@ -40,6 +41,7 @@ public class WebXHostConfiguration {
         this.hostname = hostname;
         this.port = port;
         this.socketTimeoutMs = socketTimeoutMs;
+        this.isStandalone = false;
     }
 
     public String getHostname() {

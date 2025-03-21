@@ -19,7 +19,7 @@ package eu.ill.webx.transport;
 
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SocketResponse;
-import eu.ill.webx.configuration.WebXSessionCreationConfiguration;
+import eu.ill.webx.WebXClientConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -80,7 +80,7 @@ public class SessionChannel {
         }
     }
 
-    public synchronized String startSession(WebXSessionCreationConfiguration configuration) throws WebXDisconnectedException {
+    public synchronized String startSession(WebXClientConfiguration configuration) throws WebXDisconnectedException {
         String usernameBase64 = Base64.getEncoder().encodeToString(configuration.getUsername().getBytes());
         String passwordBase64 = Base64.getEncoder().encodeToString(configuration.getPassword().getBytes());
         String request = "create," +

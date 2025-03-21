@@ -17,7 +17,6 @@
  */
 package eu.ill.webx;
 
-import eu.ill.webx.configuration.WebXHostConfiguration;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,7 +61,7 @@ public class WebXRelay {
         }
     }
 
-    public synchronized void onClientDisconnect(WebXHost host) {
+    public synchronized void onClientDisconnect(final WebXHost host) {
         if (this.hosts.contains(host)) {
             if (host.getClientCount() == 0) {
                 // Remove from list
