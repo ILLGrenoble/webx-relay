@@ -17,6 +17,7 @@
  */
 package eu.ill.webx;
 
+import eu.ill.webx.configuration.WebXHostConfiguration;
 import eu.ill.webx.exceptions.WebXClientException;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;

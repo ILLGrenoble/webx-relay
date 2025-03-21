@@ -17,6 +17,7 @@
  */
 package eu.ill.webx;
 
+import eu.ill.webx.configuration.WebXHostConfiguration;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ClientIdentifier;
@@ -58,10 +59,22 @@ public class WebXHost {
     public synchronized void connect() throws WebXConnectionException {
         if (!this.transport.isConnected()) {
             // Initialise transport: verify that the host has a running webx server
-            this.connectToWebXHost();
+            try {
+                logger.info("Connecting to WebX server at {}:{}...", this.configuration.getHostname(), this.configuration.getPort());
+                this.transport.connect(this.configuration.getHostname(), this.configuration.getPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone(), this::onMessage);
+                logger.info("... connected to {}", this.configuration.getHostname());
+
+            } catch (WebXDisconnectedException e) {
+                throw new WebXConnectionException("Failed to connect to WebX host");
+            }
 
             // Start connection checker
-            this.connectionChecker = new WebXHostConnectionChecker(this.transport, this::onConnectionCheckError);
+            this.connectionChecker = new WebXHostConnectionChecker(this.transport, (error) -> {
+                if (this.transport.isConnected()) {
+                    this.disconnectClients();
+                    this.transport.disconnect();
+                }
+            });
             this.connectionChecker.start();
             if (!this.connectionChecker.waitForPing()) {
                 logger.error("Timeout while waiting to receive ping from WebX Host {}", this.configuration.getHostname());
@@ -132,6 +145,19 @@ public class WebXHost {
         });
     }
 
+    private Optional<WebXSession> getSession(final SessionId sessionId) {
+        return this.sessions.stream().filter(session -> sessionId.equals(session.getSessionId())).findFirst();
+    }
+
+    private synchronized void onMessage(byte[] messageData) {
+        logger.trace("Got client message of length {} from {}", messageData.length, this.configuration.getHostname());
+
+        // Get session Id
+        SessionId sessionId = new SessionId(messageData);
+        this.getSession(sessionId).ifPresent(session -> {
+            session.onMessage(messageData);
+        });
+    }
 
     public synchronized int getClientCount() {
         return this.sessions.stream()
@@ -220,28 +246,6 @@ public class WebXHost {
         }
     }
 
-    private Optional<WebXSession> getSession(final SessionId sessionId) {
-        return this.sessions.stream().filter(session -> sessionId.equals(session.getSessionId())).findFirst();
-    }
-
-    private void connectToWebXHost() throws WebXConnectionException {
-        try {
-            logger.info("Connecting to WebX server at {}:{}...", this.configuration.getHostname(), this.configuration.getPort());
-            this.transport.connect(this.configuration.getHostname(), this.configuration.getPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone(), this::onMessage);
-            logger.info("... connected to {}", this.configuration.getHostname());
-
-        } catch (WebXDisconnectedException e) {
-            throw new WebXConnectionException("Failed to connect to WebX host");
-        }
-    }
-
-    private void onConnectionCheckError(final String error) {
-        if (this.transport.isConnected()) {
-            this.disconnectClients();
-            this.transport.disconnect();
-        }
-    }
-
     private synchronized void disconnectClients() {
         for (WebXSession session : this.sessions) {
             session.disconnectAllClients();
@@ -249,15 +253,5 @@ public class WebXHost {
 
         this.sessions.clear();
         logger.info("Disconnected all clients from {}", this.configuration.getHostname());
-    }
-
-    private synchronized void onMessage(byte[] messageData) {
-        logger.trace("Got client message of length {} from {}", messageData.length, this.configuration.getHostname());
-
-        // Get session Id
-        SessionId sessionId = new SessionId(messageData);
-        this.getSession(sessionId).ifPresent(session -> {
-            session.onMessage(messageData);
-        });
     }
 }

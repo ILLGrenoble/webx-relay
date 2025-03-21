@@ -24,15 +24,13 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 
 public class MessageSubscriber {
-    public interface MessageListener {
-        void onMessage(byte[] messageData);
-    }
+    public interface MessageListener { void onMessage(byte[] messageData); }
 
     private static final Logger logger = LoggerFactory.getLogger(MessageSubscriber.class);
 
     private ZMQ.Socket socket;
 
-    private Thread thread;
+    private Thread messageThread;
     private boolean running = false;
 
     private final MessageListener messageListener;
@@ -50,8 +48,8 @@ public class MessageSubscriber {
 
             running = true;
 
-            this.thread = new Thread(this::loop);
-            this.thread.start();
+            this.messageThread = new Thread(this::loop);
+            this.messageThread.start();
 
             logger.debug("WebX Message Subscriber started");
         }
@@ -64,9 +62,9 @@ public class MessageSubscriber {
             }
 
             try {
-                this.thread.interrupt();
-                this.thread.join();
-                this.thread = null;
+                this.messageThread.interrupt();
+                this.messageThread.join();
+                this.messageThread = null;
 
                 this.socket.close();
 
