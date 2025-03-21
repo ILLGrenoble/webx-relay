@@ -59,7 +59,7 @@ public class WebXSession {
         return sessionId;
     }
 
-    public synchronized void start() {
+    public void start() {
         if (!running) {
             running = true;
 
@@ -67,7 +67,7 @@ public class WebXSession {
         }
     }
 
-    public synchronized void stop() {
+    public void stop() {
         if (running) {
             try {
                 running = false;
@@ -97,7 +97,7 @@ public class WebXSession {
         return this.clients.size();
     }
 
-    public synchronized void sendInstruction(byte[] instructionData) {
+    public void sendInstruction(byte[] instructionData) {
         this.instructionPublisher.queueInstruction(instructionData);
     }
 

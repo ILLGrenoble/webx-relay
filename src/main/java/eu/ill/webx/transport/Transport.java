@@ -86,6 +86,7 @@ public class Transport {
 
     public synchronized void disconnect() {
         if (this.context != null) {
+            this.connected = false;
 
             if (this.connector != null) {
                 this.connector.disconnect();
@@ -109,8 +110,6 @@ public class Transport {
 
             this.context.destroy();
             this.context = null;
-
-            this.connected = false;
         }
     }
 

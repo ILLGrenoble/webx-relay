@@ -44,7 +44,7 @@ public class WebXHost {
     private final WebXHostConfiguration configuration;
     private final Transport transport;
 
-    private final List<WebXSession> sessions = new ArrayList<>();
+    private List<WebXSession> sessions = new ArrayList<>();
 
     WebXHost(final WebXHostConfiguration configuration) {
         this.configuration = configuration;
@@ -60,7 +60,7 @@ public class WebXHost {
         return this.configuration.getPort();
     }
 
-    public synchronized void connect() throws WebXConnectionException {
+    public void connect() throws WebXConnectionException {
         if (!this.transport.isConnected()) {
             // Initialise transport: verify that the host has a running WebX server
             try {
@@ -74,12 +74,12 @@ public class WebXHost {
         }
     }
 
-    public synchronized void disconnect() {
+    public void disconnect() {
         // Disconnect from WebX server
         this.transport.disconnect();
     }
 
-    public synchronized WebXClient onClientConnection(final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
+    public WebXClient onClientConnection(final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
         if (this.transport.isConnected()) {
             SessionId sessionId;
             if (clientConfiguration.getSessionId() == null) {
@@ -99,7 +99,7 @@ public class WebXHost {
                final WebXSession webXSession = new WebXSession(sessionId, transport);
                webXSession.start();
 
-               this.sessions.add(webXSession);
+               this.addSession(webXSession);
                return webXSession;
             });
 
@@ -110,7 +110,7 @@ public class WebXHost {
         throw new WebXConnectionException("Transport to host not connected when creating client");
     }
 
-    public synchronized void onClientDisconnected(WebXClient client) {
+    public void onClientDisconnected(WebXClient client) {
         this.disconnectClient(transport, client);
 
         this.getSession(client.getSessionId()).ifPresent(session -> {
@@ -120,27 +120,35 @@ public class WebXHost {
                 logger.debug("Client removed from session with Id \"{}\". Session now has no clients: stopping it", session.getSessionId().hexString());
                 session.stop();
 
-                this.sessions.remove(session);
+                this.removeSession(session);
             }
         });
     }
 
     public synchronized void cleanupSessions() {
-        for (final WebXSession session : this.sessions) {
+        this.sessions = this.sessions.stream().filter(session -> {
             if (session.getClientCount() == 0) {
                 logger.debug("Cleanup: Session with Id \"{}\" has no clients: stopping it", session.getSessionId().hexString());
                 session.stop();
-
-                this.sessions.remove(session);
+                return false;
             }
-        }
+            return true;
+        }).toList();
     }
 
-    private Optional<WebXSession> getSession(final SessionId sessionId) {
+    private synchronized void addSession(final WebXSession session) {
+        this.sessions.add(session);
+    }
+
+    private synchronized void removeSession(final WebXSession session) {
+        this.sessions.remove(session);
+    }
+
+    private synchronized Optional<WebXSession> getSession(final SessionId sessionId) {
         return this.sessions.stream().filter(session -> sessionId.equals(session.getSessionId())).findFirst();
     }
 
-    private synchronized void onMessage(byte[] messageData) {
+    private void onMessage(byte[] messageData) {
         logger.trace("Got client message of length {} from {}", messageData.length, this.configuration.getHostname());
 
         // Get session Id
