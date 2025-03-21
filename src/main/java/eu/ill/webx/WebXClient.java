@@ -49,6 +49,9 @@ public class WebXClient {
         this.clientIdentifier = clientIdentifier;
         this.session = session;
 
+        // Set the sessionId in the instruction prefix
+        this.instructionPrefix.put(0, session.getSessionId().bytes(), 0, 16);
+
         // Add the clientId to the instruction prefix
         ByteBuffer clientIdBuffer = ByteBuffer.allocate(4).order(LITTLE_ENDIAN);
         clientIdBuffer.putInt(clientIdentifier.clientId());
