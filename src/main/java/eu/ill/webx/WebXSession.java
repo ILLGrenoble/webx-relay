@@ -17,14 +17,11 @@
  */
 package eu.ill.webx;
 
-import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ClientIdentifier;
 import eu.ill.webx.model.Message;
-import eu.ill.webx.model.SocketResponse;
-import eu.ill.webx.transport.InstructionPublisher;
-import eu.ill.webx.transport.SessionChannel;
-import eu.ill.webx.transport.Transport;
 import eu.ill.webx.model.SessionId;
+import eu.ill.webx.transport.InstructionPublisher;
+import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,19 +33,21 @@ public class WebXSession {
     private static final Logger logger = LoggerFactory.getLogger(WebXSession.class);
 
     private final SessionId sessionId;
-    private final SessionChannel sessionChannel;
     private final InstructionPublisher instructionPublisher;
 
     private final List<WebXClient> clients = new ArrayList<>();
 
-    private Thread connectionCheckThread;
+    private final WebXSessionValidator sessionValidator;
 
     private boolean running = false;
 
     public WebXSession(final SessionId sessionId, final Transport transport) {
         this.sessionId = sessionId;
-        this.sessionChannel = transport.getSessionChannel();
         this.instructionPublisher = transport.getInstructionPublisher();
+        this.sessionValidator = new WebXSessionValidator(this.sessionId, transport, (error -> {
+            logger.error("Session validation error: {}", error);
+            this.sendMessageToClients(new Message.InterruptMessage("Failed to ping WebX Session"));
+        }));
     }
 
     public SessionId getSessionId() {
@@ -59,11 +58,7 @@ public class WebXSession {
         if (!running) {
             running = true;
 
-            if (this.sessionChannel != null) {
-                // Start connection checker
-                this.connectionCheckThread = new Thread(this::connectionCheck);
-                this.connectionCheckThread.start();
-            }
+            this.sessionValidator.start();
         }
     }
 
@@ -71,12 +66,8 @@ public class WebXSession {
         if (running) {
             try {
                 running = false;
-
-                if (connectionCheckThread != null) {
-                    this.connectionCheckThread.interrupt();
-                    this.connectionCheckThread.join();
-                    this.connectionCheckThread = null;
-                }
+                this.sessionValidator.interrupt();
+                this.sessionValidator.join();
 
                 logger.debug("Session {} stopped", this.sessionId.hexString());
 
@@ -125,33 +116,6 @@ public class WebXSession {
     private void sendMessageToClients(final Message message) {
         for (WebXClient client : this.clients) {
             client.onMessage(message);
-        }
-    }
-
-    private void connectionCheck() {
-        while (this.running) {
-            // Use a variable sleep: if connection is ok, wait 5s, otherwise try every second to reconnect
-            try {
-                logger.trace("Sending ping to session {}", this.sessionId.hexString());
-                SocketResponse response = this.sessionChannel.sendRequest("ping," + this.sessionId.hexString());
-
-                String[] responseElements = response.toString().split(",");
-
-                if (responseElements[0].equals("pang")) {
-                    logger.error("Failed to ping webX Session {}: {}", this.sessionId.hexString(), responseElements[2]);
-                    this.sendMessageToClients(new Message.InterruptMessage("Failed to ping WebX Session"));
-                }
-
-            } catch (WebXDisconnectedException e) {
-                logger.error("Failed to get response from connector ping to session {}", this.sessionId.hexString());
-                this.sendMessageToClients(new Message.InterruptMessage("Failed to get response from connection ping to WebX Session"));
-            }
-
-            try {
-                Thread.sleep(15000);
-
-            } catch (InterruptedException ignored) {
-            }
         }
     }
 

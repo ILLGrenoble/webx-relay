@@ -36,7 +36,6 @@ public class WebXHost {
 
     private final WebXHostConfiguration configuration;
     private final Transport transport;
-    private WebXHostConnectionChecker connectionChecker;
 
     private final List<WebXSession> sessions = new ArrayList<>();
 
@@ -65,35 +64,12 @@ public class WebXHost {
             } catch (WebXDisconnectedException e) {
                 throw new WebXConnectionException("Failed to connect to WebX host");
             }
-
-            // Start connection checker
-            this.connectionChecker = new WebXHostConnectionChecker(this.transport, (error) -> {
-                if (this.transport.isConnected()) {
-                    this.disconnectClients();
-                    this.transport.disconnect();
-                }
-            });
-            this.connectionChecker.start();
-            if (!this.connectionChecker.waitForPing()) {
-                logger.error("Timeout while waiting to receive ping from WebX Host {}", this.configuration.getHostname());
-                throw new WebXConnectionException("Failed to ping WebX Host after startup");
-            }
         }
     }
 
     public synchronized void disconnect() {
         // Disconnect from webx server
         this.transport.disconnect();
-
-        try {
-            this.connectionChecker.interrupt();
-            this.connectionChecker.join();
-
-            logger.info("Host disconnected from {} and thread stopped", this.configuration.getHostname());
-
-        } catch (InterruptedException exception) {
-            logger.error("Stop of Host thread for {} interrupted", this.configuration.getHostname());
-        }
     }
 
     public synchronized WebXClient onClientConnection(final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
@@ -243,12 +219,4 @@ public class WebXHost {
         }
     }
 
-    private synchronized void disconnectClients() {
-        for (WebXSession session : this.sessions) {
-            session.disconnectAllClients();
-        }
-
-        this.sessions.clear();
-        logger.info("Disconnected all clients from {}", this.configuration.getHostname());
-    }
 }
