@@ -1,3 +1,12 @@
+0.7.0 21/03/2025
+================
+ * Code documentation
+ * Send pings only for each session (remove host pinging): session pinging either directly to standalone engine or via the router.
+ * Refactoring configuration classes
+ * Move instruction thread from session to instruction publisher: single thread per host.
+ * Single session ping thread per session. Single message listener for the subscriber (the host).
+ * Refactoring code. Adding WebXSession. Don't create client until connection is fully made. 
+
 0.6.0 12/03/2025
 ================
  * Remove sending message queue size to client
