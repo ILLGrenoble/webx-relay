@@ -70,10 +70,15 @@ public class WebXSessionValidator extends Thread {
                         logger.trace("Sending ping to session {}", this.sessionId.hexString());
                         SocketResponse response = this.transport.sendRequest("ping," + this.sessionId.hexString());
 
-                        String[] responseElements = response.toString().split(",");
+                        if (response.toString() == null) {
+                            this.onErrorHandler.onError(String.format("Failed to ping webX Session %s", this.sessionId.hexString()));
 
-                        if (responseElements[0].equals("pang")) {
-                            this.onErrorHandler.onError(String.format("Failed to ping webX Session %s: %s", this.sessionId.hexString(), responseElements[2]));
+                        } else {
+                            String[] responseElements = response.toString().split(",");
+
+                            if (responseElements[0].equals("pang")) {
+                                this.onErrorHandler.onError(String.format("Failed to ping webX Session %s: %s", this.sessionId.hexString(), responseElements[2]));
+                            }
                         }
 
                     } catch (WebXDisconnectedException e) {
