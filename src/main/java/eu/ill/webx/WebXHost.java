@@ -55,7 +55,7 @@ public class WebXHost {
 
     public synchronized void connect() throws WebXConnectionException {
         if (!this.transport.isConnected()) {
-            // Initialise transport: verify that the host has a running webx server
+            // Initialise transport: verify that the host has a running WebX server
             try {
                 logger.info("Connecting to WebX server at {}:{}...", this.configuration.getHostname(), this.configuration.getPort());
                 this.transport.connect(this.configuration.getHostname(), this.configuration.getPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone(), this::onMessage);
@@ -68,7 +68,7 @@ public class WebXHost {
     }
 
     public synchronized void disconnect() {
-        // Disconnect from webx server
+        // Disconnect from WebX server
         this.transport.disconnect();
     }
 

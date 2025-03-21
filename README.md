@@ -117,7 +117,7 @@ The `WebXHost` represents a single connection to a WebX host server. When reques
  - connect a secure Session Channel to the server using the request-response protocol (`ZMQ_REQ`)
  - start a thread to regularly check that the connection to the server is valid
 
-A single `WebXHost` exists for each webx server. Each host maintains connected clients (`WebXClient`).
+A single `WebXHost` exists for each WebX server. Each host maintains connected clients (`WebXClient`).
 
 The `WebXHost` will create a client when a connection request is received. If the client connects successfully it is added to the `WebXHost`. The `WebXHost` groups `WebXClients` by the session Id of the WebX Engine.
 
