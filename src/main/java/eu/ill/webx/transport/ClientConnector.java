@@ -27,6 +27,10 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
+/**
+ * The ClientConnector provides an interface to the REP-REQ ZMQ socket to make requests to the WebX Router or Engine.
+ * It's the main entry point to the connection, obtaining ports for the remaining sockets, client connection and disconnection requests.
+ */
 public class ClientConnector {
 
     private static final Logger logger = LoggerFactory.getLogger(ClientConnector.class);
@@ -34,10 +38,24 @@ public class ClientConnector {
     private ZMQ.Socket socket;
     private ConnectionData connectionData;
 
+    /**
+     * Default constructor
+     */
     ClientConnector() {
     }
 
-    public ConnectionData connect(ZContext context, String address, int socketTimeoutMs, boolean standalone) throws WebXDisconnectedException {
+    /**
+     * Connects to the Webx Router or Engine.
+     * If connecting directly to the engine (standalone) sends a command to obtain subscriber and publisher socket ports
+     * If connecting to the router the same command also sends the port of the session channel and the public key for encryption
+     * @param context The ZMQ context
+     * @param address The address of the client connector socket
+     * @param socketTimeoutMs The timeout for all requests
+     * @param standalone specifies whether the connection is directly to a standalone engine or to a router
+     * @return The connection data for the other sockets
+     * @throws WebXDisconnectedException thrown if the connection fails
+     */
+    ConnectionData connect(ZContext context, String address, int socketTimeoutMs, boolean standalone) throws WebXDisconnectedException {
 
         if (this.socket == null) {
             this.socket = context.createSocket(SocketType.REQ);
@@ -77,7 +95,10 @@ public class ClientConnector {
         return this.connectionData;
     }
 
-    public void disconnect() {
+    /**
+     * Disconnects the ZMQ socket
+     */
+    void disconnect() {
         if (this.socket != null) {
             this.socket.close();
             this.socket = null;
@@ -89,7 +110,13 @@ public class ClientConnector {
         }
     }
 
-    public synchronized SocketResponse sendRequest(String request) throws WebXDisconnectedException {
+    /**
+     * Sends a synchronous command to the client connector
+     * @param request the command data
+     * @return the socket response
+     * @throws WebXDisconnectedException thrown if the request fails
+     */
+    synchronized SocketResponse sendRequest(String request) throws WebXDisconnectedException {
         try {
             if (this.socket != null) {
                 this.socket.send(request);

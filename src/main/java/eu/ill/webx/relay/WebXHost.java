@@ -35,32 +35,46 @@ import java.util.Optional;
 /**
  * Provides connection to a WebXRouter or standalone WebXEngine.
  * WebXTransport management connections to the ZMQ sockets.
- * WebXHost managed all sessions that are in use on the host. Creation of sessions and connection/creation of clients is handled here.
+ * WebXHost manages all sessions that are in use on the host. Creation of sessions and connection/creation of clients is handled here.
  */
 public class WebXHost {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXHost.class);
 
     private final WebXHostConfiguration configuration;
-    private final Transport transport;
+    private final Transport transport = new Transport();
 
     private List<WebXSession> sessions = new ArrayList<>();
 
+    /**
+     * Constructor taking a host configuration
+     * @param configuration The host configuration
+     */
     WebXHost(final WebXHostConfiguration configuration) {
         this.configuration = configuration;
-
-        this.transport = new Transport();
     }
 
+    /**
+     * Returns the hostname
+     * @return the hostname
+     */
     public String getHostname() {
         return this.configuration.getHostname();
     }
 
+    /**
+     * Returns the principal (client connector) port of the host
+     * @return the host port
+     */
     public int getPort() {
         return this.configuration.getPort();
     }
 
-    public void connect() throws WebXConnectionException {
+    /**
+     * Starts the connection to the WebX Host. Connects all ZMQ sockets.
+     * @throws WebXConnectionException thrown if the connectionfails
+     */
+    void connect() throws WebXConnectionException {
         if (!this.transport.isConnected()) {
             // Initialise transport: verify that the host has a running WebX server
             try {
@@ -74,17 +88,27 @@ public class WebXHost {
         }
     }
 
-    public void disconnect() {
+    /**
+     * Disconnects all the ZMQ sockets. Blocks until all threads are joined.
+     */
+    void disconnect() {
         // Disconnect from WebX server
         this.transport.disconnect();
     }
 
+    /**
+     * Called when a client connects. Depending on the connection type it will start a new session. In all cases the client is
+     * connected to WebX engine.
+     * @param clientConfiguration The client connection configuration
+     * @return a new WebX client
+     * @throws WebXConnectionException thrown if the connection fails
+     */
     public WebXClient onClientConnection(final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
         if (this.transport.isConnected()) {
             SessionId sessionId;
             if (clientConfiguration.getSessionId() == null) {
                 logger.info("Connecting to WebX using password authentication");
-                sessionId = this.startSession(transport, clientConfiguration);
+                sessionId = this.startSession(clientConfiguration);
                 logger.info("Authentication successful. Got session Id \"{}\"", sessionId.hexString());
 
             } else {
@@ -93,7 +117,7 @@ public class WebXHost {
             }
 
             // Connect to the session and get a client Id
-            final ClientIdentifier clientIdentifier = this.connectClient(transport, sessionId);
+            final ClientIdentifier clientIdentifier = this.connectClient(sessionId);
 
             final WebXSession session = this.getSession(sessionId).orElseGet(() -> {
                final WebXSession webXSession = new WebXSession(sessionId, transport);
@@ -110,11 +134,15 @@ public class WebXHost {
         throw new WebXConnectionException("Transport to host not connected when creating client");
     }
 
+    /**
+     * Called when a client disconnects. The client is disconnected in the WebX engine. The session will be removed if it is empty.
+     * @param client the WebX client
+     */
     public void onClientDisconnected(WebXClient client) {
-        this.disconnectClient(transport, client);
+        this.disconnectClient(client);
 
         this.getSession(client.getSessionId()).ifPresent(session -> {
-            session.disconnectClient(client);
+            session.onClientDisconnected(client);
 
             if (session.getClientCount() == 0) {
                 logger.debug("Client removed from session with Id \"{}\". Session now has no clients: stopping it", session.getSessionId().hexString());
@@ -125,6 +153,19 @@ public class WebXHost {
         });
     }
 
+    /**
+     * Returns the total number of clients connected
+     * @return the number of clients connected
+     */
+    public synchronized int getClientCount() {
+        return this.sessions.stream()
+                .mapToInt(WebXSession::getClientCount)
+                .reduce(0, Integer::sum);
+    }
+
+    /**
+     * Ensures that there are no empty sessions
+     */
     public synchronized void cleanupSessions() {
         this.sessions = this.sessions.stream().filter(session -> {
             if (session.getClientCount() == 0) {
@@ -136,18 +177,36 @@ public class WebXHost {
         }).toList();
     }
 
+    /**
+     * Adds a new session to the session list
+     * @param session the session to add
+     */
     private synchronized void addSession(final WebXSession session) {
         this.sessions.add(session);
     }
 
+    /**
+     * Removes a session from the sessions list
+     * @param session the session to remove
+     */
     private synchronized void removeSession(final WebXSession session) {
         this.sessions.remove(session);
     }
 
+    /**
+     * Returns a session optional given the Id of the session
+     * @param sessionId the id of the session
+     * @return and Optional session
+     */
     private synchronized Optional<WebXSession> getSession(final SessionId sessionId) {
         return this.sessions.stream().filter(session -> sessionId.equals(session.getSessionId())).findFirst();
     }
 
+    /**
+     * Callback from the message publisher when a new message has been sent from the server. The host determines which session is valid (from the header of the message)
+     * and forwards it accordingly.
+     * @param messageData The raw binary message data
+     */
     private void onMessage(byte[] messageData) {
         logger.trace("Got client message of length {} from {}", messageData.length, this.configuration.getHostname());
 
@@ -158,16 +217,16 @@ public class WebXHost {
         });
     }
 
-    public synchronized int getClientCount() {
-        return this.sessions.stream()
-                .mapToInt(WebXSession::getClientCount)
-                .reduce(0, Integer::sum);
-    }
-
-    private SessionId startSession(Transport transport, WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
+    /**
+     * Sends requests to the WebX Router to start a new session.
+     * @param clientConfiguration The client configuration (login, screen size, etc)
+     * @return a unique Session Id for the session
+     * @throws WebXConnectionException thrown if the session creation fails
+     */
+    private SessionId startSession(WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
         try {
             // Start WebX session via the router and get a session ID
-            String response = transport.getSessionChannel().startSession(clientConfiguration);
+            String response = this.transport.startSession(clientConfiguration);
             String[] responseData = response.split(",");
             int responseCode = Integer.parseInt(responseData[0]);
             String sessionIdString = responseData[1];
@@ -185,10 +244,16 @@ public class WebXHost {
         }
     }
 
-    private ClientIdentifier connectClient(final Transport transport, final SessionId sessionId) throws WebXConnectionException {
+    /**
+     * Sends a request to create a new client for a specific session. The identifier of the client is used to create a new WebXClient.
+     * @param sessionId the session Id
+     * @return a unique client identifier
+     * @throws WebXConnectionException thrown if the request fails
+     */
+    private ClientIdentifier connectClient(final SessionId sessionId) throws WebXConnectionException {
         try {
             final String request = String.format("connect,%s", sessionId.hexString());
-            String response = transport.sendRequest(request).toString();
+            String response = this.transport.sendRequest(request).toString();
             if (response == null) {
                 throw new WebXConnectionException("WebX Server returned a null connection response");
 
@@ -222,11 +287,15 @@ public class WebXHost {
         }
     }
 
-    private void disconnectClient(final Transport transport, final WebXClient client) {
+    /**
+     * Sends a request to remove a client from a session
+     * @param client The client to remove
+     */
+    private void disconnectClient(final WebXClient client) {
         if (client != null && client.isConnected()) {
             try {
                 final String request = String.format("disconnect,%s,%s", client.getSessionId().hexString(), client.getClientIdentifier().clientIdString());
-                SocketResponse response = transport.sendRequest(request);
+                SocketResponse response = this.transport.sendRequest(request);
                 if (response == null) {
                     logger.error("Failed to get response from WebX server");
 

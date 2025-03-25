@@ -17,16 +17,16 @@
  */
 package eu.ill.webx.exceptions;
 
+/**
+ * Exception thrown when a problem occurs while trying to connect to a host or connect a client.
+ */
 public class WebXConnectionException extends WebXException {
 
-    public WebXConnectionException() {
-    }
-
+    /**
+     * Constructor with error message
+     * @param message the error message
+     */
     public WebXConnectionException(String message) {
         super(message);
-    }
-
-    public WebXConnectionException(String message, Throwable cause) {
-        super(message, cause);
     }
 }

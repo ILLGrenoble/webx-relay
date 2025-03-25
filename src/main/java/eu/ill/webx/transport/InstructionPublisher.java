@@ -25,6 +25,11 @@ import org.zeromq.ZMQ;
 
 import java.util.concurrent.LinkedBlockingDeque;
 
+/**
+ * The instruction publisher publishes instructions asynchronously to the WebX Engine (passing by the router if not in standalone).
+ * There is one instruction publisher per host, each instruction is passes sequentially in a thread-safe loop.
+ * To avoid blocking any client requests the instructions are queued and consumed by a separate thread.
+ */
 public class InstructionPublisher {
 
     private static final Logger logger = LoggerFactory.getLogger(InstructionPublisher.class);
@@ -34,10 +39,19 @@ public class InstructionPublisher {
     private Thread instructionThread;
     private boolean connected = false;
 
+    /**
+     * Default constructor
+     */
     InstructionPublisher() {
     }
 
-    public synchronized void connect(ZContext context, String address) {
+    /**
+     * Connects to the ZMQ subscriber socket of the WebX Router or WebX Engine and starts a new
+     * thread to handling client instructions that are in the queue.
+     * @param context The ZMQ context
+     * @param address The address of the Subscriber soket
+     */
+    void connect(ZContext context, String address) {
         if (this.socket == null) {
             this.socket = context.createSocket(SocketType.PUB);
             this.socket.setLinger(0);
@@ -58,7 +72,10 @@ public class InstructionPublisher {
         }
     }
 
-    public synchronized void disconnect() {
+    /**
+     * Disconnects from the ZMQ socket and stops the thread (waiting for it to terminate)
+     */
+    synchronized void disconnect() {
         if (this.connected) {
             try {
                 this.connected = false;
@@ -79,8 +96,11 @@ public class InstructionPublisher {
         }
     }
 
-
-    public synchronized void queueInstruction(byte[] instructionData) {
+    /**
+     * Queues a client instruction to send to the WebX Engine. The messages are handled sequentially in the instruction thread.
+     * @param instructionData the binary instruction data
+     */
+    synchronized void queueInstruction(byte[] instructionData) {
         try {
             this.instructionQueue.put(instructionData);
 
@@ -89,7 +109,9 @@ public class InstructionPublisher {
         }
     }
 
-
+    /**
+     * Loop waiting for instructions to appear in the instruction queue and consume them immediately
+     */
     private void instructionLoop() {
         while (this.connected) {
             try {

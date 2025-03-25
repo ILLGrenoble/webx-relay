@@ -17,16 +17,17 @@
  */
 package eu.ill.webx.exceptions;
 
+/**
+ * Thrown when the connection is interrupted either explicitly by the Relay due to another problem
+ * or from a thread interrupt.
+ */
 public class WebXConnectionInterruptException extends WebXException {
 
-    public WebXConnectionInterruptException() {
-    }
-
+    /**
+     * Constructor with an error message
+     * @param message the error message
+     */
     public WebXConnectionInterruptException(String message) {
         super(message);
-    }
-
-    public WebXConnectionInterruptException(String message, Throwable cause) {
-        super(message, cause);
     }
 }

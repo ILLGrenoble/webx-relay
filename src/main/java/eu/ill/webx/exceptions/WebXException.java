@@ -17,14 +17,30 @@
  */
 package eu.ill.webx.exceptions;
 
+/**
+ * General WebX Exception
+ */
 public class WebXException extends Exception {
+
+    /**
+     * Default constructor
+     */
     public WebXException() {
     }
 
+    /**
+     * Constructor with message
+     * @param message the error message
+     */
     public WebXException(String message) {
         super(message);
     }
 
+    /**
+     * Constructor with message and cause
+     * @param message the error message
+     * @param cause the cause of the error
+     */
     public WebXException(String message, Throwable cause) {
         super(message, cause);
     }

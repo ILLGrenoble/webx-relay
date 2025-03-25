@@ -17,8 +17,16 @@
  */
 package eu.ill.webx.model;
 
+/**
+ * Encapsulates the binary data of a ZMQ REQ-REP socket response
+ * @param data the raw binary data
+ */
 public record SocketResponse(byte[] data) {
 
+    /**
+     * Converts the data to string if not null
+     * @return the string value of the data if not null
+     */
     public String toString() {
         return this.data == null ? null : new String(this.data);
     }

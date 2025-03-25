@@ -1,3 +1,8 @@
+1.0.0 25/03/2025
+================
+ * Minor refactoring
+ * Full code documentation
+
 0.8.0 21/03/2025
 ================
  * Fix thread blocking issues during host disconnect and message being received at the same time.

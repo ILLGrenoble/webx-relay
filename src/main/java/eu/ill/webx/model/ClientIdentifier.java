@@ -17,13 +17,25 @@
  */
 package eu.ill.webx.model;
 
-
+/**
+ * Encapsulates data representing a unique client in a WebX Engine
+ * @param clientIndex The unique index of a client (used to filter messages)
+ * @param clientId The unique Id of a client (used to identify instructions to the WebX Engine)
+ */
 public record ClientIdentifier(long clientIndex, int clientId) {
 
+    /**
+     * Returns a hex representation of the client Id
+     * @return a hex representation of the client Id
+     */
     public String clientIdString() {
         return String.format("%08x", clientId);
     }
 
+    /**
+     * Returns the hex representation of the client Index
+     * @return the hex representation of the client Index
+     */
     public String clientIndexString() {
         return String.format("%016d", clientIndex);
     }

@@ -22,6 +22,10 @@ import eu.ill.webx.utils.HexString;
 
 import java.nio.ByteBuffer;
 
+/**
+ * Encapsulates the binary session Id value. This is used for filtering of messages from a WebX Engine.
+ * The Session Id is 16 bytes. We store this also as two long values that are used for equality comparison.
+ */
 public class SessionId {
     private final long lower;
     private final long upper;
@@ -29,6 +33,11 @@ public class SessionId {
 
     private String hexString;
 
+    /**
+     * Constructor with a hex string representation of the binary session Id. the binary equivalent
+     * and upper and lower long values are created.
+     * @param sessionIdString The hex representation of the session Id
+     */
     public SessionId(String sessionIdString) {
         this.hexString = sessionIdString;
         this.sessionId = HexString.toByteArray(sessionIdString, 16);
@@ -38,6 +47,10 @@ public class SessionId {
         this.lower = sessionIdBuffer.getLong();
     }
 
+    /**
+     * Constructor taking raw binary session Id data. The lower and upper long values are calculator.
+     * @param sessionId the binary session Id
+     */
     public SessionId(byte[] sessionId) {
         this.sessionId = sessionId;
 
@@ -46,6 +59,10 @@ public class SessionId {
         this.lower = sessionIdBuffer.getLong();
     }
 
+    /**
+     * Returns the hex representation of the session Id
+     * @return the hex representation of the session Id
+     */
     public String hexString() {
         if (hexString == null) {
             this.hexString = HexString.fromByteArray(sessionId);
@@ -53,10 +70,19 @@ public class SessionId {
         return hexString;
     }
 
+    /**
+     * Returns the raw binary session Id
+     * @return the raw binary session Id
+     */
     public byte[] bytes() {
         return sessionId;
     }
 
+    /**
+     * Equality comparison comparing the upper and lower long values of the session Id
+     * @param o the object to compare to
+     * @return true if equal
+     */
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
@@ -65,6 +91,10 @@ public class SessionId {
         return lower == sessionId.lower && upper == sessionId.upper;
     }
 
+    /**
+     * Returns the hashcode of the session Id generated from the lower and upper long values
+     * @return
+     */
     @Override
     public int hashCode() {
         int result = Long.hashCode(lower);

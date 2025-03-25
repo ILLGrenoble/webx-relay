@@ -17,10 +17,22 @@
  */
 package eu.ill.webx.exceptions;
 
+/**
+ * Thrown when the host is not connected
+ */
 public class WebXDisconnectedException extends WebXException {
+
+    /**
+     * Default constructor
+     */
     public WebXDisconnectedException() {
         super("Not connected to WebX server");
     }
+
+    /**
+     * Constructor with additional error message
+     * @param message error message
+     */
     public WebXDisconnectedException(String message) {
         super(String.format("Not connected to WebX server: %s", message));
     }

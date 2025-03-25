@@ -25,8 +25,10 @@
 
     <groupId>eu.ill</groupId>
     <artifactId>webx-relay</artifactId>
-    <version>0.8.0</version>
+    <version>1.0.0</version>
+
     <packaging>jar</packaging>
+
     <url>https://github.com/ILLGrenoble/webx-relay</url>
     <name>${project.groupId}:${project.artifactId}</name>
     <description>The WebX Relay library connecting a WebX Engine to a WebX Client.</description>
@@ -122,6 +124,7 @@
                             <excludes>
                                 <exclude>**/README</exclude>
                                 <exclude>**/LICENSE</exclude>
+                                <exclude>**/LICENSE.BSD</exclude>
                                 <exclude>src/etc</exclude>
                                 <exclude>src/test/resources/**</exclude>
                                 <exclude>src/main/resources/**</exclude>
@@ -143,8 +146,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>16</source>
-                    <target>16</target>
+                    <source>17</source>
+                    <target>17</target>
                 </configuration>
             </plugin>
         </plugins>

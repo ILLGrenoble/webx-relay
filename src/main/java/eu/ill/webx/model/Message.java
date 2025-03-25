@@ -22,28 +22,59 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+/**
+ * Encapsulates the raw binary message data from a WebX Engine.
+ * The priority of the message is calculated from the type of message (mouse movement is considered priority to
+ * improve the feedback from user interactions).
+ */
 public class Message implements Comparable<Message> {
-    public final static int MESSAGE_HEADER_LENGTH = 48;
+
+    /**
+     * Enum defining the type of the message
+     */
+    public enum Type {
+        /**
+         * An interrupt message (used internally)
+         */
+        INTERRUPT,
+
+        /**
+         * A Close message (used internally)
+         */
+        CLOSE,
+
+        /**
+         * A mouse movement message
+         */
+        MOUSE,
+
+        /**
+         * A cursor message
+         */
+        CURSOR,
+
+        /**
+         * A disconnect message
+         */
+        DISCONNECT,
+
+        /**
+         * Any other message
+         */
+        OTHER
+    }
+
     private final static int TYPE_OFFSET = 32;
     private final byte[] data;
     private final Type type;
     private final Long timestamp;
     private final Integer priority;
 
-    protected Message(final Type type, final Integer priority) {
-        this.timestamp = new Date().getTime();
-        this.data = null;
-        this.type = type;
-        this.priority = priority;
-    }
-
-    protected Message(final Type type, final Integer priority, byte[] message) {
-        this.timestamp = new Date().getTime();
-        this.data = message;
-        this.type = type;
-        this.priority = priority;
-    }
-
+    /**
+     * The public constructor of a Message taking raw message data. The message header is analysed to determine the
+     * type and therefore the priority.
+     * @param data the binary data
+     */
     public Message(byte[] data) {
         this.timestamp = new Date().getTime();
         this.data = data;
@@ -66,54 +97,95 @@ public class Message implements Comparable<Message> {
         }
     }
 
+    /**
+     * Constructor taking a message type and a priority.
+     * These messages are created and handled internally by the relay.
+     * @param type the type of message
+     * @param priority the priority of the message
+     */
+    private Message(final Type type, final Integer priority) {
+        this.timestamp = new Date().getTime();
+        this.data = null;
+        this.type = type;
+        this.priority = priority;
+    }
+
+    /**
+     * Constructor taking a message type, a priority and raw data.
+     * These messages are created and handled internally by the relay.
+     * @param type the type of message
+     * @param priority the priority of the message
+     * @param message The raw data
+     */
+    private Message(final Type type, final Integer priority, byte[] message) {
+        this.timestamp = new Date().getTime();
+        this.data = message;
+        this.type = type;
+        this.priority = priority;
+    }
+
+    /**
+     * Returns the raw data
+     * @return the raw data
+     */
     public byte[] getData() {
         return data;
     }
 
+    /**
+     * Returns the data as a string
+     * @return the data as a string
+     */
     public String getStringData() {
         return new String(data, StandardCharsets.UTF_8);
     }
 
+    /**
+     * Returns the message type
+     * @return the message type
+     */
     public Type getType() {
         return type;
     }
 
-    public Long getTimestamp() {
-        return timestamp;
-    }
-
-    public Integer getPriority() {
-        return priority;
-    }
-
+    /**
+     * Comparison function. Lower numbers are considered more important.
+     * If two messages with identical priorities, the timestamp is used (older message more important).
+     * @param msg the object to be compared.
+     * @return a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the specified object.
+     */
     @Override
     public int compareTo(Message msg) {
         // Order primarily by priority
-        int priorityComparison = this.getPriority().compareTo(msg.getPriority());
+        int priorityComparison = this.priority.compareTo(msg.priority);
         if (priorityComparison == 0) {
             // Otherwise, by timestamp
-            return this.getTimestamp().compareTo(msg.getTimestamp());
+            return this.timestamp.compareTo(msg.timestamp);
         }
 
         return priorityComparison;
     }
 
-    public static enum Type {
-        INTERRUPT,
-        CLOSE,
-        MOUSE,
-        CURSOR,
-        DISCONNECT,
-        OTHER
-    }
-
+    /**
+     * Creates a Interrupt message (used internally)
+     */
     public static class InterruptMessage extends Message {
+        /**
+         * Constructor with a message on why the interrupt is generated
+         * @param message The interrupt message
+         */
         public InterruptMessage(String message) {
             super(Type.INTERRUPT, 0, message.getBytes(StandardCharsets.UTF_8));
         }
     }
 
+    /**
+     * Creates a Close message (used internally)
+     */
     public static class CloseMessage extends Message {
+        /**
+         * Default constructor
+         */
         public CloseMessage() {
             super(Type.CLOSE, 0);
         }

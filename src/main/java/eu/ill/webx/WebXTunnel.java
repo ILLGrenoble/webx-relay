@@ -86,6 +86,7 @@ public class WebXTunnel {
     }
 
     /**
+     * Returns the connection Id of the client: corresponds to the session Id of the WebX Engine
      * @return The connection Id of the client: corresponds to the session Id of the WebX Engine
      * @throws WebXClientException thrown if the tunnel is not connected
      */
@@ -106,7 +107,6 @@ public class WebXTunnel {
      */
     public void disconnect() {
         if (this.client != null) {
-//            this.client.disconnect();
             this.host.onClientDisconnected(client);
 
             WebXRelay.getInstance().onClientDisconnect(this.host);
@@ -114,6 +114,7 @@ public class WebXTunnel {
     }
 
     /**
+     * Returns true if the client is connected
      * @return True if the client is connected.
      */
     public boolean isConnected() {

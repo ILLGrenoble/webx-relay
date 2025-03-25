@@ -17,40 +17,22 @@
  */
 package eu.ill.webx.model;
 
-public class ConnectionData {
+/**
+ * Encapsulates connection data returned by the client connector and used to connect all the sockets.
+ * @param publisherPort the publisher port
+ * @param subscriberPort the subscriber port
+ * @param sessionPort the session port (WebX Router only)
+ * @param serverPublicKey the session public key of the router (WebX Router only)
+ * */
+public record ConnectionData(int publisherPort, int subscriberPort, int sessionPort, String serverPublicKey) {
 
-    private final int publisherPort;
-    private final int subscriberPort;
-    private final int sessionPort;
-    private final String serverPublicKey;
-
+    /**
+     * Returned from a standalone WebX Engine with the ports of the publisher and subscriber sockets
+     * @param publisherPort the publisher port
+     * @param subscriberPort the subscriber port
+     */
     public ConnectionData(int publisherPort, int subscriberPort) {
-        this.publisherPort = publisherPort;
-        this.subscriberPort = subscriberPort;
-        this.sessionPort = 0;
-        this.serverPublicKey = null;
+        this(publisherPort, subscriberPort, 0, null);
     }
 
-    public ConnectionData(int publisherPort, int subscriberPort, int sessionPort, String serverPublicKey) {
-        this.publisherPort = publisherPort;
-        this.subscriberPort = subscriberPort;
-        this.sessionPort = sessionPort;
-        this.serverPublicKey = serverPublicKey;
-    }
-
-    public int getPublisherPort() {
-        return publisherPort;
-    }
-
-    public int getSubscriberPort() {
-        return subscriberPort;
-    }
-
-    public int getSessionPort() {
-        return sessionPort;
-    }
-
-    public String getServerPublicKey() {
-        return serverPublicKey;
-    }
 }

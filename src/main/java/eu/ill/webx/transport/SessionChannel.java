@@ -30,16 +30,33 @@ import zmq.util.Z85;
 
 import java.util.Base64;
 
+/**
+ * The Session Channel provides an encrypted socket to connect initiate and create sessions with the WebX Router.
+ * For new sessions a login and password are sent and as such encryption is required. ZMQ uses the curve encryption layer.
+ * The session channel is created with the servers public key. The session channel generates its own private-public key-pair
+ * and sends the public key back to the server. this way 2-way encryption can be made.
+ * Sessions are created with user credentials, screen size and keyboard layout parameters. On success a session Id is returned.
+ */
 public class SessionChannel {
 
     private static final Logger logger = LoggerFactory.getLogger(SessionChannel.class);
 
     private ZMQ.Socket socket;
 
+    /**
+     * Default constructor
+     */
     SessionChannel() {
     }
 
-    public void connect(ZContext context, String address, int socketTimeoutMs, String serverPublicKey) {
+    /**
+     * Connects to the ZQM session channel socket of the WebX Router
+     * @param context The ZMQ context
+     * @param address The address of the session channel socket
+     * @param socketTimeoutMs The timeout in milliseconds for responses
+     * @param serverPublicKey The public key of the WebX Router
+     */
+    void connect(ZContext context, String address, int socketTimeoutMs, String serverPublicKey) {
         if (this.socket == null) {
             this.socket = context.createSocket(SocketType.REQ);
             this.socket.setReceiveTimeOut(socketTimeoutMs);
@@ -55,7 +72,10 @@ public class SessionChannel {
         }
     }
 
-    public void disconnect() {
+    /**
+     * Disconnects from the ZQM socket
+     */
+    void disconnect() {
         if (this.socket != null) {
             this.socket.close();
             this.socket = null;
@@ -64,7 +84,13 @@ public class SessionChannel {
         }
     }
 
-    public synchronized SocketResponse sendRequest(String request) throws WebXDisconnectedException {
+    /**
+     * Sends a synchronous request to the server
+     * @param request The string request
+     * @return Returns a SocketResponse
+     * @throws WebXDisconnectedException Thrown if the server is disconnected
+     */
+    synchronized SocketResponse sendRequest(String request) throws WebXDisconnectedException {
         try {
             if (this.socket != null) {
                 this.socket.send(request);
@@ -80,7 +106,13 @@ public class SessionChannel {
         }
     }
 
-    public synchronized String startSession(WebXClientConfiguration configuration) throws WebXDisconnectedException {
+    /**
+     * Sends a request to start a new session with connection credentials
+     * @param configuration The configuration for the session (login, screen size and keyboard)
+     * @return The session Id string
+     * @throws WebXDisconnectedException thrown if an error occurs with the socket connection
+     */
+    synchronized String startSession(WebXClientConfiguration configuration) throws WebXDisconnectedException {
         String usernameBase64 = Base64.getEncoder().encodeToString(configuration.getUsername().getBytes());
         String passwordBase64 = Base64.getEncoder().encodeToString(configuration.getPassword().getBytes());
         String request = "create," +
@@ -91,5 +123,4 @@ public class SessionChannel {
                 configuration.getKeyboardLayout();
         return this.sendRequest(request).toString();
     }
-
 }

@@ -27,7 +27,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Central creation and storage of WebXHosts
+ * Central creation and storage of WebXHosts. The WebX Tunnel uses the relay to connect to hosts and to indicate when a client connects (so that cleanup can be performed).
+ * The WebXRelay is a singleton class.
  */
 public class WebXRelay {
 
@@ -35,17 +36,34 @@ public class WebXRelay {
 
     private final List<WebXHost> hosts = new ArrayList<>();
 
-    private WebXRelay(){
+    /**
+     * Private constructor
+     */
+    private WebXRelay() {
     }
 
+    /**
+     * Private static creator of a singleton instance
+     */
     private static class Holder {
         private static final WebXRelay INSTANCE = new WebXRelay();
     }
 
+    /**
+     * Returns the singleton instance
+     * @return the singleton WebXRelay instance
+     */
     public static WebXRelay getInstance() {
         return Holder.INSTANCE;
     }
 
+    /**
+     * Connects to a WebX Host (if a connection hasn't already been made). The host will obtain connection ports from the
+     * client connector socket and connect all ZMQ sockets to the server (either the WebX Router or a standalone WebX Engine)
+     * @param configuration The host configuration (hostname, client connector port, standalone)
+     * @return a WebXHost
+     * @throws WebXConnectionException thrown if the connection fails
+     */
     public synchronized WebXHost connectToHost(final WebXHostConfiguration configuration) throws WebXConnectionException {
         Optional<WebXHost> existingHost = this.getHost(configuration);
         if (existingHost.isPresent()) {
@@ -65,6 +83,10 @@ public class WebXRelay {
         }
     }
 
+    /**
+     * Called when a client disconnects so that we can perform cleanup operations (close the host connection if no clients are connected)
+     * @param host the WebXHost instance
+     */
     public synchronized void onClientDisconnect(final WebXHost host) {
         if (this.hosts.contains(host)) {
             if (host.getClientCount() == 0) {
@@ -77,6 +99,11 @@ public class WebXRelay {
         }
     }
 
+    /**
+     * Returns a WebXHost optional for a given configuration
+     * @param configuration The WebXHost configuration
+     * @return a WebXHost optional
+     */
     private Optional<WebXHost> getHost(final WebXHostConfiguration configuration) {
         // Find host that is already running
         return this.hosts.stream()

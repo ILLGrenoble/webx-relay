@@ -17,16 +17,17 @@
  */
 package eu.ill.webx.exceptions;
 
+/**
+ * A general client exception thrown when methods to the client-facing classes (ie Tunnel and Client) are called
+ * and the state of the client is not valid.
+ */
 public class WebXClientException extends WebXException {
 
-    public WebXClientException() {
-    }
-
+    /**
+     * Constructor with an error message
+     * @param message the error message
+     */
     public WebXClientException(String message) {
         super(message);
-    }
-
-    public WebXClientException(String message, Throwable cause) {
-        super(message, cause);
     }
 }

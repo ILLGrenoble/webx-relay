@@ -32,7 +32,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
 /**
- * Provides a connection point between specific client and a session.
+ * Provides a connection point between specific web client and a session.
  * Messages from the WebXEngine are stored in the messageQueue and read manually from client applications (via the WebXTunnel).
  */
 public class WebXClient {
@@ -48,7 +48,11 @@ public class WebXClient {
 
     private final ByteBuffer instructionPrefix = ByteBuffer.allocate(20).order(LITTLE_ENDIAN);
 
-
+    /**
+     * Constructor taking a unique client identifier and parent session
+     * @param clientIdentifier The unique identifier
+     * @param session The parent session
+     */
     WebXClient(final ClientIdentifier clientIdentifier, final WebXSession session) {
         this.clientIdentifier = clientIdentifier;
         this.session = session;
@@ -62,25 +66,45 @@ public class WebXClient {
         this.instructionPrefix.put(16, clientIdBuffer.array(), 0, 4);
     }
 
+    /**
+     * Returns the client identifier
+     * @return the client identifier
+     */
     public ClientIdentifier getClientIdentifier() {
         return clientIdentifier;
     }
 
+    /**
+     * Returns the session Id
+     * @return the session Id
+     */
     public SessionId getSessionId() {
         return this.session.getSessionId();
     }
 
-    public void disconnect() {
+    /**
+     * Called by the session when the client is disconneted. This sends a message to the message queue to unblock any calls that are active to the getMessage method
+     */
+    public void onDisconnected() {
         if (this.connected) {
             this.onMessage(new Message.CloseMessage());
             this.connected = false;
         }
     }
 
+    /**
+     * Returns true if state is connected
+     * @return true if state is connected
+     */
     public boolean isConnected() {
         return connected;
     }
 
+    /**
+     * Called when a message from the server is destined to this client.
+     * Queues a new Message object
+     * @param messageData the raw message data
+     */
     public void onMessage(byte[] messageData) {
         if (this.connected) {
             logger.trace("Got client message of length {}", messageData.length);
@@ -89,12 +113,20 @@ public class WebXClient {
         }
     }
 
-    public void onMessage(Message message) {
+    /**
+     * Queues a message. Called from the session when an interrupt occurs.
+     * @param message the message
+     */
+    void onMessage(Message message) {
         if (this.connected) {
             this.messageQueue.add(message);
         }
     }
 
+    /**
+     * Sends a message to the instruction publisher. The instruction data is prefixed with the session Id and client Id.
+     * @param instructionData the binary instruction data from the client
+     */
     public void sendInstruction(byte[] instructionData) {
         if (this.connected) {
             logger.trace("Got instruction of length {}", instructionData.length);
@@ -106,6 +138,13 @@ public class WebXClient {
         }
     }
 
+    /**
+     * Blocking method, waiting for a message to be sent from the server. Messages from the server are queued by a separate thread.
+     * @return the raw binary message from the engine
+     * @throws WebXClientException thrown if the client is in error
+     * @throws WebXConnectionInterruptException thrown if the connection is interrupted
+     * @throws WebXDisconnectedException thrown if disconnected
+     */
     public byte[] getMessage() throws WebXClientException, WebXConnectionInterruptException, WebXDisconnectedException {
         if (this.connected) {
             try {
@@ -134,10 +173,6 @@ public class WebXClient {
                 } else {
                     logger.trace("Read client message of length {}", messageData.length);
 
-                    if (messageData.length < Message.MESSAGE_HEADER_LENGTH) {
-                        throw new WebXClientException("Invalid message received from the server");
-                    }
-
                     return messageData;
                 }
 
@@ -150,6 +185,11 @@ public class WebXClient {
         }
     }
 
+    /**
+     * Returns true if the client Identifier matches the header of the message data
+     * @param messageData the raw message data
+     * @return true if the client should receive the message
+     */
     boolean matchesMessageIndexMask(final byte[] messageData) {
         if (messageData.length < 24) {
             return false;

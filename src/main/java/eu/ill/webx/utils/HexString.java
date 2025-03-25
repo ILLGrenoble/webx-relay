@@ -22,15 +22,37 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Utility class to convert binary bytearrays into hexadecimal strings and vice versa.
+ */
 public class HexString {
     private static final Logger logger = LoggerFactory.getLogger(HexString.class);
 
     private static final byte[] HEX_ARRAY = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
 
+    /**
+     * Default constructor
+     */
+    public HexString() {
+    }
+
+    /**
+     * Converts byte data to a hex string using full length of byte data.
+     * The data is formatted for easier debugging.
+     * @param data the input binary data
+     * @return hexadecimal representation of the data
+     */
     public static String toDebugString(byte[] data) {
         return HexString.toDebugString(data, data.length);
     }
 
+    /**
+     * Converts byte data to hex string using a fixed maximum length of data
+     * The data is formatted for easier debugging.
+     * @param data the input binary data
+     * @param length The maximum length of the string
+     * @return hexadecimal representation of the data
+     */
     public static String toDebugString(byte[] data, int length) {
         length = Math.min(length, data.length);
 
@@ -46,10 +68,21 @@ public class HexString {
         return "[" + new String(hexChars, StandardCharsets.UTF_8) + (data.length > length ? " ...]" : "]");
     }
 
+    /**
+     * Converts byte data to hex string
+     * @param data the input binary data
+     * @return hexadecimal representation of the data
+     */
     public static String fromByteArray(byte[] data) {
         return fromByteArray(data, data.length);
     }
 
+    /**
+     * Converts byte data to hex string using a maximum length of the data
+     * @param data the input binary data
+     * @return hexadecimal representation of the data
+     * @param length The maximum length of the string
+     */
     public static String fromByteArray(byte[] data, int length) {
         byte[] hexChars = new byte[length * 2];
         for (int j = 0; j < length; j++) {
@@ -60,6 +93,12 @@ public class HexString {
         return new String(hexChars, StandardCharsets.UTF_8);
     }
 
+    /**
+     * Converts from a hexadecimal string to a byte array. Validation is made of the expected byte length.
+     * @param hexString the input hex string
+     * @param expectedBytesLength the expected number of bytes
+     * @return the byte array equivalent to the hex string
+     */
     public static byte[] toByteArray(String hexString, int expectedBytesLength) {
         if (expectedBytesLength != hexString.length() / 2) {
             logger.error("Received invalid HexString of expected length {}: {}", expectedBytesLength, hexString);

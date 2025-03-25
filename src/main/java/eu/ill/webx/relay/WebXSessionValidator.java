@@ -33,7 +33,16 @@ public class WebXSessionValidator extends Thread {
     private static final Logger logger = LoggerFactory.getLogger(WebXSessionValidator.class);
     private static final int PING_DELAY_MS = 15000;
 
-    public interface OnErrorHandler { void onError(String error); }
+    /**
+     * Defines an interface to handle errors produced during the ping request
+     */
+    interface OnErrorHandler {
+        /**
+         * Called when an error occurs during the ping
+         * @param error the error message
+         */
+        void onError(String error);
+    }
 
     private final SessionId sessionId;
     private final Transport transport;
@@ -41,24 +50,53 @@ public class WebXSessionValidator extends Thread {
 
     private boolean running = false;
 
+    /**
+     * Constructor taking the session Id, transport layer and error handler (callback function when pinging fails)
+     * @param sessionId The unique session Id (used for logging)
+     * @param transport The transort layer (to send synchronous ping messages)
+     * @param onErrorHandler The callback when a ping fails
+     */
     WebXSessionValidator(final SessionId sessionId, final Transport transport, final OnErrorHandler onErrorHandler) {
         this.sessionId = sessionId;
         this.transport = transport;
         this.onErrorHandler = onErrorHandler != null ? onErrorHandler : error -> {};
     }
 
+    /**
+     * Returns true when running
+     * @return true when running
+     */
+    public boolean isRunning() {
+        return this.running;
+    }
+
+    /**
+     * Starts the session validator thread
+     */
     @Override
     public void start() {
-        running = true;
-        super.start();
+        if (!this.running) {
+            this.running = true;
+            super.start();
+        }
     }
 
+    /**
+     * Interrupts the session validator thread
+     */
     @Override
     public void interrupt() {
-        running = false;
-        super.interrupt();
+        if (this.running) {
+            this.running = false;
+            super.interrupt();
+        }
     }
 
+    /**
+     * Main method called when the Thread executes. The thread will send a ping request to the WebX Engine and wait for a response. If no response
+     * is received before the timeout value then the error callback is called.
+     * the ping is sent to the WebX Engine every 15 seconds.
+     */
     @Override
     public void run() {
         while (this.running) {
