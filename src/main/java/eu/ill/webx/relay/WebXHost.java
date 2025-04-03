@@ -94,6 +94,7 @@ public class WebXHost {
     void disconnect() {
         // Disconnect from WebX server
         this.transport.disconnect();
+        logger.info("Disconnected from WebX server at {}:{}...", this.getHostname(), this.getPort());
     }
 
     /**
