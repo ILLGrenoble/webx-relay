@@ -22,6 +22,8 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
+
 /**
  * Encapsulates the raw binary message data from a WebX Engine.
  * The priority of the message is calculated from the type of message (mouse movement is considered priority to
@@ -76,7 +78,9 @@ public class Message implements Comparable<Message> {
      * @param data the binary data
      */
     public Message(byte[] data) {
-        this.timestamp = new Date().getTime();
+        ByteBuffer messageMetadataWrapper = ByteBuffer.wrap(data, 24, 8).order(LITTLE_ENDIAN);
+        this.timestamp = messageMetadataWrapper.getLong();
+
         this.data = data;
         int type = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getInt(TYPE_OFFSET);
         if (type == 6) {
