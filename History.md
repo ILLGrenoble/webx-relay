@@ -1,3 +1,8 @@
+1.1.0 11/04/2025
+================
+ * Get message timestamp directly from message data
+ * Log info for host disconnect
+
 1.0.0 25/03/2025
 ================
  * Minor refactoring
@@ -17,7 +22,7 @@
  * Single session ping thread per session. Single message listener for the subscriber (the host).
  * Refactoring code. Adding WebXSession. Don't create client until connection is fully made. 
 
-0.6.0 12/03/2025
+0.6.0 12/03/2025[History.md](History.md)
 ================
  * Remove sending message queue size to client
 
