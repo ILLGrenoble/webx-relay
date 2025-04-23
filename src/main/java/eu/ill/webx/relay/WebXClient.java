@@ -117,7 +117,7 @@ public class WebXClient {
      * Queues a message. Called from the session when an interrupt occurs.
      * @param message the message
      */
-    void onMessage(Message message) {
+    public void onMessage(Message message) {
         if (this.connected) {
             this.messageQueue.add(message);
         }

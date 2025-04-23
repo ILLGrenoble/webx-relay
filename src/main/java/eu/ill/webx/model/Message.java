@@ -66,7 +66,9 @@ public class Message implements Comparable<Message> {
         OTHER
     }
 
+    private final static int HEADER_LENGTH = 48;
     private final static int TYPE_OFFSET = 32;
+
     private final byte[] data;
     private final Type type;
     private final Long timestamp;
@@ -192,6 +194,25 @@ public class Message implements Comparable<Message> {
          */
         public CloseMessage() {
             super(Type.CLOSE, 0);
+        }
+    }
+
+    /**
+     * Creates a "dummy" Connect message (sent to the client when the connection to the server has been made)
+     */
+    public static class ConnectionMessage extends Message {
+        /**
+         * Default constructor
+         */
+        public ConnectionMessage() {
+            super(GenerateMessageData());
+        }
+
+        private static byte[] GenerateMessageData() {
+            byte[] data = new byte[HEADER_LENGTH];
+            // Set the message type to 1 (Connection)
+            ByteBuffer.wrap(data, TYPE_OFFSET, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(1);
+            return data;
         }
     }
 }

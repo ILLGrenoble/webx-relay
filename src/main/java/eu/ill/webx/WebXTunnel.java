@@ -21,6 +21,7 @@ import eu.ill.webx.exceptions.WebXClientException;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
+import eu.ill.webx.model.Message;
 import eu.ill.webx.relay.WebXClient;
 import eu.ill.webx.relay.WebXHost;
 import eu.ill.webx.relay.WebXRelay;
@@ -73,6 +74,9 @@ public class WebXTunnel {
             try {
                 logger.debug("Creating client for {}...", this.host.getHostname());
                 this.client = this.host.onClientConnection(clientConfiguration);
+
+                // Send the connection message to the client
+                this.client.onMessage(new Message.ConnectionMessage());
                 logger.info("... client created.");
 
             } catch (WebXConnectionException error) {
