@@ -1,3 +1,7 @@
+1.2.0 23/04/2025
+================
+ * Send a connection message to the client when connection is successful.
+
 1.1.0 11/04/2025
 ================
  * Get message timestamp directly from message data
