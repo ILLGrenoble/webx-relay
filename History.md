@@ -1,3 +1,7 @@
+1.3.0 25/04/2025
+================
+ * Add optional EngineConfiguration parameters. These parameters are sent to the WebXRouter and converted into environment variables for the spawned WebX Engine.
+
 1.2.0 23/04/2025
 ================
  * Send a connection message to the client when connection is successful.
