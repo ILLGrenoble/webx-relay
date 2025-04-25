@@ -145,7 +145,7 @@ public class SessionChannel {
             return this.parseSessionCreationResponse(response);
 
         } catch (WebXConnectionException e) {
-            logger.warn("Failed to start session with engine configuration, using legacy connection method: NOTE engine parameters will not be ignored.");
+            logger.warn("Failed to start session with engine configuration, using legacy connection method: NOTE engine parameters will be ignored.");
             // try legacy connection format
             return this.startSession(clientConfiguration);
         }

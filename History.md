@@ -1,3 +1,7 @@
+1.3.1 25/04/2025
+================
+ * Fix log message.
+
 1.3.0 25/04/2025
 ================
  * Add optional EngineConfiguration parameters. These parameters are sent to the WebXRouter and converted into environment variables for the spawned WebX Engine.
