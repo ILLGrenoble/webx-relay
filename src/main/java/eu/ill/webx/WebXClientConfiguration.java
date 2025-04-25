@@ -17,6 +17,8 @@
  */
 package eu.ill.webx;
 
+import java.util.Base64;
+
 /**
  * Provides client connection configuration.
  * Used for requesting a new session (login) or connection to a running one (sessionId)
@@ -86,6 +88,15 @@ public class WebXClientConfiguration {
         return new WebXClientConfiguration("00000000000000000000000000000000");
     }
 
+    /**
+     * Private constructor containing login details, screen size and keyboard layout. This will result in a new session being created by the WebX Router (if there isn't
+     * one already running for the user).
+     * @param username The username
+     * @param password The password
+     * @param screenWidth Desired screen width for a new X11 session
+     * @param screenHeight Desired screen height for a new X11 session
+     * @param keyboardLayout The requested keyboard layout
+     */
     private WebXClientConfiguration(final String username, final String password, final Integer screenWidth, final Integer screenHeight, final String keyboardLayout) {
         this.username = username;
         this.password = password;
@@ -95,6 +106,10 @@ public class WebXClientConfiguration {
         this.sessionId = null;
     }
 
+    /**
+     * Private constructor containing a sessionId. The WebX Router will attempt to connect to an existing session with an identical Id.
+     * @param sessionId Session Id of a running session.
+     */
     private WebXClientConfiguration(final String sessionId) {
         this.username = null;
         this.password = null;
@@ -150,5 +165,18 @@ public class WebXClientConfiguration {
      */
     public String getSessionId() {
         return sessionId;
+    }
+
+    /**
+     * Returns the connection string for the client
+     * @return The connection string
+     */
+    public String connectionString() {
+        final String username = this.username == null ? "" : this.username;
+        final String password = this.password == null ? "" : this.password;
+
+        String usernameBase64 = Base64.getEncoder().encodeToString(username.getBytes());
+        String passwordBase64 = Base64.getEncoder().encodeToString(password.getBytes());
+        return String.format("%s,%s,%d,%d,%s", usernameBase64, passwordBase64, screenWidth, screenHeight, keyboardLayout);
     }
 }

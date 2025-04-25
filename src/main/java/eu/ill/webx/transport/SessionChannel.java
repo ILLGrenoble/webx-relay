@@ -17,9 +17,12 @@
  */
 package eu.ill.webx.transport;
 
+import eu.ill.webx.WebXClientConfiguration;
+import eu.ill.webx.WebXEngineConfiguration;
+import eu.ill.webx.exceptions.WebXCommunicationException;
+import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SocketResponse;
-import eu.ill.webx.WebXClientConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
@@ -27,8 +30,6 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.util.Z85;
-
-import java.util.Base64;
 
 /**
  * The Session Channel provides an encrypted socket to connect initiate and create sessions with the WebX Router.
@@ -88,9 +89,10 @@ public class SessionChannel {
      * Sends a synchronous request to the server
      * @param request The string request
      * @return Returns a SocketResponse
-     * @throws WebXDisconnectedException Thrown if the server is disconnected
+     * @throws WebXCommunicationException Thrown if there is a communication error
+     * @throws WebXDisconnectedException thrown if the server is not connected
      */
-    synchronized SocketResponse sendRequest(String request) throws WebXDisconnectedException {
+    synchronized SocketResponse sendRequest(String request) throws WebXCommunicationException, WebXDisconnectedException {
         try {
             if (this.socket != null) {
                 this.socket.send(request);
@@ -102,25 +104,73 @@ public class SessionChannel {
 
         } catch (ZMQException e) {
             logger.error("Caught ZMQ Exception: {}", e.getMessage());
-            throw new WebXDisconnectedException();
+            throw new WebXCommunicationException(String.format("Failed to send request to WebX Router: %s", e.getMessage()));
         }
     }
 
     /**
-     * Sends a request to start a new session with connection credentials
-     * @param configuration The configuration for the session (login, screen size and keyboard)
+     * Legacy connection method: Sends a request to start a new session with connection credentials
+     * @param clientConfiguration The configuration for the session (login, screen size and keyboard)
      * @return The session Id string
-     * @throws WebXDisconnectedException thrown if an error occurs with the socket connection
+     * @throws WebXCommunicationException thrown if an error occurs with the socket connection
+     * @throws WebXDisconnectedException thrown if the server is not connected
      */
-    synchronized String startSession(WebXClientConfiguration configuration) throws WebXDisconnectedException {
-        String usernameBase64 = Base64.getEncoder().encodeToString(configuration.getUsername().getBytes());
-        String passwordBase64 = Base64.getEncoder().encodeToString(configuration.getPassword().getBytes());
-        String request = "create," +
-                usernameBase64 + "," +
-                passwordBase64 + "," +
-                configuration.getScreenWidth() + "," +
-                configuration.getScreenHeight() + "," +
-                configuration.getKeyboardLayout();
-        return this.sendRequest(request).toString();
+    synchronized String startSession(final WebXClientConfiguration clientConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXConnectionException {
+        final String clientConfigurationConnectionString = clientConfiguration.connectionString();
+        final String request = String.format("create,%s", clientConfigurationConnectionString);
+
+        SocketResponse response = this.sendRequest(request);
+        return this.parseSessionCreationResponse(response);
+    }
+
+    /**
+     * Sends a request to start a new session with connection credentials and engine configuration parameters
+     * @param clientConfiguration The configuration for the session (login, screen size and keyboard)
+     * @param engineConfiguration The configuration for the WebX engine
+     * @return The session Id string
+     * @throws WebXCommunicationException thrown if an error occurs with the socket connection
+     */
+    synchronized String startSession(final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXConnectionException {
+        // Check for null engine configuration
+        if (engineConfiguration == null) {
+            return this.startSession(clientConfiguration);
+        }
+
+        try {
+            final String clientConfigurationConnectionString = clientConfiguration.connectionString();
+            final String engineConfigurationConnectionString = engineConfiguration.connectionString();
+            String request = String.format("create,%s,%s", clientConfigurationConnectionString, engineConfigurationConnectionString);
+
+            SocketResponse response = this.sendRequest(request);
+            return this.parseSessionCreationResponse(response);
+
+        } catch (WebXConnectionException e) {
+            logger.warn("Failed to start session with engine configuration, using legacy connection method: NOTE engine parameters will not be ignored.");
+            // try legacy connection format
+            return this.startSession(clientConfiguration);
+        }
+    }
+
+    /**
+     * Parses the response from the WebX Router to create a session. If the response code isn't 0 then the connection is not valid.
+     * @param response The socket response from the connection request
+     * @return The session Id string
+     * @throws WebXConnectionException Thrown if the response is invalid or an error occurs with the handling
+     */
+    private String parseSessionCreationResponse(SocketResponse response) throws WebXConnectionException {
+        try {
+            String responseString = response.toString();
+            String[] responseData = responseString.split(",");
+            int responseCode = Integer.parseInt(responseData[0]);
+            if (responseCode == 0) {
+                return responseData[1];
+
+            } else {
+                throw new WebXConnectionException(String.format("Couldn't create WebX session: session response invalid (response code %d)", responseCode));
+            }
+
+        } catch (NullPointerException exception) {
+            throw new WebXConnectionException(String.format("Failed to parse response from WebX Router: %s", exception.getMessage()));
+        }
     }
 }

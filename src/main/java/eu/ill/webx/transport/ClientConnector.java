@@ -17,6 +17,7 @@
  */
 package eu.ill.webx.transport;
 
+import eu.ill.webx.exceptions.WebXCommunicationException;
 import eu.ill.webx.model.ConnectionData;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SocketResponse;
@@ -114,9 +115,10 @@ public class ClientConnector {
      * Sends a synchronous command to the client connector
      * @param request the command data
      * @return the socket response
-     * @throws WebXDisconnectedException thrown if the request fails
+     * @throws WebXCommunicationException thrown if the request fails
+     * @throws WebXDisconnectedException thrown if the server is not connected
      */
-    synchronized SocketResponse sendRequest(String request) throws WebXDisconnectedException {
+    synchronized SocketResponse sendRequest(String request) throws WebXCommunicationException, WebXDisconnectedException {
         try {
             if (this.socket != null) {
                 this.socket.send(request);
@@ -128,7 +130,7 @@ public class ClientConnector {
 
         } catch (ZMQException e) {
             logger.error("Caught ZMQ Exception: {}", e.getMessage());
-            throw new WebXDisconnectedException();
+            throw new WebXCommunicationException(String.format("Failed to send request to WebX Engine: %s", e.getMessage()));
         }
     }
 }

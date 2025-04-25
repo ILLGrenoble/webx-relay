@@ -18,7 +18,9 @@
 package eu.ill.webx.relay;
 
 import eu.ill.webx.WebXClientConfiguration;
+import eu.ill.webx.WebXEngineConfiguration;
 import eu.ill.webx.WebXHostConfiguration;
+import eu.ill.webx.exceptions.WebXCommunicationException;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ClientIdentifier;
@@ -101,15 +103,16 @@ public class WebXHost {
      * Called when a client connects. Depending on the connection type it will start a new session. In all cases the client is
      * connected to WebX engine.
      * @param clientConfiguration The client connection configuration
+     * @param engineConfiguration The engine configuration (WebX Engine)
      * @return a new WebX client
      * @throws WebXConnectionException thrown if the connection fails
      */
-    public WebXClient onClientConnection(final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
+    public WebXClient onClientConnection(final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXConnectionException {
         if (this.transport.isConnected()) {
             SessionId sessionId;
             if (clientConfiguration.getSessionId() == null) {
                 logger.info("Connecting to WebX using password authentication");
-                sessionId = this.startSession(clientConfiguration);
+                sessionId = this.startSession(clientConfiguration, engineConfiguration);
                 logger.info("Authentication successful. Got session Id \"{}\"", sessionId.hexString());
 
             } else {
@@ -221,23 +224,19 @@ public class WebXHost {
     /**
      * Sends requests to the WebX Router to start a new session.
      * @param clientConfiguration The client configuration (login, screen size, etc)
+     * @param engineConfiguration The engine configuration (WebX Engine)
      * @return a unique Session Id for the session
      * @throws WebXConnectionException thrown if the session creation fails
      */
-    private SessionId startSession(WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
+    private SessionId startSession(final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXConnectionException {
         try {
             // Start WebX session via the router and get a session ID
-            String response = this.transport.startSession(clientConfiguration);
-            String[] responseData = response.split(",");
-            int responseCode = Integer.parseInt(responseData[0]);
-            String sessionIdString = responseData[1];
-            if (responseCode == 0) {
-                return new SessionId(sessionIdString);
+            String sessionIdString = this.transport.startSession(clientConfiguration, engineConfiguration);
+            return new SessionId(sessionIdString);
 
-            } else {
-                logger.error("Couldn't create WebX session: {}", sessionIdString);
-                throw new WebXConnectionException("Couldn't create WebX session: session response invalid");
-            }
+        } catch (WebXCommunicationException e) {
+            logger.error("Cannot start session: communication failed with the WebX Server");
+            throw new WebXConnectionException("Communication failed with the WebX Server when creating WebX session");
 
         } catch (WebXDisconnectedException e) {
             logger.error("Cannot start session: WebX Server is disconnected");
@@ -282,6 +281,10 @@ public class WebXHost {
             logger.error("Cannot connect client: Failed to parse client id and index");
             throw new WebXConnectionException("Failed to parse client id and index");
 
+        } catch (WebXCommunicationException e) {
+            logger.error("Cannot connect client: Communication with the WebX Server failed");
+            throw new WebXConnectionException("Communication with the WebX Server failed when creating WebX session");
+
         } catch (WebXDisconnectedException e) {
             logger.error("Cannot connect client: WebX Server is disconnected");
             throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
@@ -303,6 +306,9 @@ public class WebXHost {
                 } else {
                     logger.info("Client (Id \"{}\" and index \"{}\") disconnected from WebX session \"{}\"", client.getClientIdentifier().clientIdString(), client.getClientIdentifier().clientIndexString(), client.getSessionId().hexString());
                 }
+
+            } catch (WebXCommunicationException e) {
+                logger.warn("Cannot disconnect client {}: Communication with the WebX Server failed", client.getClientIdentifier().clientIdString());
 
             } catch (WebXDisconnectedException e) {
                 logger.warn("Cannot disconnect client {}: WebX Server is disconnected", client.getClientIdentifier().clientIdString());

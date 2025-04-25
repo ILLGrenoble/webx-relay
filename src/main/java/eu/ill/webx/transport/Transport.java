@@ -18,6 +18,9 @@
 package eu.ill.webx.transport;
 
 import eu.ill.webx.WebXClientConfiguration;
+import eu.ill.webx.WebXEngineConfiguration;
+import eu.ill.webx.exceptions.WebXCommunicationException;
+import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ConnectionData;
 import eu.ill.webx.model.SocketResponse;
@@ -144,9 +147,10 @@ public class Transport {
      * standalone or not
      * @param request The string formatted request
      * @return The Socket response
-     * @throws WebXDisconnectedException thrown if the communication fails or the server is not connected
+     * @throws WebXCommunicationException thrown if the communication fails
+     * @throws WebXDisconnectedException thrown if the server is not connected
      */
-    public synchronized SocketResponse sendRequest(final String request) throws WebXDisconnectedException {
+    public synchronized SocketResponse sendRequest(final String request) throws WebXCommunicationException, WebXDisconnectedException {
         if (!this.connected) {
              throw new WebXDisconnectedException();
         }
@@ -160,14 +164,17 @@ public class Transport {
     }
 
     /**
-     * Sends a request to the session channel to start a new session with connection credentials
+     * Sends a request to the session channel to start a new session with connection credentials and engine configuration parameters
      * @param configuration The configuration for the session (login, screen size and keyboard)
+     * @param engineConfiguration The configuration for the WebX Engine
      * @return The session Id string
+     * @throws WebXCommunicationException thrown if an error occurs with the socket communication
      * @throws WebXDisconnectedException thrown if the server is not running in standalone mode
+     * @throws WebXConnectionException Thrown if the connection response is invalid or an error occurs with the handling
      */
-    public synchronized String startSession(WebXClientConfiguration configuration) throws WebXDisconnectedException {
+    public synchronized String startSession(final WebXClientConfiguration configuration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXConnectionException {
         if (!this.isStandalone) {
-            return this.sessionChannel.startSession(configuration);
+            return this.sessionChannel.startSession(configuration, engineConfiguration);
 
         } else {
             throw new WebXDisconnectedException("Cannot start session in standalone mode");

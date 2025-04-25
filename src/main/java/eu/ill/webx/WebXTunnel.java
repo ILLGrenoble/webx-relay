@@ -50,7 +50,21 @@ public class WebXTunnel {
      */
     public static WebXTunnel Connect(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
         WebXTunnel tunnel = new WebXTunnel();
-        tunnel.connect(hostConfiguration, clientConfiguration);
+        tunnel.connect(hostConfiguration, clientConfiguration, null);
+        return tunnel;
+    }
+
+    /**
+     * Static method to create a WebXTunnel, connect to the host and create a client.
+     * @param hostConfiguration Configuration for the WebX Host (eg hostname and port)
+     * @param clientConfiguration Configuration for the client (login parameters or session Id)
+     * @param engineConfiguration Configuration for the WebX Engine (converted to environment variables by the WebX Router)
+     * @return a connected WebXTunnel
+     * @throws WebXConnectionException thrown if the connection fails
+     */
+    public static WebXTunnel Connect(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXConnectionException {
+        WebXTunnel tunnel = new WebXTunnel();
+        tunnel.connect(hostConfiguration, clientConfiguration, engineConfiguration);
         return tunnel;
     }
 
@@ -65,15 +79,16 @@ public class WebXTunnel {
      * The connection parameters determine whether a new session is created or connection is required to a session that is already running.
      * @param hostConfiguration Configuration for the WebX Host (eg hostname and port)
      * @param clientConfiguration Configuration for the client (login parameters or session Id)
+     * @param engineConfiguration Configuration for the WebX Engine (converted to environment variables by the WebX Router)
      * @throws WebXConnectionException thrown if the connection fails
      */
-    public void connect(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration) throws WebXConnectionException {
+    public void connect(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXConnectionException {
         if (this.client == null) {
             this.host = WebXRelay.getInstance().connectToHost(hostConfiguration);
 
             try {
                 logger.debug("Creating client for {}...", this.host.getHostname());
-                this.client = this.host.onClientConnection(clientConfiguration);
+                this.client = this.host.onClientConnection(clientConfiguration, engineConfiguration);
 
                 // Send the connection message to the client
                 this.client.onMessage(new Message.ConnectionMessage());

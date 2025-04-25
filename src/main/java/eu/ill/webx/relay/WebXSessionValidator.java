@@ -18,6 +18,7 @@
 package eu.ill.webx.relay;
 
 
+import eu.ill.webx.exceptions.WebXCommunicationException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SessionId;
 import eu.ill.webx.model.SocketResponse;
@@ -118,6 +119,9 @@ public class WebXSessionValidator extends Thread {
                                 this.onErrorHandler.onError(String.format("Failed to ping webX Session %s: %s", this.sessionId.hexString(), responseElements[2]));
                             }
                         }
+
+                    } catch (WebXCommunicationException e) {
+                        this.onErrorHandler.onError(String.format("Failed to communicate with the WebX Server when sending ping to session %s", this.sessionId.hexString()));
 
                     } catch (WebXDisconnectedException e) {
                         this.onErrorHandler.onError(String.format("Failed to get response from connector ping to session %s", this.sessionId.hexString()));
