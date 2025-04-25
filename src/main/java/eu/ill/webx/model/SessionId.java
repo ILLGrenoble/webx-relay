@@ -93,7 +93,7 @@ public class SessionId {
 
     /**
      * Returns the hashcode of the session Id generated from the lower and upper long values
-     * @return
+     * @return the hashcode of the session Id
      */
     @Override
     public int hashCode() {
