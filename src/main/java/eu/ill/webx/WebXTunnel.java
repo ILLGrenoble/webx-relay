@@ -38,6 +38,9 @@ public class WebXTunnel {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXTunnel.class);
 
+    public static final int WEBX_MESSAGE_HEADER_LENGTH = Message.HEADER_LENGTH;
+    public static final byte[] WEBX_NOP_MESSAGE_DATA = Message.NOP_MESSAGE_DATA;
+
     private WebXHost host;
     private WebXClient client;
 

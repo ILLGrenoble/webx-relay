@@ -66,8 +66,10 @@ public class Message implements Comparable<Message> {
         OTHER
     }
 
-    private final static int HEADER_LENGTH = 48;
+    public final static int HEADER_LENGTH = 48;
     private final static int TYPE_OFFSET = 32;
+
+    public final static byte[] NOP_MESSAGE_DATA = new byte[HEADER_LENGTH];
 
     private final byte[] data;
     private final Type type;

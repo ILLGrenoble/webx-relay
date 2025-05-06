@@ -1,3 +1,7 @@
+1.4.0 06/05/2025
+================
+ * Provide public access to WebX message header lengths and NOP message data.
+
 1.3.1 25/04/2025
 ================
  * Fix log message.
