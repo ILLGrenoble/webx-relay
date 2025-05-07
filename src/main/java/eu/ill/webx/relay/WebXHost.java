@@ -289,17 +289,23 @@ public class WebXHost {
      * @throws WebXCommunicationException thrown if the communication fails
      */
     private Tuple<String, String> sendConnectionRequest(final SessionId sessionId, final String clientVersion) throws WebXConnectionException, WebXDisconnectedException, WebXCommunicationException {
-        final String request = String.format("connect,%s,%s", sessionId.hexString(), clientVersion);
-        final String response = this.sendConnectionRequest(request, sessionId);
+        try {
+            final String request = String.format("connect,%s,%s", sessionId.hexString(), clientVersion);
+            final String response = this.sendConnectionRequest(request, sessionId);
 
-        final String[] responseElements = response.split(",");
+            final String[] responseElements = response.split(",");
 
-        if (responseElements.length != 2) {
+            if (responseElements.length == 2) {
+                return new Tuple<>(responseElements[0], responseElements[1]);
+            }
+
             logger.warn("Failed to connect client with sessionId and client version, using legacy client connection method.");
-            return this.sendConnectionRequest(sessionId);
+
+        } catch (WebXConnectionException exception) {
+            logger.warn("Failed to connect client with sessionId and client version ({}), using legacy client connection method.", exception.getMessage());
         }
 
-        return new Tuple<>(responseElements[0], responseElements[1]);
+        return this.sendConnectionRequest(sessionId);
     }
 
     /**

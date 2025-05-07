@@ -1,3 +1,7 @@
+1.5.1 07/05/2025
+================
+ * Fix client connection with legacy router when sending webx-client version.
+
 1.5.0 07/05/2025
 ================
  * Send the webx-client version in the ClientConfiguration. Usable in the future for server-client compatibility testing.
