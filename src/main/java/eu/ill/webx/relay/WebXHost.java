@@ -27,6 +27,7 @@ import eu.ill.webx.model.ClientIdentifier;
 import eu.ill.webx.model.SessionId;
 import eu.ill.webx.model.SocketResponse;
 import eu.ill.webx.transport.Transport;
+import eu.ill.webx.utils.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -121,7 +122,7 @@ public class WebXHost {
             }
 
             // Connect to the session and get a client Id
-            final ClientIdentifier clientIdentifier = this.connectClient(sessionId);
+            final ClientIdentifier clientIdentifier = this.connectClient(sessionId, clientConfiguration.getClientVersion());
 
             final WebXSession session = this.getSession(sessionId).orElseGet(() -> {
                final WebXSession webXSession = new WebXSession(sessionId, transport);
@@ -247,31 +248,18 @@ public class WebXHost {
     /**
      * Sends a request to create a new client for a specific session. The identifier of the client is used to create a new WebXClient.
      * @param sessionId the session Id
+     * @param clientVersion the client version
      * @return a unique client identifier
      * @throws WebXConnectionException thrown if the request fails
      */
-    private ClientIdentifier connectClient(final SessionId sessionId) throws WebXConnectionException {
+    private ClientIdentifier connectClient(final SessionId sessionId, final String clientVersion) throws WebXConnectionException {
         try {
-            final String request = String.format("connect,%s", sessionId.hexString());
-            String response = this.transport.sendRequest(request).toString();
-            if (response == null) {
-                throw new WebXConnectionException("WebX Server returned a null connection response");
+            Tuple<String, String> responseElements = this.sendConnectionRequest(sessionId, clientVersion);
+            String clientIdString = responseElements.getX();
+            final String clientIndexString = responseElements.getY();
 
-            } else if (response.isEmpty()) {
-                throw new WebXConnectionException(String.format("WebX Server refused connection with sessionId %s", sessionId.hexString()));
-            }
-
-            final String[] responseElements = response.split(",");
-
-            if (responseElements.length != 2) {
-                throw new WebXConnectionException("WebX Server returned an invalid connection response");
-            }
-
-            String clientIdString = responseElements[0];
-            final String clientIndexString = responseElements[1];
-
-            int clientId = Integer.parseUnsignedInt(responseElements[0], 16);
-            long clientIndex = Long.parseUnsignedLong(responseElements[1], 16);
+            int clientId = Integer.parseUnsignedInt(clientIdString, 16);
+            long clientIndex = Long.parseUnsignedLong(clientIndexString, 16);
 
             logger.info("Client connected to WebX session \"{}\":  Got client Id \"{}\" and index \"{}\"", sessionId.hexString(), clientIdString, clientIndexString);
 
@@ -289,6 +277,70 @@ public class WebXHost {
             logger.error("Cannot connect client: WebX Server is disconnected");
             throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
         }
+    }
+
+    /**
+     * Sends a request to connect a client to a session. The client version is passed also to the WebX Engine.
+     * @param sessionId the session Id
+     * @param clientVersion the client version
+     * @return a tuple containing the client Id and client index
+     * @throws WebXConnectionException thrown if the request fails
+     * @throws WebXDisconnectedException thrown if the server is disconnected
+     * @throws WebXCommunicationException thrown if the communication fails
+     */
+    private Tuple<String, String> sendConnectionRequest(final SessionId sessionId, final String clientVersion) throws WebXConnectionException, WebXDisconnectedException, WebXCommunicationException {
+        final String request = String.format("connect,%s,%s", sessionId.hexString(), clientVersion);
+        final String response = this.sendConnectionRequest(request, sessionId);
+
+        final String[] responseElements = response.split(",");
+
+        if (responseElements.length != 2) {
+            logger.warn("Failed to connect client with sessionId and client version, using legacy client connection method.");
+            return this.sendConnectionRequest(sessionId);
+        }
+
+        return new Tuple<>(responseElements[0], responseElements[1]);
+    }
+
+    /**
+     * Sends a request to connect a client to a session (legacy method with the client version).
+     * @param sessionId the session Id
+     * @return a tuple containing the client Id and client index
+     * @throws WebXConnectionException thrown if the request fails
+     * @throws WebXDisconnectedException thrown if the server is disconnected
+     * @throws WebXCommunicationException thrown if the communication fails
+     */
+    private Tuple<String, String> sendConnectionRequest(final SessionId sessionId) throws WebXConnectionException, WebXDisconnectedException, WebXCommunicationException {
+        final String request = String.format("connect,%s", sessionId.hexString());
+        final String response = this.sendConnectionRequest(request, sessionId);
+
+        final String[] responseElements = response.split(",");
+
+        if (responseElements.length != 2) {
+            throw new WebXConnectionException("WebX Server returned an invalid connection response");
+        }
+
+        return new Tuple<>(responseElements[0], responseElements[1]);
+    }
+
+    /**
+     * Sends a request to the WebX server to connect a client to a session.
+     * @param sessionId the session Id
+     * @return the raw response from the server
+     * @throws WebXConnectionException thrown if the request fails
+     * @throws WebXDisconnectedException thrown if the server is disconnected
+     * @throws WebXCommunicationException thrown if the communication fails
+     */
+    private String sendConnectionRequest(final String request, final SessionId sessionId) throws WebXConnectionException, WebXDisconnectedException, WebXCommunicationException {
+        String response = this.transport.sendRequest(request).toString();
+        if (response == null) {
+            throw new WebXConnectionException("WebX Server returned a null connection response");
+
+        } else if (response.isEmpty()) {
+            throw new WebXConnectionException(String.format("WebX Server refused connection with sessionId %s", sessionId.hexString()));
+        }
+
+        return response;
     }
 
     /**

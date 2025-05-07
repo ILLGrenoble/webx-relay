@@ -26,12 +26,16 @@ import java.util.Base64;
  */
 public class WebXClientConfiguration {
 
+    private final static String DEFAULT_WEBX_CLIENT_VERSION = "1.7.1"; // last version that didn't automatically send the client version
+
     private final String username;
     private final String password;
     private final String sessionId;
     private final Integer screenWidth;
     private final Integer screenHeight;
     private final String keyboardLayout;
+
+    private final String clientVersion;
 
     /**
      * Returns a configuration containing login details, screen size and keyboard layout. This will result in a new session being created by the WebX Router (if there isn't
@@ -41,10 +45,11 @@ public class WebXClientConfiguration {
      * @param screenWidth Desired screen width for a new X11 session
      * @param screenHeight Desired screen height for a new X11 session
      * @param keyboardLayout The requested keyboard layout
+     * @param clientVersion The WebX Client version
      * @return The WebXClientConfiguration
      */
-    public static WebXClientConfiguration ForLogin(final String username, final String password, final Integer screenWidth, final Integer screenHeight, final String keyboardLayout) {
-        return new WebXClientConfiguration(username, password, screenWidth, screenHeight, keyboardLayout);
+    public static WebXClientConfiguration ForLogin(final String username, final String password, final Integer screenWidth, final Integer screenHeight, final String keyboardLayout, final String clientVersion) {
+        return new WebXClientConfiguration(username, password, screenWidth, screenHeight, keyboardLayout, clientVersion);
     }
 
     /**
@@ -54,10 +59,11 @@ public class WebXClientConfiguration {
      * @param password The password
      * @param screenWidth Desired screen width for a new X11 session
      * @param screenHeight Desired screen height for a new X11 session
+     * @param clientVersion The WebX Client version
      * @return The WebXClientConfiguration
      */
-    public static WebXClientConfiguration ForLogin(final String username, final String password, final Integer screenWidth, final Integer screenHeight) {
-        return new WebXClientConfiguration(username, password, screenWidth, screenHeight, "gb");
+    public static WebXClientConfiguration ForLogin(final String username, final String password, final Integer screenWidth, final Integer screenHeight, final String clientVersion) {
+        return new WebXClientConfiguration(username, password, screenWidth, screenHeight, "gb", clientVersion);
     }
 
     /**
@@ -65,27 +71,30 @@ public class WebXClientConfiguration {
      * one already running for the user).
      * @param username The username
      * @param password The password
+     * @param clientVersion The WebX Client version
      * @return The WebXClientConfiguration
      */
-    public static WebXClientConfiguration ForLogin(final String username, final String password) {
-        return new WebXClientConfiguration(username, password, 1920, 1024, "gb");
+    public static WebXClientConfiguration ForLogin(final String username, final String password, final String clientVersion) {
+        return new WebXClientConfiguration(username, password, 1920, 1024, "gb", clientVersion);
     }
 
     /**
      * Returns a configuration containing a sessionId. The WebX Router will attempt to connect to an existing session with an identical Id.
      * @param sessionId Session Id of a running session.
+     * @param clientVersion The WebX Client version
      * @return The WebXClientConfiguration
      */
-    public static WebXClientConfiguration ForExistingSession(final String sessionId) {
-        return new WebXClientConfiguration(sessionId);
+    public static WebXClientConfiguration ForExistingSession(final String sessionId, final String clientVersion) {
+        return new WebXClientConfiguration(sessionId, clientVersion);
     }
 
     /**
      * Returns a configuration for a standalone session.
+     * @param clientVersion The WebX Client version
      * @return The WebXClientConfiguration
      */
-    public static WebXClientConfiguration ForStandaloneSession() {
-        return new WebXClientConfiguration("00000000000000000000000000000000");
+    public static WebXClientConfiguration ForStandaloneSession(final String clientVersion) {
+        return new WebXClientConfiguration("00000000000000000000000000000000", clientVersion);
     }
 
     /**
@@ -96,27 +105,30 @@ public class WebXClientConfiguration {
      * @param screenWidth Desired screen width for a new X11 session
      * @param screenHeight Desired screen height for a new X11 session
      * @param keyboardLayout The requested keyboard layout
+     * @param clientVersion The WebX Client version
      */
-    private WebXClientConfiguration(final String username, final String password, final Integer screenWidth, final Integer screenHeight, final String keyboardLayout) {
+    private WebXClientConfiguration(final String username, final String password, final Integer screenWidth, final Integer screenHeight, final String keyboardLayout, final String clientVersion) {
         this.username = username;
         this.password = password;
         this.screenWidth = screenWidth;
         this.screenHeight = screenHeight;
         this.keyboardLayout = keyboardLayout;
         this.sessionId = null;
+        this.clientVersion = clientVersion;
     }
 
     /**
      * Private constructor containing a sessionId. The WebX Router will attempt to connect to an existing session with an identical Id.
      * @param sessionId Session Id of a running session.
      */
-    private WebXClientConfiguration(final String sessionId) {
+    private WebXClientConfiguration(final String sessionId, final String clientVersion) {
         this.username = null;
         this.password = null;
         this.screenWidth = null;
         this.screenHeight = null;
         this.keyboardLayout = null;
         this.sessionId = sessionId;
+        this.clientVersion = clientVersion;
     }
 
     /**
@@ -165,6 +177,10 @@ public class WebXClientConfiguration {
      */
     public String getSessionId() {
         return sessionId;
+    }
+
+    public String getClientVersion() {
+        return clientVersion == null ? DEFAULT_WEBX_CLIENT_VERSION : clientVersion;
     }
 
     /**
