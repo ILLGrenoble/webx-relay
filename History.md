@@ -1,3 +1,7 @@
+1.5.0 07/05/2025
+================
+ * Send the webx-client version in the ClientConfiguration. Usable in the future for server-client compatibility testing.
+
 1.4.0 06/05/2025
 ================
  * Provide public access to WebX message header lengths and NOP message data.
