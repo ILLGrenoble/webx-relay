@@ -46,7 +46,7 @@
  * Single session ping thread per session. Single message listener for the subscriber (the host).
  * Refactoring code. Adding WebXSession. Don't create client until connection is fully made. 
 
-0.6.0 12/03/2025[History.md](History.md)
+0.6.0 12/03/2025
 ================
  * Remove sending message queue size to client
 
