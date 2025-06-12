@@ -34,10 +34,21 @@ import java.util.List;
  */
 public class WebXSession {
 
+    /**
+     * Defines an interface to handle errors that occur in the session.
+     */
+    interface OnErrorHandler {
+        /**
+         * Called when an error occurs on the session
+         * @param session the WebXSession that encountered the error
+         */
+        void onError(final WebXSession session);
+    }
     private static final Logger logger = LoggerFactory.getLogger(WebXSession.class);
 
     private final SessionId sessionId;
     private final Transport transport;
+    private final OnErrorHandler onErrorHandler;
 
     private final List<WebXClient> clients = new ArrayList<>();
 
@@ -48,13 +59,16 @@ public class WebXSession {
      * with a callback to handle ping failures and interrupt the client message queue.
      * @param sessionId the unique Session Id
      * @param transport the ZMQ transport layer
+     * @param onErrorHandler the callback function to handle errors during session validation
      */
-    WebXSession(final SessionId sessionId, final Transport transport) {
+    WebXSession(final SessionId sessionId, final Transport transport, final OnErrorHandler onErrorHandler) {
         this.sessionId = sessionId;
         this.transport = transport;
+        this.onErrorHandler = onErrorHandler;
         this.sessionValidator = new WebXSessionValidator(this.sessionId, transport, (error -> {
-            logger.error("Session validation error: {}", error);
+            logger.warn("Session validation error: {}", error);
             this.sendMessageToClients(new Message.InterruptMessage("Failed to ping WebX Session"));
+            this.onErrorHandler.onError(this);
         }));
     }
 
@@ -87,7 +101,7 @@ public class WebXSession {
             }
 
         } catch (InterruptedException exception) {
-            logger.error("Stop of relay message listener and client instruction threads interrupted", exception);
+            logger.warn("Stop of relay message listener and client instruction threads interrupted", exception);
         }
     }
 
@@ -109,6 +123,14 @@ public class WebXSession {
     public synchronized void onClientDisconnected(final WebXClient client) {
         client.onDisconnected();
         this.clients.remove(client);
+    }
+
+    /**
+     * Returns a list of all connected clients to the session
+     * @return a list of all connected clients to the session
+     */
+    public List<WebXClient> getClients() {
+        return new ArrayList<>(this.clients);
     }
 
     /**

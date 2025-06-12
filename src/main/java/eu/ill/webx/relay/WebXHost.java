@@ -125,7 +125,7 @@ public class WebXHost {
             final ClientIdentifier clientIdentifier = this.connectClient(sessionId, clientConfiguration.getClientVersion());
 
             final WebXSession session = this.getSession(sessionId).orElseGet(() -> {
-               final WebXSession webXSession = new WebXSession(sessionId, transport);
+               final WebXSession webXSession = new WebXSession(sessionId, transport, this::onSessionError);
                webXSession.start();
 
                this.addSession(webXSession);
@@ -236,11 +236,11 @@ public class WebXHost {
             return new SessionId(sessionIdString);
 
         } catch (WebXCommunicationException e) {
-            logger.error("Cannot start session: communication failed with the WebX Server");
+            logger.warn("Cannot start session: communication failed with the WebX Server");
             throw new WebXConnectionException("Communication failed with the WebX Server when creating WebX session");
 
         } catch (WebXDisconnectedException e) {
-            logger.error("Cannot start session: WebX Server is disconnected");
+            logger.warn("Cannot start session: WebX Server is disconnected");
             throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
         }
     }
@@ -266,15 +266,15 @@ public class WebXHost {
             return new ClientIdentifier(clientIndex, clientId);
 
         } catch (NumberFormatException exception) {
-            logger.error("Cannot connect client: Failed to parse client id and index");
+            logger.warn("Cannot connect client: Failed to parse client id and index");
             throw new WebXConnectionException("Failed to parse client id and index");
 
         } catch (WebXCommunicationException e) {
-            logger.error("Cannot connect client: Communication with the WebX Server failed");
+            logger.warn("Cannot connect client: Communication with the WebX Server failed");
             throw new WebXConnectionException("Communication with the WebX Server failed when creating WebX session");
 
         } catch (WebXDisconnectedException e) {
-            logger.error("Cannot connect client: WebX Server is disconnected");
+            logger.warn("Cannot connect client: WebX Server is disconnected");
             throw new WebXConnectionException("WebX Server disconnected when creating WebX session");
         }
     }
@@ -359,7 +359,7 @@ public class WebXHost {
                 final String request = String.format("disconnect,%s,%s", client.getSessionId().hexString(), client.getClientIdentifier().clientIdString());
                 SocketResponse response = this.transport.sendRequest(request);
                 if (response == null) {
-                    logger.error("Failed to get response from WebX server");
+                    logger.warn("Failed to get response from WebX server");
 
                 } else {
                     logger.info("Client (Id \"{}\" and index \"{}\") disconnected from WebX session \"{}\"", client.getClientIdentifier().clientIdString(), client.getClientIdentifier().clientIndexString(), client.getSessionId().hexString());
@@ -372,6 +372,20 @@ public class WebXHost {
                 logger.warn("Cannot disconnect client {}: WebX Server is disconnected", client.getClientIdentifier().clientIdString());
             }
         }
+    }
+
+    /**
+     * Callback when a session is in error. This will close all clients and remove the session.
+     * @param session the session that is in error
+     */
+    private void onSessionError(final WebXSession session) {
+        session.getClients().forEach(client -> {
+            logger.warn("Session {} in error, closing all clients and removing session", session.getSessionId().hexString());
+            this.onClientDisconnected(client);
+        });
+
+        // Ensure that any sessions that are empty are cleaned up
+        this.cleanupSessions();
     }
 
 }

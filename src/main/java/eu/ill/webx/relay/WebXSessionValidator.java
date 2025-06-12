@@ -110,26 +110,33 @@ public class WebXSessionValidator extends Thread {
                         SocketResponse response = this.transport.sendRequest("ping," + this.sessionId.hexString());
 
                         if (response.toString() == null) {
-                            this.onErrorHandler.onError(String.format("Failed to ping webX Session %s", this.sessionId.hexString()));
+                            this.onError(String.format("Failed to ping webX Session %s", this.sessionId.hexString()));
 
                         } else {
                             String[] responseElements = response.toString().split(",");
 
                             if (responseElements[0].equals("pang")) {
-                                this.onErrorHandler.onError(String.format("Failed to ping webX Session %s: %s", this.sessionId.hexString(), responseElements[2]));
+                                this.onError(String.format("Failed to ping webX Session %s: %s", this.sessionId.hexString(), responseElements[2]));
                             }
                         }
 
                     } catch (WebXCommunicationException e) {
-                        this.onErrorHandler.onError(String.format("Failed to communicate with the WebX Server when sending ping to session %s", this.sessionId.hexString()));
+                        this.onError(String.format("Failed to communicate with the WebX Server when sending ping to session %s", this.sessionId.hexString()));
 
                     } catch (WebXDisconnectedException e) {
-                        this.onErrorHandler.onError(String.format("Failed to get response from connector ping to session %s", this.sessionId.hexString()));
+                        this.onError(String.format("Failed to get response from connector ping to session %s", this.sessionId.hexString()));
                     }
                 }
 
             } catch (InterruptedException ignored) {
             }
+        }
+    }
+
+    private void onError(String error) {
+        this.running = false;
+        if (this.onErrorHandler != null) {
+            this.onErrorHandler.onError(error);
         }
     }
 }
