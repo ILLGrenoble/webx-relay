@@ -38,7 +38,16 @@ public class WebXTunnel {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXTunnel.class);
 
+    /**
+     * The length of the WebX message header
+     * This is the same as the Message.HEADER_LENGTH but more publicly available.
+     */
     public static final int WEBX_MESSAGE_HEADER_LENGTH = Message.HEADER_LENGTH;
+
+    /**
+     * The raw data for a NOP message (used to keep the connection alive).
+     * This is the same as the Message.NOP_MESSAGE_DATA but more publicly available.
+     */
     public static final byte[] WEBX_NOP_MESSAGE_DATA = Message.NOP_MESSAGE_DATA;
 
     private WebXHost host;

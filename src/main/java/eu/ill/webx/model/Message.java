@@ -66,9 +66,18 @@ public class Message implements Comparable<Message> {
         OTHER
     }
 
+    /**
+     * The length of the WebX message header in bytes.
+     * This is used to determine the length of the message data.
+     */
     public final static int HEADER_LENGTH = 48;
+
     private final static int TYPE_OFFSET = 32;
 
+    /**
+     * The raw data for a NOP message (used to keep the connection alive).
+     * This is an empty message with the header length set to 48 bytes.
+     */
     public final static byte[] NOP_MESSAGE_DATA = new byte[HEADER_LENGTH];
 
     private final byte[] data;

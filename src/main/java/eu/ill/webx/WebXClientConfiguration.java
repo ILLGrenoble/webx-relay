@@ -179,6 +179,10 @@ public class WebXClientConfiguration {
         return sessionId;
     }
 
+    /**
+     * Returns the client version
+     * @return The client version
+     */
     public String getClientVersion() {
         return clientVersion == null ? DEFAULT_WEBX_CLIENT_VERSION : clientVersion;
     }
