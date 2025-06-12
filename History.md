@@ -1,3 +1,8 @@
+1.6.0 12/06/2025
+================
+ * Improve handling of session errors (ping fails): Ensure that the pinging stops, all clients are disconnected and that the session is removed from the host (disconnecting the host if it is the last session).
+ * Change all logged errors to warning.
+
 1.5.1 07/05/2025
 ================
  * Fix client connection with legacy router when sending webx-client version.
