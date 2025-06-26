@@ -39,6 +39,24 @@ import zmq.util.Z85;
  * Sessions are created with user credentials, screen size and keyboard layout parameters. On success a session Id is returned.
  */
 public class SessionChannel {
+    private enum CreationResponseCode {
+        SUCCESS,
+        INVALID_REQUEST_PARAMETERS,
+        CREATION_ERROR,
+        UNKNOWN_ERROR;
+
+        public static CreationResponseCode fromInteger(int x) {
+            return switch (x) {
+                case 0 -> SUCCESS;
+                case 1 -> INVALID_REQUEST_PARAMETERS;
+                case 2 -> CREATION_ERROR;
+                default -> UNKNOWN_ERROR;
+            };
+        }
+    }
+
+    private record SessionCreationResponse(CreationResponseCode responseCode, String payload) {
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(SessionChannel.class);
 
@@ -120,7 +138,13 @@ public class SessionChannel {
         final String request = String.format("create,%s", clientConfigurationConnectionString);
 
         SocketResponse response = this.sendRequest(request);
-        return this.parseSessionCreationResponse(response);
+
+        final SessionCreationResponse sessionCreationResponse = this.parseSessionCreationResponse(response);
+        if (sessionCreationResponse.responseCode.equals(CreationResponseCode.SUCCESS)) {
+            return sessionCreationResponse.payload;
+        }
+
+        throw new WebXConnectionException(String.format("Couldn't create WebX session (response code %s): %s", sessionCreationResponse.responseCode, sessionCreationResponse.payload));
     }
 
     /**
@@ -136,19 +160,23 @@ public class SessionChannel {
             return this.startSession(clientConfiguration);
         }
 
-        try {
-            final String clientConfigurationConnectionString = clientConfiguration.connectionString();
-            final String engineConfigurationConnectionString = engineConfiguration.connectionString();
-            String request = String.format("create,%s,%s", clientConfigurationConnectionString, engineConfigurationConnectionString);
+        final String clientConfigurationConnectionString = clientConfiguration.connectionString();
+        final String engineConfigurationConnectionString = engineConfiguration.connectionString();
+        String request = String.format("create,%s,%s", clientConfigurationConnectionString, engineConfigurationConnectionString);
 
-            SocketResponse response = this.sendRequest(request);
-            return this.parseSessionCreationResponse(response);
+        SocketResponse response = this.sendRequest(request);
 
-        } catch (WebXConnectionException e) {
-            logger.warn("Failed to start session with engine configuration, using legacy connection method. NOTE: engine parameters will be ignored.");
+        final SessionCreationResponse sessionCreationResponse = this.parseSessionCreationResponse(response);
+        if (sessionCreationResponse.responseCode.equals(CreationResponseCode.SUCCESS)) {
+            return sessionCreationResponse.payload;
+
+        } else if (sessionCreationResponse.responseCode.equals(CreationResponseCode.INVALID_REQUEST_PARAMETERS)) {
+            logger.warn("Failed to start session with engine configuration (response code {}), using legacy connection method. NOTE: engine parameters will be ignored.", sessionCreationResponse.responseCode);
             // try legacy connection format
             return this.startSession(clientConfiguration);
         }
+
+        throw new WebXConnectionException(String.format("Couldn't create WebX session (response code %s): %s", sessionCreationResponse.responseCode, sessionCreationResponse.payload));
     }
 
     /**
@@ -157,17 +185,13 @@ public class SessionChannel {
      * @return The session Id string
      * @throws WebXConnectionException Thrown if the response is invalid or an error occurs with the handling
      */
-    private String parseSessionCreationResponse(SocketResponse response) throws WebXConnectionException {
+    private SessionCreationResponse parseSessionCreationResponse(SocketResponse response) throws WebXConnectionException {
         try {
             String responseString = response.toString();
             String[] responseData = responseString.split(",");
             int responseCode = Integer.parseInt(responseData[0]);
-            if (responseCode == 0) {
-                return responseData[1];
 
-            } else {
-                throw new WebXConnectionException(String.format("Couldn't create WebX session: session response invalid (response code %d)", responseCode));
-            }
+            return new SessionCreationResponse(CreationResponseCode.fromInteger(responseCode), responseData[1]);
 
         } catch (NullPointerException exception) {
             throw new WebXConnectionException(String.format("Failed to parse response from WebX Router: %s", exception.getMessage()));
