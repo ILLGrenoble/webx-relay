@@ -1,3 +1,9 @@
+1.7.0 30/06/2025
+================
+ * Update readme
+ * Test for incorrect params when creating a webx session
+ * Manage multiple response codes from the WebX Router when creating a session.
+
 1.6.0 12/06/2025
 ================
  * Improve handling of session errors (ping fails): Ensure that the pinging stops, all clients are disconnected and that the session is removed from the host (disconnecting the host if it is the last session).
