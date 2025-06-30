@@ -43,6 +43,7 @@ public class SessionChannel {
         SUCCESS,
         INVALID_REQUEST_PARAMETERS,
         CREATION_ERROR,
+        AUTHENTICATION_ERROR,
         UNKNOWN_ERROR;
 
         public static CreationResponseCode fromInteger(int x) {
@@ -50,6 +51,7 @@ public class SessionChannel {
                 case 0 -> SUCCESS;
                 case 1 -> INVALID_REQUEST_PARAMETERS;
                 case 2 -> CREATION_ERROR;
+                case 3 -> AUTHENTICATION_ERROR;
                 default -> UNKNOWN_ERROR;
             };
         }
