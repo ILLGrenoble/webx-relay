@@ -114,6 +114,7 @@ public class WebXSession {
      * If the session is running we connect the client immediately to the WebX Engine otherwise we wait.
      * @param clientVersion the version of the client
      * @return a WebXClient object
+     * @throws WebXConnectionException thrown if the connection request fails
      */
     public synchronized WebXClient createClient(final String clientVersion) throws WebXConnectionException {
         WebXClient client;

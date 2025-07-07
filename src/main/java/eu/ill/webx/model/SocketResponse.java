@@ -33,6 +33,7 @@ public record SocketResponse(byte[] data) {
 
     /**
      * Determines if the response is empty.
+     * @return true if the response has no data
      */
     public boolean isEmpty() {
         return this.data == null || this.data.length == 0;

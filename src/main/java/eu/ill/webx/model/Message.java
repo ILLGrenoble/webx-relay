@@ -213,7 +213,8 @@ public class Message implements Comparable<Message> {
      */
     public static class ConnectionMessage extends Message {
         /**
-         * Default constructor
+         * Constructor
+         * @param isStarting specifies whether the session is starting or running
          */
         public ConnectionMessage(boolean isStarting) {
             super(GenerateMessageData(isStarting));
