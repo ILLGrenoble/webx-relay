@@ -30,4 +30,11 @@ public record SocketResponse(byte[] data) {
     public String toString() {
         return this.data == null ? null : new String(this.data);
     }
+
+    /**
+     * Determines if the response is empty.
+     */
+    public boolean isEmpty() {
+        return this.data == null || this.data.length == 0;
+    }
 }

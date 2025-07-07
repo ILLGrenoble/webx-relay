@@ -102,8 +102,8 @@ public class WebXTunnel {
                 logger.debug("Creating client for {}...", this.host.getHostname());
                 this.client = this.host.onClientConnection(clientConfiguration, engineConfiguration);
 
-                // Send the connection message to the client
-                this.client.onMessage(new Message.ConnectionMessage());
+                // Send the connection message to the client (client is running/fully connected if it has a valid client identifier)
+                this.client.onMessage(new Message.ConnectionMessage(this.client.getClientIdentifier() == null));
                 logger.info("... client created.");
 
             } catch (WebXConnectionException error) {

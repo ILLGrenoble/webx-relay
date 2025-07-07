@@ -215,15 +215,31 @@ public class Message implements Comparable<Message> {
         /**
          * Default constructor
          */
-        public ConnectionMessage() {
-            super(GenerateMessageData());
+        public ConnectionMessage(boolean isStarting) {
+            super(GenerateMessageData(isStarting));
         }
 
-        private static byte[] GenerateMessageData() {
-            byte[] data = new byte[HEADER_LENGTH];
+        private static byte[] GenerateMessageData(boolean isStarting) {
+            byte[] data = new byte[HEADER_LENGTH + 4];
             // Set the message type to 1 (Connection)
             ByteBuffer.wrap(data, TYPE_OFFSET, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(1);
+
+            // Add an isStarting flag to the message data. For compatibility with legacy clients set this to 0 if the client is fully connected, and 1 if the client is starting.
+            ByteBuffer.wrap(data, HEADER_LENGTH, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(isStarting ? 1 : 0);
             return data;
         }
     }
+
+    /**
+     * Creates a Nop message
+     */
+    public static class NopMessage extends Message {
+        /**
+         * Default constructor
+         */
+        public NopMessage() {
+            super(NOP_MESSAGE_DATA);
+        }
+    }
+
 }

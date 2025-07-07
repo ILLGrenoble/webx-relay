@@ -23,6 +23,7 @@ import eu.ill.webx.exceptions.WebXCommunicationException;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ConnectionData;
+import eu.ill.webx.model.SessionCreation;
 import eu.ill.webx.model.SocketResponse;
 import org.zeromq.ZContext;
 
@@ -167,12 +168,12 @@ public class Transport {
      * Sends a request to the session channel to start a new session with connection credentials and engine configuration parameters
      * @param configuration The configuration for the session (login, screen size and keyboard)
      * @param engineConfiguration The configuration for the WebX Engine
-     * @return The session Id string
+     * @return a SessionCreation object containing a unique Session Id and the creation status
      * @throws WebXCommunicationException thrown if an error occurs with the socket communication
      * @throws WebXDisconnectedException thrown if the server is not running in standalone mode
      * @throws WebXConnectionException Thrown if the connection response is invalid or an error occurs with the handling
      */
-    public synchronized String startSession(final WebXClientConfiguration configuration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXConnectionException {
+    public synchronized SessionCreation startSession(final WebXClientConfiguration configuration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXConnectionException {
         if (!this.isStandalone) {
             return this.sessionChannel.startSession(configuration, engineConfiguration);
 

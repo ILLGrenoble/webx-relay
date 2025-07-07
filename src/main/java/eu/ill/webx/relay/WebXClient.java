@@ -39,31 +39,38 @@ public class WebXClient {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXClient.class);
 
-    private final ClientIdentifier clientIdentifier;
+    private ClientIdentifier clientIdentifier;
     private final WebXSession session;
+    private final String clientVersion;
 
     private final PriorityBlockingQueue<Message> messageQueue = new PriorityBlockingQueue<>();
 
     private boolean connected = true;
+    private boolean ready = false;
 
     private final ByteBuffer instructionPrefix = ByteBuffer.allocate(20).order(LITTLE_ENDIAN);
 
     /**
-     * Constructor taking a unique client identifier and parent session
+     * Constructor taking a session: indicates that the client is connected but not ready
+     * @param session The parent session
+     * @param clientVersion The version of the client
+     */
+    WebXClient(final WebXSession session, final String clientVersion) {
+        this.clientIdentifier = null;
+        this.session = session;
+        this.clientVersion = clientVersion;
+    }
+
+    /**
+     * Constructor taking a unique client identifier (obtained from the server) and parent session
      * @param clientIdentifier The unique identifier
      * @param session The parent session
+     * @param clientVersion The version of the client
      */
-    WebXClient(final ClientIdentifier clientIdentifier, final WebXSession session) {
-        this.clientIdentifier = clientIdentifier;
+    WebXClient(final ClientIdentifier clientIdentifier, final WebXSession session, final String clientVersion) {
         this.session = session;
-
-        // Set the sessionId in the instruction prefix
-        this.instructionPrefix.put(0, session.getSessionId().bytes(), 0, 16);
-
-        // Add the clientId to the instruction prefix
-        ByteBuffer clientIdBuffer = ByteBuffer.allocate(4).order(LITTLE_ENDIAN);
-        clientIdBuffer.putInt(clientIdentifier.clientId());
-        this.instructionPrefix.put(16, clientIdBuffer.array(), 0, 4);
+        this.clientVersion = clientVersion;
+        this.setClientIdentifier(clientIdentifier);
     }
 
     /**
@@ -75,6 +82,31 @@ public class WebXClient {
     }
 
     /**
+     * Returns the client version
+     * @return the client version
+     */
+    public String getClientVersion() {
+        return clientVersion;
+    }
+
+    /**
+     * Sets the client identifier indicating that this client is ready to process messages and instructions
+     * @param clientIdentifier The unique identifier given by the server
+     */
+    public void setClientIdentifier(ClientIdentifier clientIdentifier) {
+        this.clientIdentifier = clientIdentifier;
+        this.ready = true;
+
+        // Set the sessionId in the instruction prefix
+        this.instructionPrefix.put(0, session.getSessionId().bytes(), 0, 16);
+
+        // Add the clientId to the instruction prefix
+        ByteBuffer clientIdBuffer = ByteBuffer.allocate(4).order(LITTLE_ENDIAN);
+        clientIdBuffer.putInt(clientIdentifier.clientId());
+        this.instructionPrefix.put(16, clientIdBuffer.array(), 0, 4);
+    }
+
+    /**
      * Returns the session Id
      * @return the session Id
      */
@@ -83,7 +115,7 @@ public class WebXClient {
     }
 
     /**
-     * Called by the session when the client is disconneted. This sends a message to the message queue to unblock any calls that are active to the getMessage method
+     * Called by the session when the client is disconnected. This sends a message to the message queue to unblock any calls that are active to the getMessage method
      */
     public void onDisconnected() {
         if (this.connected) {
@@ -98,6 +130,14 @@ public class WebXClient {
      */
     public boolean isConnected() {
         return connected;
+    }
+
+    /**
+     * Returns true if the client is ready to handle messages and instructions
+     * @return true if the client is ready
+     */
+    public boolean isReady() {
+        return ready;
     }
 
     /**
@@ -128,7 +168,7 @@ public class WebXClient {
      * @param instructionData the binary instruction data from the client
      */
     public void sendInstruction(byte[] instructionData) {
-        if (this.connected) {
+        if (this.connected && this.ready) {
             logger.trace("Got instruction of length {}", instructionData.length);
 
             // Set the sessionId and clientId at the beginning
@@ -191,6 +231,10 @@ public class WebXClient {
      * @return true if the client should receive the message
      */
     boolean matchesMessageIndexMask(final byte[] messageData) {
+        if (this.clientIdentifier == null) {
+            return false;
+        }
+
         if (messageData.length < 24) {
             return false;
         }
