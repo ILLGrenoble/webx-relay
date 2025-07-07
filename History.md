@@ -1,3 +1,10 @@
+1.8.0 07/07/2025
+================
+ * Perform asynchronous creation commands (Backward compatible with older routers)
+ * Add create_async call to router that returns after Xorg has been spawned
+ * Poll status of router to determine when session is fully available
+ * Send Connection messages with running status of session. 
+
 1.7.0 30/06/2025
 ================
  * Update readme
