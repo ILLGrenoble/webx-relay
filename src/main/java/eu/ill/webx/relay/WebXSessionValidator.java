@@ -178,8 +178,13 @@ public class WebXSessionValidator extends Thread {
                 logger.trace("Requesting status of session {}", this.sessionId.hexString());
                 SocketResponse response = this.transport.sendRequest("status," + this.sessionId.hexString());
 
-                if (response.toString() == null) {
-                    this.onError(String.format("Failed to get status of WebX Session %s", this.sessionId.hexString()));
+                if (response.isEmpty()) {
+                    // Empty response: probably due to the fact that the router cannot do async creation and the status command doesn't exist
+
+                    // Have to assume the session is running
+                    logger.info("Failed to get response from status command. Assuming router does not support async creation and that session {} is running", sessionId);
+                    this.creationStatus = SessionCreation.CreationStatus.RUNNING;
+                    this.onCreationStatusUpdateHandler.onCreationStatusUpdate(this.creationStatus);
 
                 } else {
                     String[] responseElements = response.toString().split(",");
