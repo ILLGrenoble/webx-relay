@@ -1,3 +1,7 @@
+1.8.1 07/07/2025
+================
+ * Test for empty response from the status request. Assume session running if empty.
+
 1.8.0 07/07/2025
 ================
  * Perform asynchronous creation commands (Backward compatible with older routers)
