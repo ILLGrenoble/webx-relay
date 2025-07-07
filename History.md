@@ -1,6 +1,7 @@
 1.8.2 07/07/2025
 ================
- * 
+ * Refactoring to handle response of status command.
+ * Immediately attempt to obtain the status of a session if the creation configuration includes a sessionId rather than credentials. Handle legacy router responses.
 
 1.8.1 07/07/2025
 ================
