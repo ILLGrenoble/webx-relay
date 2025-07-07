@@ -1,3 +1,7 @@
+1.8.2 07/07/2025
+================
+ * 
+
 1.8.1 07/07/2025
 ================
  * Test for empty response from the status request. Assume session running if empty.

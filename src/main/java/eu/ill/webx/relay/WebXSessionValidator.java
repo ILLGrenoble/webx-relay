@@ -22,6 +22,7 @@ import eu.ill.webx.exceptions.WebXCommunicationException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SessionCreation;
 import eu.ill.webx.model.SessionId;
+import eu.ill.webx.model.SessionStatusResponse;
 import eu.ill.webx.model.SocketResponse;
 import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
@@ -176,30 +177,27 @@ public class WebXSessionValidator extends Thread {
         if (this.running) {
             try {
                 logger.trace("Requesting status of session {}", this.sessionId.hexString());
-                SocketResponse response = this.transport.sendRequest("status," + this.sessionId.hexString());
+                SessionStatusResponse response = new SessionStatusResponse(this.transport.sendRequest("status," + this.sessionId.hexString()));
 
-                if (response.isEmpty()) {
-                    // Empty response: probably due to the fact that the router cannot do async creation and the status command doesn't exist
+                switch (response.getStatus()) {
+                    case EMPTY -> {
+                        // Empty response: probably due to the fact that the router cannot do async creation and the status command doesn't exist
 
-                    // Have to assume the session is running
-                    logger.info("Failed to get response from status command. Assuming router does not support async creation and that session {} is running", sessionId);
-                    this.creationStatus = SessionCreation.CreationStatus.RUNNING;
-                    this.onCreationStatusUpdateHandler.onCreationStatusUpdate(this.creationStatus);
-
-                } else {
-                    String[] responseElements = response.toString().split(",");
-                    if (responseElements.length < 2) {
+                        // Have to assume the session is running
+                        logger.info("Failed to get response from status command. Assuming router does not support async creation and that session {} is running", sessionId.hexString());
+                        this.creationStatus = SessionCreation.CreationStatus.RUNNING;
+                        this.onCreationStatusUpdateHandler.onCreationStatusUpdate(this.creationStatus);
+                    }
+                    case ERROR -> {
                         this.onError(String.format("Invalid response from WebX Server when requesting status of session %s: %s", this.sessionId.hexString(), response));
-
-                    } else {
-                        String sessionId = responseElements[0];
-                        String createStatusCode = responseElements[1];
-                        SessionCreation.CreationStatus creationStatus = SessionCreation.CreationStatus.fromInteger(Integer.parseInt(createStatusCode));
-
-                        if (creationStatus.equals(SessionCreation.CreationStatus.RUNNING)) {
-                            logger.info("Session {} is now running", sessionId);
-                            this.creationStatus = creationStatus;
-                        }
+                    }
+                    case RUNNING -> {
+                        logger.info("Session {} is now running", sessionId);
+                        this.creationStatus = response.getCreationStatus();
+                        this.onCreationStatusUpdateHandler.onCreationStatusUpdate(creationStatus);
+                    }
+                    case STARTING -> {
+                        this.creationStatus = response.getCreationStatus();
                         this.onCreationStatusUpdateHandler.onCreationStatusUpdate(creationStatus);
                     }
                 }

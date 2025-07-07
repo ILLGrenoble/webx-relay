@@ -25,6 +25,7 @@ import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SessionCreation;
 import eu.ill.webx.model.SessionId;
+import eu.ill.webx.model.SessionStatusResponse;
 import eu.ill.webx.model.SocketResponse;
 import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
@@ -117,7 +118,10 @@ public class WebXHost {
 
             } else {
                 logger.info("Connecting to existing WebX session using sessionId \"{}\"", clientConfiguration.getSessionId());
-                sessionCreation = new SessionCreation(new SessionId(clientConfiguration.getSessionId()), SessionCreation.CreationStatus.UNKNOWN);
+
+                // Try to get status of session using sessionId
+                SessionCreation.CreationStatus creationStatus = this.getSessionStatus(clientConfiguration.getSessionId());
+                sessionCreation = new SessionCreation(new SessionId(clientConfiguration.getSessionId()), creationStatus);
             }
 
             SessionId sessionId = sessionCreation.sessionId();
@@ -219,6 +223,43 @@ public class WebXHost {
         this.getSession(sessionId).ifPresent(session -> {
             session.onMessage(messageData);
         });
+    }
+
+    /**
+     * Sends requests to the WebX Router to get the status of a session.
+     * @param sessionId The session Id
+     * @return a CreationStatus of the session
+     * @throws WebXConnectionException thrown if the session status request fails
+     */
+    private SessionCreation.CreationStatus getSessionStatus(final String sessionId) throws WebXConnectionException {
+        try {
+            logger.debug("Attempting to get session status for session id \"{}\"", sessionId);
+            SessionStatusResponse response = new SessionStatusResponse(this.transport.sendRequest("status," + sessionId));
+            switch (response.getStatus()) {
+                case EMPTY -> {
+                    // If status command returns empty response then legacy router is in use: assume that the creation status is RUNNING: session will attempt to connect client immediately
+                    logger.debug("Empty session status response for session id \"{}\": legacy router", sessionId);
+                    return SessionCreation.CreationStatus.RUNNING;
+                }
+                case ERROR -> {
+                    // If the status command returns an error then the session Id is not valid  : throw connection exception
+                    logger.warn("Session status returns an error for session id \"{}\": session Id is invalid", sessionId);
+                    throw new WebXConnectionException(String.format("WebX session with Id \"%s\" is no longer valid", sessionId));
+                }
+                default -> {
+                    // Otherwise we have a running or starting status
+                    logger.warn("Session status for session id \"{}\" is {}", sessionId, response.getStatus());
+                    return response.getCreationStatus();
+                }
+            }
+        } catch (WebXCommunicationException e) {
+            logger.warn("Cannot get session status: communication failed with the WebX Server");
+            throw new WebXConnectionException("Communication failed with the WebX Server when getting WebX session status");
+
+        } catch (WebXDisconnectedException e) {
+            logger.warn("Cannot get session status: WebX Server is disconnected");
+            throw new WebXConnectionException("WebX Server disconnected when getting WebX session status");
+        }
     }
 
     /**
