@@ -155,8 +155,9 @@ public class SessionChannel {
 
         // Check for empty response (command unknown) and retry
         if (response.isEmpty() && this.routerCanAsync) {
+            logger.debug("Response from async creation was empty: assuming legacy WebX Router and attempting synchronous creation command");
             this.routerCanAsync = false;
-            this.startSession(clientConfiguration);
+            return this.startSession(clientConfiguration);
         }
 
         final SessionCreationResponse sessionCreationResponse = this.parseSessionCreationResponse(response);
@@ -188,6 +189,7 @@ public class SessionChannel {
 
         // Check for empty response (command unknown) and retry
         if (response.isEmpty() && this.routerCanAsync) {
+            logger.debug("Response from async creation was empty: assuming legacy WebX Router and attempting synchronous creation command");
             this.routerCanAsync = false;
             return this.startSession(clientConfiguration, engineConfiguration);
         }

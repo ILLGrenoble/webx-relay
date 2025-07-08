@@ -1,3 +1,7 @@
+1.8.4 08/07/2025
+================
+ * Add logging when async creation fails and ensure startSession returns correctly.
+
 1.8.3 08/07/2025
 ================
  * Fix logging message (was warn now debug)
