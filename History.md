@@ -1,3 +1,7 @@
+1.8.3 08/07/2025
+================
+ * Fix logging message (was warn now debug)
+
 1.8.2 07/07/2025
 ================
  * Refactoring to handle response of status command.
