@@ -248,7 +248,7 @@ public class WebXHost {
                 }
                 default -> {
                     // Otherwise we have a running or starting status
-                    logger.warn("Session status for session id \"{}\" is {}", sessionId, response.getStatus());
+                    logger.debug("Session status for session id \"{}\" is {}", sessionId, response.getStatus());
                     return response.getCreationStatus();
                 }
             }
