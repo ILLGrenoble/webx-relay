@@ -99,7 +99,7 @@ public class MessageSubscriber {
                 logger.debug("WebX Message Subscriber disconnected");
 
             } catch (InterruptedException exception) {
-                logger.error("Stop of WebX Subscriber thread interrupted");
+                logger.warn("Stop of WebX Subscriber thread interrupted");
             }
         }
     }

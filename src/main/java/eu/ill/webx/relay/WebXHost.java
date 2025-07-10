@@ -138,7 +138,7 @@ public class WebXHost {
             return session.createClient(clientConfiguration.getClientVersion());
         }
 
-        logger.error("Trying to create client but transport to host is not connected");
+        logger.warn("Trying to create client but transport to host is not connected");
         throw new WebXConnectionException("Transport to host not connected when creating client");
     }
 

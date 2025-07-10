@@ -91,7 +91,7 @@ public class InstructionPublisher {
                 logger.debug("WebX Instruction Publisher disconnected");
 
             } catch (InterruptedException exception) {
-                logger.error("Stop of instruction publisher threads interrupted", exception);
+                logger.warn("Stop of instruction publisher threads interrupted", exception);
             }
         }
     }
@@ -105,7 +105,7 @@ public class InstructionPublisher {
             this.instructionQueue.put(instructionData);
 
         } catch (InterruptedException exception) {
-            logger.error("Interrupted when adding instruction to instruction queue");
+            logger.warn("Interrupted when adding instruction to instruction queue");
         }
     }
 

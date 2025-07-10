@@ -78,7 +78,7 @@ public class WebXRelay {
             return host;
         } catch (WebXConnectionException exception) {
             host.disconnect();
-            logger.error("Failed to create WebX host at {}:{} : {}", configuration.getHostname(), configuration.getPort(), exception.getMessage());
+            logger.warn("Failed to create WebX host at {}:{} : {}", configuration.getHostname(), configuration.getPort(), exception.getMessage());
             throw exception;
         }
     }

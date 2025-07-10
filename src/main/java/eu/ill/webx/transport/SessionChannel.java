@@ -135,7 +135,7 @@ public class SessionChannel {
             }
 
         } catch (ZMQException e) {
-            logger.error("Caught ZMQ Exception: {}", e.getMessage());
+            logger.warn("Caught ZMQ Exception: {}", e.getMessage());
             throw new WebXCommunicationException(String.format("Failed to send request to WebX Router: %s", e.getMessage()));
         }
     }
