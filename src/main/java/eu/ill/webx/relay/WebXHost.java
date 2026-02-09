@@ -120,7 +120,7 @@ public class WebXHost {
                 logger.info("Connecting to existing WebX session using sessionId \"{}\"", clientConfiguration.getSessionId());
 
                 // Try to get status of session using sessionId
-                SessionCreation.CreationStatus creationStatus = this.getSessionStatus(clientConfiguration.getSessionId());
+                SessionCreation.CreationStatus creationStatus = this.transport.isStandalone() ? SessionCreation.CreationStatus.RUNNING : this.getSessionStatus(clientConfiguration.getSessionId());
                 sessionCreation = new SessionCreation(new SessionId(clientConfiguration.getSessionId()), creationStatus);
             }
 

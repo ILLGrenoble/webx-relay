@@ -57,6 +57,14 @@ public class Transport {
     }
 
     /**
+     * Returns true if standalone session
+     * @return true if standalone session
+     */
+    public boolean isStandalone() {
+        return this.isStandalone;
+    }
+
+    /**
      * Starts the connection to the different ZQM sockets of the server.
      * @param hostname the WebX host
      * @param port the port for the Client Connector on the host (other ports are obtained from here)
