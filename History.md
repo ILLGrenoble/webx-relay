@@ -1,3 +1,7 @@
+1.8.6 15/07/2026
+================
+ * Allow multiple ping response handlers for each session (one per client).
+
 1.8.5 15/07/2026
 ================
  * Add ping response handler to obtain data on connection speeds (ping RTT) to individual webx-engines.
