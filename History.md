@@ -1,3 +1,9 @@
+1.8.5 15/07/2026
+================
+ * Add ping response handler to obtain data on connection speeds (ping RTT) to individual webx-engines.
+ * If in standalone mode, do not request the status of the session creation.
+ * change error logs to warn
+
 1.8.4 08/07/2025
 ================
  * Add logging when async creation fails and ensure startSession returns correctly.
