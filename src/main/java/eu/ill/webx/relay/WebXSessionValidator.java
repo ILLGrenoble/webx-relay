@@ -61,7 +61,7 @@ public class WebXSessionValidator extends Thread {
     private SessionCreation.CreationStatus creationStatus;
     private final OnCreationStatusUpdateHandler onCreationStatusUpdateHandler;
     private final OnErrorHandler onErrorHandler;
-    private PingResponseHandler pingResponseHandler = data -> {};
+    private final PingResponseHandler pingResponseHandler;
 
     private boolean running = false;
 
@@ -72,17 +72,20 @@ public class WebXSessionValidator extends Thread {
      * @param creationStatus The initial session creation status
      * @param onCreationStatusUpdateHandler The callback when we obtain a new status value
      * @param onErrorHandler The callback when communication fails
+     * @param pingResponseHandler The ping response handler (handles ping response data)
      */
     WebXSessionValidator(final SessionId sessionId,
                          final Transport transport,
                          final SessionCreation.CreationStatus creationStatus,
                          final OnCreationStatusUpdateHandler onCreationStatusUpdateHandler,
-                         final OnErrorHandler onErrorHandler) {
+                         final OnErrorHandler onErrorHandler,
+                         final PingResponseHandler pingResponseHandler) {
         this.sessionId = sessionId;
         this.transport = transport;
         this.creationStatus = creationStatus;
         this.onCreationStatusUpdateHandler = onCreationStatusUpdateHandler;
         this.onErrorHandler = onErrorHandler != null ? onErrorHandler : error -> {};
+        this.pingResponseHandler = pingResponseHandler;
     }
 
     /**
@@ -113,14 +116,6 @@ public class WebXSessionValidator extends Thread {
             this.running = false;
             super.interrupt();
         }
-    }
-
-    /**
-     * Sets the ping response handler (optional to obtain stats on ping data, eg timing)
-     * @param pingResponseHandler the ping response handler
-     */
-    public void setPingResponseHandler(PingResponseHandler pingResponseHandler) {
-        this.pingResponseHandler = pingResponseHandler != null ? pingResponseHandler : data -> {};
     }
 
     /**

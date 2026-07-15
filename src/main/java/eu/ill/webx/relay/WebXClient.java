@@ -20,10 +20,7 @@ package eu.ill.webx.relay;
 import eu.ill.webx.exceptions.WebXClientException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
-import eu.ill.webx.model.ClientIdentifier;
-import eu.ill.webx.model.Message;
-import eu.ill.webx.model.PingResponseHandler;
-import eu.ill.webx.model.SessionId;
+import eu.ill.webx.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +47,8 @@ public class WebXClient {
     private boolean ready = false;
 
     private final ByteBuffer instructionPrefix = ByteBuffer.allocate(20).order(LITTLE_ENDIAN);
+
+    private PingResponseHandler pingResponseHandler = data -> {};
 
     /**
      * Constructor taking a session: indicates that the client is connected but not ready
@@ -232,7 +231,7 @@ public class WebXClient {
      * @param pingResponseHandler the ping response handler
      */
     public void setPingResponseHandler(PingResponseHandler pingResponseHandler) {
-        this.session.setPingResponseHandler(pingResponseHandler);
+        this.pingResponseHandler = pingResponseHandler != null ? pingResponseHandler : data -> {};
     }
 
     /**
@@ -254,5 +253,13 @@ public class WebXClient {
         long clientIndexMask = messageMetadataWrapper.getLong();
 
         return (clientIndexMask & this.clientIdentifier.clientIndex()) != 0;
+    }
+
+    /**
+     * Forwards the ping response data to the PingResponseHandler if one has been set
+     * @param pingResponse the ping response data (including RTT in ms for example)
+     */
+    public void onPingResponse(PingResponseData pingResponse) {
+        this.pingResponseHandler.onPingResponse(pingResponse);
     }
 }

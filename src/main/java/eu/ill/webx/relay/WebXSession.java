@@ -69,7 +69,7 @@ public class WebXSession {
         this.creationStatus = sessionCreation.status();
         this.transport = transport;
         this.onErrorHandler = onErrorHandler;
-        this.sessionValidator = new WebXSessionValidator(this.sessionId, transport, this.creationStatus, this::onCreationStatusUpdate, this::onSessionValidationError);
+        this.sessionValidator = new WebXSessionValidator(this.sessionId, transport, this.creationStatus, this::onCreationStatusUpdate, this::onSessionValidationError, this::onPingResponse);
     }
 
     /**
@@ -94,7 +94,6 @@ public class WebXSession {
      */
     public void stop() {
         try {
-            this.sessionValidator.setPingResponseHandler(null);
             if (this.sessionValidator.isRunning()) {
                 this.sessionValidator.interrupt();
                 this.sessionValidator.join();
@@ -134,14 +133,6 @@ public class WebXSession {
     public synchronized void onClientDisconnected(final WebXClient client) {
         client.onDisconnected();
         this.clients.remove(client);
-    }
-
-    /**
-     * Sets the ping response handler (optional to obtain stats on ping data, eg timing)
-     * @param pingResponseHandler the ping response handler
-     */
-    public void setPingResponseHandler(PingResponseHandler pingResponseHandler) {
-        this.sessionValidator.setPingResponseHandler(pingResponseHandler);
     }
 
     /**
@@ -336,6 +327,16 @@ public class WebXSession {
         }
 
         return response;
+    }
+
+    /**
+     * Implementation of the PingResponseHandler
+     * @param pingResponse the ping response data
+     */
+    private void onPingResponse(PingResponseData pingResponse) {
+        for (WebXClient client : this.clients) {
+            client.onPingResponse(pingResponse);
+        }
     }
 
 }
