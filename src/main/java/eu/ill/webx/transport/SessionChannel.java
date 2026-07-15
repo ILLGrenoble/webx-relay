@@ -33,6 +33,8 @@ import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 import zmq.util.Z85;
 
+import java.util.Date;
+
 /**
  * The Session Channel provides an encrypted socket to connect initiate and create sessions with the WebX Router.
  * For new sessions a login and password are sent and as such encryption is required. ZMQ uses the curve encryption layer.
@@ -127,8 +129,12 @@ public class SessionChannel {
     synchronized SocketResponse sendRequest(String request) throws WebXCommunicationException, WebXDisconnectedException {
         try {
             if (this.socket != null) {
+                Date requestDate = new Date();
                 this.socket.send(request);
-                return new SocketResponse(socket.recv());
+                byte[] data = socket.recv();
+                Date responseDate = new Date();
+                long rtt = responseDate.getTime() - requestDate.getTime();
+                return new SocketResponse(data, rtt);
 
             } else {
                 throw new WebXDisconnectedException();

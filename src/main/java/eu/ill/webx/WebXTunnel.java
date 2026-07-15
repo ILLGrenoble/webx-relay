@@ -22,6 +22,7 @@ import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.Message;
+import eu.ill.webx.model.PingResponseHandler;
 import eu.ill.webx.relay.WebXClient;
 import eu.ill.webx.relay.WebXHost;
 import eu.ill.webx.relay.WebXRelay;
@@ -138,6 +139,7 @@ public class WebXTunnel {
      */
     public void disconnect() {
         if (this.client != null) {
+            this.client.setPingResponseHandler(null);
             this.host.onClientDisconnected(client);
 
             WebXRelay.getInstance().onClientDisconnect(this.host);
@@ -195,5 +197,13 @@ public class WebXTunnel {
         } else {
             throw new WebXClientException("Client is not connected");
         }
+    }
+
+    /**
+     * Sets the ping response handler (optional to obtain stats on ping data, eg timing)
+     * @param pingResponseHandler the ping response handler
+     */
+    public void setPingResponseHandler(PingResponseHandler pingResponseHandler) {
+        this.client.setPingResponseHandler(pingResponseHandler);
     }
 }

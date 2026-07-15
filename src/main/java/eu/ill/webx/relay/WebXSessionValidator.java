@@ -20,10 +20,7 @@ package eu.ill.webx.relay;
 
 import eu.ill.webx.exceptions.WebXCommunicationException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
-import eu.ill.webx.model.SessionCreation;
-import eu.ill.webx.model.SessionId;
-import eu.ill.webx.model.SessionStatusResponse;
-import eu.ill.webx.model.SocketResponse;
+import eu.ill.webx.model.*;
 import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,6 +61,7 @@ public class WebXSessionValidator extends Thread {
     private SessionCreation.CreationStatus creationStatus;
     private final OnCreationStatusUpdateHandler onCreationStatusUpdateHandler;
     private final OnErrorHandler onErrorHandler;
+    private PingResponseHandler pingResponseHandler = data -> {};
 
     private boolean running = false;
 
@@ -118,6 +116,14 @@ public class WebXSessionValidator extends Thread {
     }
 
     /**
+     * Sets the ping response handler (optional to obtain stats on ping data, eg timing)
+     * @param pingResponseHandler the ping response handler
+     */
+    public void setPingResponseHandler(PingResponseHandler pingResponseHandler) {
+        this.pingResponseHandler = pingResponseHandler != null ? pingResponseHandler : data -> {};
+    }
+
+    /**
      * Main method called when the Thread executes to either ping an engine or update the session creation status
      * If no response is received before the timeout value then the error callback is called.
      */
@@ -156,6 +162,8 @@ public class WebXSessionValidator extends Thread {
 
                     if (responseElements[0].equals("pang")) {
                         this.onError(String.format("Failed to ping WebX Session %s: %s", this.sessionId.hexString(), responseElements[2]));
+                    } else {
+                        this.pingResponseHandler.onPingResponse(new PingResponseData(response.rttMs()));
                     }
                 }
 

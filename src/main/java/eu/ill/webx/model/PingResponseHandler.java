@@ -17,26 +17,11 @@
  */
 package eu.ill.webx.model;
 
-/**
- * Encapsulates the binary data of a ZMQ REQ-REP socket response
- * @param data the raw binary data
- * @param rttMs the round-trip time in milliseconds
- */
-public record SocketResponse(byte[] data, long rttMs) {
 
+public interface PingResponseHandler {
     /**
-     * Converts the data to string if not null
-     * @return the string value of the data if not null
+     * Called when a ping is successfully acknowledged: used to obtain stats on connection times
+     * @param pingResponseData containing the response data
      */
-    public String toString() {
-        return this.data == null ? null : new String(this.data);
-    }
-
-    /**
-     * Determines if the response is empty.
-     * @return true if the response has no data
-     */
-    public boolean isEmpty() {
-        return this.data == null || this.data.length == 0;
-    }
+    void onPingResponse(PingResponseData pingResponseData);
 }

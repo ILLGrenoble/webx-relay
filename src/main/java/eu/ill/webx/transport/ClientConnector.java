@@ -28,6 +28,8 @@ import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
 import org.zeromq.ZMQException;
 
+import java.util.Date;
+
 /**
  * The ClientConnector provides an interface to the REP-REQ ZMQ socket to make requests to the WebX Router or Engine.
  * It's the main entry point to the connection, obtaining ports for the remaining sockets, client connection and disconnection requests.
@@ -121,8 +123,12 @@ public class ClientConnector {
     synchronized SocketResponse sendRequest(String request) throws WebXCommunicationException, WebXDisconnectedException {
         try {
             if (this.socket != null) {
+                Date requestDate = new Date();
                 this.socket.send(request);
-                return new SocketResponse(socket.recv());
+                byte[] data = socket.recv();
+                Date responseDate = new Date();
+                long rtt = responseDate.getTime() - requestDate.getTime();
+                return new SocketResponse(data, rtt);
 
             } else {
                 throw new WebXDisconnectedException();

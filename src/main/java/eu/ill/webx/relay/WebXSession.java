@@ -20,10 +20,7 @@ package eu.ill.webx.relay;
 import eu.ill.webx.exceptions.WebXCommunicationException;
 import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
-import eu.ill.webx.model.ClientIdentifier;
-import eu.ill.webx.model.Message;
-import eu.ill.webx.model.SessionCreation;
-import eu.ill.webx.model.SessionId;
+import eu.ill.webx.model.*;
 import eu.ill.webx.transport.Transport;
 import eu.ill.webx.utils.Tuple;
 import org.slf4j.Logger;
@@ -97,6 +94,7 @@ public class WebXSession {
      */
     public void stop() {
         try {
+            this.sessionValidator.setPingResponseHandler(null);
             if (this.sessionValidator.isRunning()) {
                 this.sessionValidator.interrupt();
                 this.sessionValidator.join();
@@ -136,6 +134,14 @@ public class WebXSession {
     public synchronized void onClientDisconnected(final WebXClient client) {
         client.onDisconnected();
         this.clients.remove(client);
+    }
+
+    /**
+     * Sets the ping response handler (optional to obtain stats on ping data, eg timing)
+     * @param pingResponseHandler the ping response handler
+     */
+    public void setPingResponseHandler(PingResponseHandler pingResponseHandler) {
+        this.sessionValidator.setPingResponseHandler(pingResponseHandler);
     }
 
     /**

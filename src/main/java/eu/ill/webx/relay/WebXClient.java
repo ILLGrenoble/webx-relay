@@ -22,6 +22,7 @@ import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ClientIdentifier;
 import eu.ill.webx.model.Message;
+import eu.ill.webx.model.PingResponseHandler;
 import eu.ill.webx.model.SessionId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,6 +121,7 @@ public class WebXClient {
     public void onDisconnected() {
         if (this.connected) {
             this.onMessage(new Message.CloseMessage());
+            this.setPingResponseHandler(null);
             this.connected = false;
         }
     }
@@ -223,6 +225,14 @@ public class WebXClient {
         } else {
             throw new WebXClientException("WebXClient is not connected");
         }
+    }
+
+    /**
+     * Sets the ping response handler (optional to obtain stats on ping data, eg timing)
+     * @param pingResponseHandler the ping response handler
+     */
+    public void setPingResponseHandler(PingResponseHandler pingResponseHandler) {
+        this.session.setPingResponseHandler(pingResponseHandler);
     }
 
     /**

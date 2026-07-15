@@ -18,25 +18,8 @@
 package eu.ill.webx.model;
 
 /**
- * Encapsulates the binary data of a ZMQ REQ-REP socket response
- * @param data the raw binary data
- * @param rttMs the round-trip time in milliseconds
+ * Hold data concerning WebX Engine ping responses
+ * @param rttMs the Ping Round-Trip Time in milliseconds
  */
-public record SocketResponse(byte[] data, long rttMs) {
-
-    /**
-     * Converts the data to string if not null
-     * @return the string value of the data if not null
-     */
-    public String toString() {
-        return this.data == null ? null : new String(this.data);
-    }
-
-    /**
-     * Determines if the response is empty.
-     * @return true if the response has no data
-     */
-    public boolean isEmpty() {
-        return this.data == null || this.data.length == 0;
-    }
+public record PingResponseData(long rttMs) {
 }
