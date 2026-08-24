@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.PriorityBlockingQueue;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
@@ -36,6 +37,11 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 public class WebXClient {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXClient.class);
+    private static final int INSTRUCTION_TYPE_OFFSET = 20;
+    private static final int INSTRUCTION_HEADER_LENGTH = 32;
+    private static final int PING_INSTRUCTION_TYPE = 9;
+
+    private record PingData(long serverTimestamp, long pingTimeMs) {}
 
     private ClientIdentifier clientIdentifier;
     private final WebXSession session;
@@ -45,6 +51,7 @@ public class WebXClient {
 
     private boolean connected = true;
     private boolean ready = false;
+    private PingData lastPing = new PingData(0L, 0L);
 
     private final ByteBuffer instructionPrefix = ByteBuffer.allocate(20).order(LITTLE_ENDIAN);
 
@@ -171,6 +178,14 @@ public class WebXClient {
     public void sendInstruction(byte[] instructionData) {
         if (this.connected && this.ready) {
             logger.trace("Got instruction of length {}", instructionData.length);
+            int type = ByteBuffer.wrap(instructionData).order(ByteOrder.LITTLE_ENDIAN).getInt(INSTRUCTION_TYPE_OFFSET);
+            if (type == PING_INSTRUCTION_TYPE) {
+                long timestamp = ByteBuffer.wrap(instructionData).order(ByteOrder.LITTLE_ENDIAN).getLong(INSTRUCTION_HEADER_LENGTH);
+                if (timestamp == lastPing.serverTimestamp) {
+                    long rttMs = System.currentTimeMillis() - lastPing.pingTimeMs;
+                    this.onPingResponse(new PingResponseData(PingResponseData.Source.CLIENT, rttMs));
+                }
+            }
 
             // Set the sessionId and clientId at the beginning
             System.arraycopy(this.instructionPrefix.array(), 0, instructionData, 0, 20);
@@ -194,6 +209,10 @@ public class WebXClient {
 
                 if (message.getType().equals(Message.Type.INTERRUPT)) {
                     throw new WebXConnectionInterruptException(message.getStringData());
+
+                } else if (message.getType().equals(Message.Type.PING)) {
+                    long timestamp = ByteBuffer.wrap(message.getData()).order(ByteOrder.LITTLE_ENDIAN).getLong(Message.TIMESTAMP_OFFSET);
+                    this.lastPing = new PingData(timestamp, System.currentTimeMillis());
 
                 } else if (message.getType().equals(Message.Type.DISCONNECT)) {
                     logger.info("Client (Id \"{}\" and index \"{}\") received disconnect message from WebX session \"{}\"", this.getClientIdentifier().clientIdString(), this.getClientIdentifier().clientIndexString(), this.getSessionId().hexString());
@@ -260,6 +279,9 @@ public class WebXClient {
      * @param pingResponse the ping response data (including RTT in ms for example)
      */
     public void onPingResponse(PingResponseData pingResponse) {
-        this.pingResponseHandler.onPingResponse(pingResponse);
+        Thread.startVirtualThread(() -> {
+            this.pingResponseHandler.onPingResponse(pingResponse);
+        });
+
     }
 }

@@ -61,6 +61,11 @@ public class Message implements Comparable<Message> {
         DISCONNECT,
 
         /**
+         * A ping message
+         */
+        PING,
+
+        /**
          * Any other message
          */
         OTHER
@@ -71,7 +76,7 @@ public class Message implements Comparable<Message> {
      * This is used to determine the length of the message data.
      */
     public final static int HEADER_LENGTH = 48;
-
+    public final static int TIMESTAMP_OFFSET = 24;
     private final static int TYPE_OFFSET = 32;
 
     /**
@@ -102,6 +107,10 @@ public class Message implements Comparable<Message> {
 
         } else if (type == 7) {
             this.type = Type.CURSOR;
+            this.priority = 2;
+
+        } else if (type == 8) {
+            this.type = Type.PING;
             this.priority = 2;
 
         } else if (type == 9) {

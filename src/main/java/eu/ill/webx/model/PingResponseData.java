@@ -20,6 +20,15 @@ package eu.ill.webx.model;
 /**
  * Hold data concerning WebX Engine ping responses
  * @param rttMs the Ping Round-Trip Time in milliseconds
+ * @param source the source of the Ping
  */
-public record PingResponseData(long rttMs) {
+public record PingResponseData(Source source, long rttMs) {
+
+    /**
+     * Specifies the source of the ping data (server or client)
+     */
+    public enum Source {
+        SERVER,
+        CLIENT,
+    }
 }

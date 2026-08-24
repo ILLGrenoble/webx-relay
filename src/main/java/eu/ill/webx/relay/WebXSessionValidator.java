@@ -158,7 +158,7 @@ public class WebXSessionValidator extends Thread {
                     if (responseElements[0].equals("pang")) {
                         this.onError(String.format("Failed to ping WebX Session %s: %s", this.sessionId.hexString(), responseElements[2]));
                     } else {
-                        this.pingResponseHandler.onPingResponse(new PingResponseData(response.rttMs()));
+                        this.pingResponseHandler.onPingResponse(new PingResponseData(PingResponseData.Source.SERVER, response.rttMs()));
                     }
                 }
 
