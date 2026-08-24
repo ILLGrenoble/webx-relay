@@ -1,3 +1,7 @@
+1.8.7 24/08/2026
+================
+ * Obtain ping RTT for between relay and client (tap into existing engine-client RTT pings)
+
 1.8.6 15/07/2026
 ================
  * Allow multiple ping response handlers for each session (one per client).
