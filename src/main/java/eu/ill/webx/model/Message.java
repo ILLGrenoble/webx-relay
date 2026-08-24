@@ -76,7 +76,15 @@ public class Message implements Comparable<Message> {
      * This is used to determine the length of the message data.
      */
     public final static int HEADER_LENGTH = 48;
+
+    /**
+     * The offset in bytes of the timestamp data in the header
+     */
     public final static int TIMESTAMP_OFFSET = 24;
+
+    /**
+     * The offset in bytes of the type of message in the header
+     */
     private final static int TYPE_OFFSET = 32;
 
     /**

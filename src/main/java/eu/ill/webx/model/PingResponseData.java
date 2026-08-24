@@ -28,7 +28,14 @@ public record PingResponseData(Source source, long rttMs) {
      * Specifies the source of the ping data (server or client)
      */
     public enum Source {
+        /**
+         * Specifies that the source of the ping data is the server
+         */
         SERVER,
+
+        /**
+         * Specifies that the source of the ping data is the client
+         */
         CLIENT,
     }
 }

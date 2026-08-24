@@ -18,6 +18,9 @@
 package eu.ill.webx.model;
 
 
+/**
+ * Interface of the handler to the ping data
+ */
 public interface PingResponseHandler {
     /**
      * Called when a ping is successfully acknowledged: used to obtain stats on connection times
