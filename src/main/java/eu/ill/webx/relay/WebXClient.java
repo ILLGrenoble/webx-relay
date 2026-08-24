@@ -178,6 +178,12 @@ public class WebXClient {
     public void sendInstruction(byte[] instructionData) {
         if (this.connected && this.ready) {
             logger.trace("Got instruction of length {}", instructionData.length);
+
+            // Set the sessionId and clientId at the beginning
+            System.arraycopy(this.instructionPrefix.array(), 0, instructionData, 0, 20);
+
+            this.session.sendInstruction(instructionData);
+
             int type = ByteBuffer.wrap(instructionData).order(ByteOrder.LITTLE_ENDIAN).getInt(INSTRUCTION_TYPE_OFFSET);
             if (type == PING_INSTRUCTION_TYPE) {
                 long timestamp = ByteBuffer.wrap(instructionData).order(ByteOrder.LITTLE_ENDIAN).getLong(INSTRUCTION_HEADER_LENGTH);
@@ -186,11 +192,6 @@ public class WebXClient {
                     this.onPingResponse(new PingResponseData(PingResponseData.Source.CLIENT, rttMs));
                 }
             }
-
-            // Set the sessionId and clientId at the beginning
-            System.arraycopy(this.instructionPrefix.array(), 0, instructionData, 0, 20);
-
-            this.session.sendInstruction(instructionData);
         }
     }
 

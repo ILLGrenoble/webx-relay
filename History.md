@@ -1,3 +1,7 @@
+1.8.8 24/08/2026
+================
+ * Send instruction data immediately to server then determine if it is a ping message
+
 1.8.7 24/08/2026
 ================
  * Obtain ping RTT for between relay and client (tap into existing engine-client RTT pings)
