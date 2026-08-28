@@ -26,7 +26,9 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 
@@ -41,6 +43,8 @@ public class WebXClient {
     private static final int INSTRUCTION_HEADER_LENGTH = 32;
     private static final int PING_INSTRUCTION_TYPE = 9;
 
+    private static final int MAX_PING_RESPONSE_QUEUE_LENGTH = 60;
+
     private record PingData(long serverTimestamp, long pingTimeMs) {}
 
     private ClientIdentifier clientIdentifier;
@@ -48,14 +52,13 @@ public class WebXClient {
     private final String clientVersion;
 
     private final PriorityBlockingQueue<Message> messageQueue = new PriorityBlockingQueue<>();
+    private final LinkedBlockingQueue<PingResponseData> pingResponseQueue = new LinkedBlockingQueue<>();
 
     private boolean connected = true;
     private boolean ready = false;
     private PingData lastPing = new PingData(0L, 0L);
 
     private final ByteBuffer instructionPrefix = ByteBuffer.allocate(20).order(LITTLE_ENDIAN);
-
-    private PingResponseHandler pingResponseHandler = data -> {};
 
     /**
      * Constructor taking a session: indicates that the client is connected but not ready
@@ -127,7 +130,6 @@ public class WebXClient {
     public void onDisconnected() {
         if (this.connected) {
             this.onMessage(new Message.CloseMessage());
-            this.setPingResponseHandler(null);
             this.connected = false;
         }
     }
@@ -247,14 +249,6 @@ public class WebXClient {
     }
 
     /**
-     * Sets the ping response handler (optional to obtain stats on ping data, eg timing)
-     * @param pingResponseHandler the ping response handler
-     */
-    public void setPingResponseHandler(PingResponseHandler pingResponseHandler) {
-        this.pingResponseHandler = pingResponseHandler != null ? pingResponseHandler : data -> {};
-    }
-
-    /**
      * Returns true if the client Identifier matches the header of the message data
      * @param messageData the raw message data
      * @return true if the client should receive the message
@@ -280,9 +274,30 @@ public class WebXClient {
      * @param pingResponse the ping response data (including RTT in ms for example)
      */
     public void onPingResponse(PingResponseData pingResponse) {
-        Thread.startVirtualThread(() -> {
-            this.pingResponseHandler.onPingResponse(pingResponse);
-        });
+        while (this.pingResponseQueue.size() > MAX_PING_RESPONSE_QUEUE_LENGTH) {
+            this.pingResponseQueue.remove();
+        }
+        this.pingResponseQueue.add(pingResponse);
+    }
 
+    /**
+     * Blocking call to get the oldest ping response data. Call will block until a ping response data is
+     * available or will return with null if the client is no longer connected.
+     * @return oldest PingResponseData of client or server
+     */
+    public PingResponseData takePingResponseData() {
+        while (this.connected) {
+            try {
+                // Get next ping response data, wait for timeout and check if we're still connected
+                PingResponseData data = this.pingResponseQueue.poll(100, TimeUnit.MILLISECONDS);
+                if (data != null) {
+                    return data;
+                }
+
+            } catch (InterruptedException exception) {
+                return null;
+            }
+        }
+        return null;
     }
 }

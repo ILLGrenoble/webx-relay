@@ -32,7 +32,7 @@ public class WebXSessionValidator extends Thread {
 
     private static final Logger logger = LoggerFactory.getLogger(WebXSessionValidator.class);
     private static final int CREATION_STATE_DELAY_MS = 500;
-    private static final int PING_DELAY_MS = 15000;
+    private static final int PING_DELAY_MS = 5000;
 
     /**
      * Defines an interface to handle errors produced during the ping request

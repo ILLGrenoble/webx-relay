@@ -22,6 +22,7 @@ import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXConnectionInterruptException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.Message;
+import eu.ill.webx.model.PingResponseData;
 import eu.ill.webx.model.PingResponseHandler;
 import eu.ill.webx.relay.WebXClient;
 import eu.ill.webx.relay.WebXHost;
@@ -139,7 +140,6 @@ public class WebXTunnel {
      */
     public void disconnect() {
         if (this.client != null) {
-            this.client.setPingResponseHandler(null);
             this.host.onClientDisconnected(client);
 
             WebXRelay.getInstance().onClientDisconnect(this.host);
@@ -184,6 +184,21 @@ public class WebXTunnel {
     }
 
     /**
+     * Blocking call to get oldest ping response data from the Client. To reduce dependency on notifications of ping data, the client only stores a
+     * limited number of ping responses and it is up to users to independently obtain the data. The client therefore only
+     * has to store a limited queue of responses (ensuring the relaying of desktop data is as quick and simple as possible).
+     * @return The ping response data
+     */
+    public PingResponseData takePingResponseData(){
+        if (this.client != null) {
+            return this.client.takePingResponseData();
+
+        } else {
+            return null;
+        }
+    }
+
+    /**
      * Writes data to the WebX Engine, sending instructions from the client.
      * The instruction is queued and the client thread is liberated quickly.
      * Instruction headers are automatically modified to include the session Id and the Client Id so that they are correctly routed and controlled in the server.
@@ -197,13 +212,5 @@ public class WebXTunnel {
         } else {
             throw new WebXClientException("Client is not connected");
         }
-    }
-
-    /**
-     * Sets the ping response handler (optional to obtain stats on ping data, eg timing)
-     * @param pingResponseHandler the ping response handler
-     */
-    public void setPingResponseHandler(PingResponseHandler pingResponseHandler) {
-        this.client.setPingResponseHandler(pingResponseHandler);
     }
 }

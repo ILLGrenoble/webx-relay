@@ -17,12 +17,24 @@
  */
 package eu.ill.webx.model;
 
+import java.util.Date;
+
 /**
  * Hold data concerning WebX Engine ping responses
- * @param rttMs the Ping Round-Trip Time in milliseconds
  * @param source the source of the Ping
+ * @param rttMs the Ping Round-Trip Time in milliseconds
+ * @param date the creation date of the ping response data
  */
-public record PingResponseData(Source source, long rttMs) {
+public record PingResponseData(Source source, long rttMs, Date date) {
+
+    /**
+     * Constructs the Ping response data and sets the date to the current date
+     * @param source the source of the Ping
+     * @param rttMs the Ping Round-Trip Time in milliseconds
+     */
+    public PingResponseData(Source source, long rttMs) {
+        this(source, rttMs, new Date());
+    }
 
     /**
      * Specifies the source of the ping data (server or client)
