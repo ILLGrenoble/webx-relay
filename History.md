@@ -1,3 +1,7 @@
+1.8.9 28/08/2026
+================
+* Remove dependency on user callback functions during the ping response handling: could potentially lead to slowdown of relaying of data. Instead use a message queue of response data and force clients to poll for the data.
+
 1.8.8 24/08/2026
 ================
  * Send instruction data immediately to server then determine if it is a ping message
