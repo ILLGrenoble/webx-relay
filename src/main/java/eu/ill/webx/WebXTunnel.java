@@ -184,10 +184,10 @@ public class WebXTunnel {
     }
 
     /**
-     * Blocking call to get oldest ping response data from the Client. To reduce dependency on notifications of ping data, the client only stores a
+     * Get oldest ping response data from the Client. To reduce dependency on notifications of ping data, the client only stores a
      * limited number of ping responses and it is up to users to independently obtain the data. The client therefore only
      * has to store a limited queue of responses (ensuring the relaying of desktop data is as quick and simple as possible).
-     * @return The ping response data
+     * @return The oldest ping response data (or null if no data exists)
      */
     public PingResponseData takePingResponseData(){
         if (this.client != null) {

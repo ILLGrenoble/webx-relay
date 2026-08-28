@@ -281,22 +281,13 @@ public class WebXClient {
     }
 
     /**
-     * Blocking call to get the oldest ping response data. Call will block until a ping response data is
-     * available or will return with null if the client is no longer connected.
-     * @return oldest PingResponseData of client or server
+     * Get the oldest ping response data.
+     * @return oldest PingResponseData of client or server or null if no data exists
      */
     public PingResponseData takePingResponseData() {
-        while (this.connected) {
-            try {
-                // Get next ping response data, wait for timeout and check if we're still connected
-                PingResponseData data = this.pingResponseQueue.poll(100, TimeUnit.MILLISECONDS);
-                if (data != null) {
-                    return data;
-                }
-
-            } catch (InterruptedException exception) {
-                return null;
-            }
+        if (this.connected) {
+            // Get next oldest ping response data
+            return this.pingResponseQueue.poll();
         }
         return null;
     }

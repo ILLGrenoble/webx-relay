@@ -1,3 +1,7 @@
+1.8.10 28/08/2026
+================
+* Retrieving ping response data is no longer blocking: Null is returned if data is not available.
+
 1.8.9 28/08/2026
 ================
 * Remove dependency on user callback functions during the ping response handling: could potentially lead to slowdown of relaying of data. Instead use a message queue of response data and force clients to poll for the data.
