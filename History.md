@@ -1,3 +1,7 @@
+1.8.11 14/09/2026
+================
+* Test for empty parameter list before adding them to the request
+
 1.8.10 28/08/2026
 ================
 * Retrieving ping response data is no longer blocking: Null is returned if data is not available.
