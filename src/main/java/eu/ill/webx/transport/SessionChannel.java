@@ -189,7 +189,8 @@ public class SessionChannel {
 
         final String clientConfigurationConnectionString = clientConfiguration.connectionString();
         final String engineConfigurationConnectionString = engineConfiguration.connectionString();
-        String request = String.format("%s,%s,%s", this.routerCanAsync ? ASYNC_CREATE : SYNC_CREATE, clientConfigurationConnectionString, engineConfigurationConnectionString);
+        final String engineConfigRequestString = engineConfigurationConnectionString.isEmpty() ? "" : String.format(",%s", engineConfigurationConnectionString);
+        String request = String.format("%s,%s%s", this.routerCanAsync ? ASYNC_CREATE : SYNC_CREATE, clientConfigurationConnectionString, engineConfigRequestString);
 
         SocketResponse response = this.sendRequest(request);
 
