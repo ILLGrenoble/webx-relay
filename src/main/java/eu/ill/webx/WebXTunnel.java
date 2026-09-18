@@ -17,16 +17,11 @@
  */
 package eu.ill.webx;
 
-import eu.ill.webx.exceptions.WebXClientException;
-import eu.ill.webx.exceptions.WebXConnectionException;
-import eu.ill.webx.exceptions.WebXConnectionInterruptException;
-import eu.ill.webx.exceptions.WebXDisconnectedException;
+import eu.ill.webx.exceptions.*;
 import eu.ill.webx.model.Message;
 import eu.ill.webx.model.PingResponseData;
-import eu.ill.webx.model.PingResponseHandler;
 import eu.ill.webx.relay.WebXClient;
-import eu.ill.webx.relay.WebXHost;
-import eu.ill.webx.relay.WebXRelay;
+import eu.ill.webx.relay.WebXParallelRelay;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +47,7 @@ public class WebXTunnel {
      */
     public static final byte[] WEBX_NOP_MESSAGE_DATA = Message.NOP_MESSAGE_DATA;
 
-    private WebXHost host;
+    private String hostname;
     private WebXClient client;
 
     /**
@@ -98,23 +93,8 @@ public class WebXTunnel {
      */
     public void connect(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXConnectionException {
         if (this.client == null) {
-            this.host = WebXRelay.getInstance().connectToHost(hostConfiguration);
-
-            try {
-                logger.debug("Creating client for {}...", this.host.getHostname());
-                this.client = this.host.onClientConnection(clientConfiguration, engineConfiguration);
-
-                // Send the connection message to the client (client is running/fully connected if it has a valid client identifier)
-                this.client.onMessage(new Message.ConnectionMessage(this.client.getClientIdentifier() == null));
-                logger.info("... client created.");
-
-            } catch (WebXConnectionException error) {
-                logger.info("... client connection failed: {}", error.getMessage());
-                // Cleanup after connection failure
-                this.host.cleanupSessions();
-                WebXRelay.getInstance().onClientDisconnect(this.host);
-                throw error;
-            }
+            this.hostname = hostConfiguration.getHostname();
+            this.client = WebXParallelRelay.getInstance().connectToHost(hostConfiguration, clientConfiguration, engineConfiguration);
         }
     }
 
@@ -140,9 +120,7 @@ public class WebXTunnel {
      */
     public void disconnect() {
         if (this.client != null) {
-            this.host.onClientDisconnected(client);
-
-            WebXRelay.getInstance().onClientDisconnect(this.host);
+            WebXParallelRelay.getInstance().disconnectFromHost(client, hostname);
         }
     }
 

@@ -19,8 +19,8 @@ package eu.ill.webx.transport;
 
 import eu.ill.webx.WebXClientConfiguration;
 import eu.ill.webx.WebXEngineConfiguration;
+import eu.ill.webx.exceptions.WebXClientConnectionException;
 import eu.ill.webx.exceptions.WebXCommunicationException;
-import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ConnectionData;
 import eu.ill.webx.model.SessionCreation;
@@ -179,9 +179,9 @@ public class Transport {
      * @return a SessionCreation object containing a unique Session Id and the creation status
      * @throws WebXCommunicationException thrown if an error occurs with the socket communication
      * @throws WebXDisconnectedException thrown if the server is not running in standalone mode
-     * @throws WebXConnectionException Thrown if the connection response is invalid or an error occurs with the handling
+     * @throws WebXClientConnectionException Thrown if the connection response is invalid or an error occurs with the handling
      */
-    public synchronized SessionCreation startSession(final WebXClientConfiguration configuration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXConnectionException {
+    public SessionCreation startSession(final WebXClientConfiguration configuration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXClientConnectionException {
         if (!this.isStandalone) {
             return this.sessionChannel.startSession(configuration, engineConfiguration);
 

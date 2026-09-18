@@ -19,8 +19,8 @@ package eu.ill.webx.transport;
 
 import eu.ill.webx.WebXClientConfiguration;
 import eu.ill.webx.WebXEngineConfiguration;
+import eu.ill.webx.exceptions.WebXClientConnectionException;
 import eu.ill.webx.exceptions.WebXCommunicationException;
-import eu.ill.webx.exceptions.WebXConnectionException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.SessionCreation;
 import eu.ill.webx.model.SessionId;
@@ -153,7 +153,7 @@ public class SessionChannel {
      * @throws WebXCommunicationException thrown if an error occurs with the socket connection
      * @throws WebXDisconnectedException thrown if the server is not connected
      */
-    synchronized SessionCreation startSession(final WebXClientConfiguration clientConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXConnectionException {
+    synchronized SessionCreation startSession(final WebXClientConfiguration clientConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXClientConnectionException {
         final String clientConfigurationConnectionString = clientConfiguration.connectionString();
         final String request = String.format("%s,%s", this.routerCanAsync ? ASYNC_CREATE : SYNC_CREATE, clientConfigurationConnectionString);
 
@@ -171,7 +171,7 @@ public class SessionChannel {
             return new SessionCreation(new SessionId(sessionCreationResponse.payload), sessionCreationResponse.creationStatus);
         }
 
-        throw new WebXConnectionException(String.format("Couldn't create WebX session (response code %s): %s", sessionCreationResponse.responseCode, sessionCreationResponse.payload));
+        throw new WebXClientConnectionException(String.format("Couldn't create WebX session (response code %s): %s", sessionCreationResponse.responseCode, sessionCreationResponse.payload));
     }
 
     /**
@@ -181,7 +181,7 @@ public class SessionChannel {
      * @return a SessionCreation object containing a unique Session Id and the creation status
      * @throws WebXCommunicationException thrown if an error occurs with the socket connection
      */
-    synchronized SessionCreation startSession(final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXConnectionException {
+    SessionCreation startSession(final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXClientConnectionException {
         // Check for null engine configuration
         if (engineConfiguration == null) {
             return this.startSession(clientConfiguration);
@@ -211,16 +211,16 @@ public class SessionChannel {
             return this.startSession(clientConfiguration);
         }
 
-        throw new WebXConnectionException(String.format("Couldn't create WebX session (response code %s): %s", sessionCreationResponse.responseCode, sessionCreationResponse.payload));
+        throw new WebXClientConnectionException(String.format("Couldn't create WebX session (response code %s): %s", sessionCreationResponse.responseCode, sessionCreationResponse.payload));
     }
 
     /**
      * Parses the response from the WebX Router to create a session. If the response code isn't 0 then the connection is not valid.
      * @param response The socket response from the connection request
      * @return The session creation response
-     * @throws WebXConnectionException Thrown if the response is invalid or an error occurs with the handling
+     * @throws WebXClientConnectionException Thrown if the response is invalid or an error occurs with the handling
      */
-    private SessionCreationResponse parseSessionCreationResponse(SocketResponse response) throws WebXConnectionException {
+    private SessionCreationResponse parseSessionCreationResponse(SocketResponse response) throws WebXClientConnectionException {
         try {
             String responseString = response.toString();
             String[] responseData = responseString.split(",");
@@ -238,7 +238,7 @@ public class SessionChannel {
 
 
         } catch (NullPointerException exception) {
-            throw new WebXConnectionException(String.format("Failed to parse response from WebX Router: %s", exception.getMessage()));
+            throw new WebXClientConnectionException(String.format("Failed to parse response from WebX Router: %s", exception.getMessage()));
         }
     }
 }
