@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQException;
 
 /**
  * The message subscriber connects to the ZMQ message publisher of the WebX Router (or Engine if in standalone)
@@ -83,11 +84,9 @@ public class MessageSubscriber {
      * Disconnects from the ZQM socket and stops the thread. The disconnect method
      * blocks until the thread has joined.
      */
-    void disconnect() {
+    synchronized void disconnect() {
         if (this.running) {
-            synchronized (this) {
-                this.running = false;
-            }
+            this.running = false;
 
             try {
                 this.messageThread.interrupt();
@@ -112,9 +111,13 @@ public class MessageSubscriber {
         while (this.running) {
             try {
                 byte[] messageData = socket.recv();
-                this.messageHandler.onMessage(messageData);
+                synchronized (this) {
+                    if (this.running) {
+                        this.messageHandler.onMessage(messageData);
+                    }
+                }
 
-            } catch (org.zeromq.ZMQException e) {
+            } catch (ZMQException e) {
                 if (this.running) {
                     logger.info("WebX Subscriber thread interrupted");
                 }

@@ -19,6 +19,7 @@ package eu.ill.webx.transport;
 
 import eu.ill.webx.WebXClientConfiguration;
 import eu.ill.webx.WebXEngineConfiguration;
+import eu.ill.webx.WebXHostConfiguration;
 import eu.ill.webx.exceptions.WebXClientConnectionException;
 import eu.ill.webx.exceptions.WebXCommunicationException;
 import eu.ill.webx.exceptions.WebXDisconnectedException;
@@ -35,17 +36,24 @@ public class Transport {
 
     private ZContext context;
     private boolean connected = false;
-    private boolean isStandalone;
 
-    private ClientConnector connector;
-    private MessageSubscriber messageSubscriber;
-    private InstructionPublisher instructionPublisher;
-    private SessionChannel sessionChannel;
+    private final WebXHostConfiguration configuration;
+    private final ClientConnector connector;
+    private final MessageSubscriber messageSubscriber;
+    private final InstructionPublisher instructionPublisher;
+    private final SessionChannel sessionChannel;
 
     /**
-     * Default constructor
+     * Constructs the Transport object
+     * @param configuration The host configuration
+     * @param messageHandler a handler for all incoming messages from the server
      */
-    public Transport() {
+    public Transport(final WebXHostConfiguration configuration, final MessageSubscriber.MessageHandler messageHandler) {
+        this.configuration = configuration;
+        this.connector = new ClientConnector();
+        this.messageSubscriber = new MessageSubscriber(messageHandler);
+        this.instructionPublisher = new InstructionPublisher();
+        this.sessionChannel = !configuration.isStandalone() ? new SessionChannel() : null;
     }
 
     /**
@@ -61,37 +69,30 @@ public class Transport {
      * @return true if standalone session
      */
     public boolean isStandalone() {
-        return this.isStandalone;
+        return this.configuration.isStandalone();
     }
 
     /**
      * Starts the connection to the different ZQM sockets of the server.
-     * @param hostname the WebX host
-     * @param port the port for the Client Connector on the host (other ports are obtained from here)
-     * @param socketTimeoutMs the timeout in milliseconds for socket communication
-     * @param isStandalone specified whether the server has a WebX Engine running in standalone mode
-     * @param messageHandler a handler for all incoming messages from the server
      * @throws WebXDisconnectedException thrown in the connection fails
      */
-    public synchronized void connect(String hostname, int port, int socketTimeoutMs, boolean isStandalone, final MessageSubscriber.MessageHandler messageHandler) throws WebXDisconnectedException {
+    public synchronized void connect() throws WebXDisconnectedException {
 
         if (this.context == null) {
-            this.isStandalone = isStandalone;
             this.connected = false;
             this.context = new ZContext();
 
+            final String hostname = this.configuration.getHostname();
+            final Integer port = this.configuration.getPort();
+            final Integer socketTimeoutMs = this.configuration.getSocketTimeoutMs();
+            boolean isStandalone = this.configuration.isStandalone();
+
             try {
-                this.connector = new ClientConnector();
                 ConnectionData connectionData = this.connector.connect(this.context, "tcp://" + hostname + ":" + port, socketTimeoutMs, isStandalone);
-
-                this.messageSubscriber = new MessageSubscriber(messageHandler);
                 this.messageSubscriber.connect(this.context, "tcp://" + hostname + ":" + connectionData.publisherPort());
-
-                this.instructionPublisher = new InstructionPublisher();
                 this.instructionPublisher.connect(this.context, "tcp://" + hostname + ":" + connectionData.subscriberPort());
 
                 if (!isStandalone) {
-                    this.sessionChannel = new SessionChannel();
                     this.sessionChannel.connect(this.context, "tcp://" + hostname + ":" + connectionData.sessionPort(), socketTimeoutMs, connectionData.serverPublicKey());
                 }
 
@@ -116,24 +117,12 @@ public class Transport {
         if (this.context != null) {
             this.connected = false;
 
-            if (this.connector != null) {
-                this.connector.disconnect();
-                this.connector = null;
-            }
-
-            if (this.messageSubscriber != null) {
-                this.messageSubscriber.disconnect();
-                this.messageSubscriber = null;
-            }
-
-            if (this.instructionPublisher != null) {
-                this.instructionPublisher.disconnect();
-                this.instructionPublisher = null;
-            }
+            this.connector.disconnect();
+            this.messageSubscriber.disconnect();
+            this.instructionPublisher.disconnect();
 
             if (this.sessionChannel != null) {
                 this.sessionChannel.disconnect();
-                this.sessionChannel = null;
             }
 
             this.context.destroy();
@@ -146,9 +135,7 @@ public class Transport {
      * @param instructionData the instruction data
      */
     public synchronized void sendInstruction(byte[] instructionData) {
-        if (this.connected) {
-            this.instructionPublisher.queueInstruction(instructionData);
-        }
+        this.instructionPublisher.queueInstruction(instructionData);
     }
 
     /**
@@ -164,7 +151,7 @@ public class Transport {
              throw new WebXDisconnectedException();
         }
 
-        if (this.isStandalone) {
+        if (this.configuration.isStandalone()) {
             return this.connector.sendRequest(request);
 
         } else {
@@ -181,8 +168,8 @@ public class Transport {
      * @throws WebXDisconnectedException thrown if the server is not running in standalone mode
      * @throws WebXClientConnectionException Thrown if the connection response is invalid or an error occurs with the handling
      */
-    public SessionCreation startSession(final WebXClientConfiguration configuration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXClientConnectionException {
-        if (!this.isStandalone) {
+    public synchronized SessionCreation startSession(final WebXClientConfiguration configuration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXClientConnectionException {
+        if (!this.configuration.isStandalone()) {
             return this.sessionChannel.startSession(configuration, engineConfiguration);
 
         } else {

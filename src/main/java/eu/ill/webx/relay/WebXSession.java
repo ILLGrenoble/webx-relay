@@ -113,7 +113,7 @@ public class WebXSession {
      * @return a WebXClient object
      * @throws WebXClientConnectionException thrown if the connection request fails
      */
-    public synchronized WebXClient createClient(final String clientVersion) throws WebXClientConnectionException {
+    public WebXClient createClient(final String clientVersion) throws WebXClientConnectionException {
         WebXClient client;
         if (this.creationStatus == SessionCreation.CreationStatus.RUNNING) {
             final ClientIdentifier clientIdentifier = this.connectClient(sessionId, clientVersion);
@@ -122,7 +122,9 @@ public class WebXSession {
         } else {
             client = new WebXClient(this, clientVersion);
         }
-        this.clients.add(client);
+        synchronized (this.clients) {
+            this.clients.add(client);
+        }
         return client;
     }
 
@@ -130,9 +132,11 @@ public class WebXSession {
      * Called when a client disconnects. Removes the client from the clients list.
      * @param client the client that has disconnected
      */
-    public synchronized void onClientDisconnected(final WebXClient client) {
+    public void onClientDisconnected(final WebXClient client) {
         client.onDisconnected();
-        this.clients.remove(client);
+        synchronized (this.clients) {
+            this.clients.remove(client);
+        }
     }
 
     /**
@@ -140,15 +144,19 @@ public class WebXSession {
      * @return a list of all connected clients to the session
      */
     public List<WebXClient> getClients() {
-        return new ArrayList<>(this.clients);
+        synchronized (this.clients) {
+            return new ArrayList<>(this.clients);
+        }
     }
 
     /**
      * Returns the number of connected clients to the session
      * @return the number of connected clients to the session
      */
-    public synchronized int getClientCount() {
-        return this.clients.size();
+    public int getClientCount() {
+        synchronized (this.clients) {
+            return this.clients.size();
+        }
     }
 
     /**
@@ -164,13 +172,14 @@ public class WebXSession {
      * which is used to filter specific clients to which the message is destined.
      * @param messageData The raw binary message data
      */
-    public synchronized void onMessage(byte[] messageData) {
-        List<WebXClient> indexAssociatedClients = this.clients.stream()
-                .filter(webXClient -> webXClient.matchesMessageIndexMask(messageData))
-                .toList();
-
-        for (WebXClient client : indexAssociatedClients) {
-            client.onMessage(messageData);
+    public void onMessage(byte[] messageData) {
+        synchronized (this.clients) {
+            List<WebXClient> indexAssociatedClients = this.clients.stream()
+                    .filter(webXClient -> webXClient.matchesMessageIndexMask(messageData))
+                    .toList();
+            for (WebXClient client : indexAssociatedClients) {
+                client.onMessage(messageData);
+            }
         }
     }
 
@@ -180,8 +189,10 @@ public class WebXSession {
      * @param message the message to send to clients
      */
     private void sendMessageToClients(final Message message) {
-        for (WebXClient client : this.clients) {
-            client.onMessage(message);
+        synchronized (this.clients) {
+            for (WebXClient client : this.clients) {
+                client.onMessage(message);
+            }
         }
     }
 
@@ -191,26 +202,28 @@ public class WebXSession {
      * always to ensure that the connection is kept alive.
      * @param creationStatus The creation status of the session
      */
-    private synchronized void onCreationStatusUpdate(SessionCreation.CreationStatus creationStatus) {
-        this.creationStatus = creationStatus;
-        if (creationStatus.equals(SessionCreation.CreationStatus.RUNNING)) {
-            for (WebXClient client : this.clients) {
-                try {
-                    final ClientIdentifier clientIdentifier = this.connectClient(sessionId, client.getClientVersion());
-                    client.setClientIdentifier(clientIdentifier);
+    private void onCreationStatusUpdate(SessionCreation.CreationStatus creationStatus) {
+        synchronized (this.clients) {
+            this.creationStatus = creationStatus;
+            if (creationStatus.equals(SessionCreation.CreationStatus.RUNNING)) {
+                for (WebXClient client : this.clients) {
+                    try {
+                        final ClientIdentifier clientIdentifier = this.connectClient(sessionId, client.getClientVersion());
+                        client.setClientIdentifier(clientIdentifier);
 
-                    client.onMessage(new Message.ConnectionMessage(false));
+                        client.onMessage(new Message.ConnectionMessage(false));
 
-                } catch (WebXClientConnectionException e) {
-                    logger.warn("Failed to connect to WebX client", e);
-                    client.onDisconnected();
+                    } catch (WebXClientConnectionException e) {
+                        logger.warn("Failed to connect to WebX client", e);
+                        client.onDisconnected();
+                    }
                 }
-            }
 
-        } else {
-            // Send NOP message to all clients to keep the communication channel alive
-            for (WebXClient client : this.clients) {
-                client.onMessage(new Message.NopMessage());
+            } else {
+                // Send NOP message to all clients to keep the communication channel alive
+                for (WebXClient client : this.clients) {
+                    client.onMessage(new Message.NopMessage());
+                }
             }
         }
     }

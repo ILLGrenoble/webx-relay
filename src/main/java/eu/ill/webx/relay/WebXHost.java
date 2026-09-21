@@ -43,7 +43,7 @@ public class WebXHost {
     private static final Logger logger = LoggerFactory.getLogger(WebXHost.class);
 
     private final WebXHostConfiguration configuration;
-    private final Transport transport = new Transport();
+    private final Transport transport;
 
     private final List<WebXSession> sessions = new ArrayList<>();
 
@@ -53,6 +53,7 @@ public class WebXHost {
      */
     WebXHost(final WebXHostConfiguration configuration) {
         this.configuration = configuration;
+        this.transport = new Transport(configuration, this::onMessage);
     }
 
     /**
@@ -80,8 +81,8 @@ public class WebXHost {
             // Initialise transport: verify that the host has a running WebX server
             try {
                 logger.info("Connecting to WebX server at {}:{}...", this.configuration.getHostname(), this.configuration.getPort());
-                this.transport.connect(this.configuration.getHostname(), this.configuration.getPort(), configuration.getSocketTimeoutMs(), configuration.isStandalone(), this::onMessage);
-                logger.info("... connected to {}", this.configuration.getHostname());
+                this.transport.connect();
+                logger.info("... connected to {}", this.getHostname());
 
             } catch (WebXDisconnectedException e) {
                 throw new WebXHostConnectionException("Failed to connect to WebX host");
@@ -166,7 +167,7 @@ public class WebXHost {
      * @return the number of clients connected
      */
     public int getClientCount() {
-        synchronized (sessions) {
+        synchronized (this.sessions) {
             return this.sessions.stream()
                     .mapToInt(WebXSession::getClientCount)
                     .reduce(0, Integer::sum);
@@ -177,7 +178,7 @@ public class WebXHost {
      * Ensures that there are no empty sessions
      */
     public void cleanupSessions() {
-        synchronized (sessions) {
+        synchronized (this.sessions) {
             List<WebXSession> sessionsToRemove = this.sessions.stream()
                     .filter(session -> session.getClientCount() != 0)
                     .toList();
@@ -195,7 +196,7 @@ public class WebXHost {
      * @param session the session to add
      */
     private void addSession(final WebXSession session) {
-        synchronized (sessions) {
+        synchronized (this.sessions) {
             this.sessions.add(session);
         }
     }
@@ -205,7 +206,7 @@ public class WebXHost {
      * @param session the session to remove
      */
     private void removeSession(final WebXSession session) {
-        synchronized (sessions) {
+        synchronized (this.sessions) {
             this.sessions.remove(session);
         }
     }
@@ -216,7 +217,7 @@ public class WebXHost {
      * @return and Optional session
      */
     private Optional<WebXSession> getSession(final SessionId sessionId) {
-        synchronized (sessions) {
+        synchronized (this.sessions) {
             return this.sessions.stream().filter(session -> sessionId.equals(session.getSessionId())).findFirst();
         }
     }

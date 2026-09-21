@@ -49,9 +49,9 @@ public class InstructionPublisher {
      * Connects to the ZMQ subscriber socket of the WebX Router or WebX Engine and starts a new
      * thread to handling client instructions that are in the queue.
      * @param context The ZMQ context
-     * @param address The address of the Subscriber soket
+     * @param address The address of the Subscriber socket
      */
-    void connect(ZContext context, String address) {
+    synchronized void connect(ZContext context, String address) {
         if (this.socket == null) {
             this.socket = context.createSocket(SocketType.PUB);
             this.socket.setLinger(0);
@@ -117,8 +117,10 @@ public class InstructionPublisher {
             try {
                 final byte[] instructionData = this.instructionQueue.take();
 
-                if (this.connected) {
-                    this.socket.send(instructionData, 0);
+                synchronized (this) {
+                    if (this.connected) {
+                        this.socket.send(instructionData, 0);
+                    }
                 }
 
             } catch (InterruptedException exception) {

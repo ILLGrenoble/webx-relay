@@ -58,7 +58,7 @@ public class ClientConnector {
      * @return The connection data for the other sockets
      * @throws WebXDisconnectedException thrown if the connection fails
      */
-    ConnectionData connect(ZContext context, String address, int socketTimeoutMs, boolean standalone) throws WebXDisconnectedException {
+    synchronized ConnectionData connect(ZContext context, String address, int socketTimeoutMs, boolean standalone) throws WebXDisconnectedException {
 
         if (this.socket == null) {
             this.socket = context.createSocket(SocketType.REQ);
@@ -101,7 +101,7 @@ public class ClientConnector {
     /**
      * Disconnects the ZMQ socket
      */
-    void disconnect() {
+    synchronized void disconnect() {
         if (this.socket != null) {
             this.socket.close();
             this.socket = null;
@@ -121,8 +121,8 @@ public class ClientConnector {
      * @throws WebXDisconnectedException thrown if the server is not connected
      */
     synchronized SocketResponse sendRequest(String request) throws WebXCommunicationException, WebXDisconnectedException {
-        try {
-            if (this.socket != null) {
+        if (this.socket != null) {
+            try {
                 Date requestDate = new Date();
                 this.socket.send(request);
                 byte[] data = socket.recv();
@@ -130,13 +130,13 @@ public class ClientConnector {
                 long rtt = responseDate.getTime() - requestDate.getTime();
                 return new SocketResponse(data, rtt);
 
-            } else {
-                throw new WebXDisconnectedException();
+            } catch (ZMQException e) {
+                logger.warn("Caught ZMQ Exception: {}", e.getMessage());
+                throw new WebXCommunicationException(String.format("Failed to send request to WebX Engine: %s", e.getMessage()));
             }
 
-        } catch (ZMQException e) {
-            logger.warn("Caught ZMQ Exception: {}", e.getMessage());
-            throw new WebXCommunicationException(String.format("Failed to send request to WebX Engine: %s", e.getMessage()));
+        } else {
+            throw new WebXDisconnectedException();
         }
     }
 }

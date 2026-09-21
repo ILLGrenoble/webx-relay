@@ -91,7 +91,7 @@ public class SessionChannel {
      * @param socketTimeoutMs The timeout in milliseconds for responses
      * @param serverPublicKey The public key of the WebX Router
      */
-    void connect(ZContext context, String address, int socketTimeoutMs, String serverPublicKey) {
+    synchronized void connect(ZContext context, String address, int socketTimeoutMs, String serverPublicKey) {
         if (this.socket == null) {
             this.socket = context.createSocket(SocketType.REQ);
             this.socket.setReceiveTimeOut(socketTimeoutMs);
@@ -110,7 +110,7 @@ public class SessionChannel {
     /**
      * Disconnects from the ZQM socket
      */
-    void disconnect() {
+    synchronized void disconnect() {
         if (this.socket != null) {
             this.socket.close();
             this.socket = null;
@@ -127,8 +127,8 @@ public class SessionChannel {
      * @throws WebXDisconnectedException thrown if the server is not connected
      */
     synchronized SocketResponse sendRequest(String request) throws WebXCommunicationException, WebXDisconnectedException {
-        try {
-            if (this.socket != null) {
+        if (this.socket != null) {
+            try {
                 Date requestDate = new Date();
                 this.socket.send(request);
                 byte[] data = socket.recv();
@@ -136,13 +136,13 @@ public class SessionChannel {
                 long rtt = responseDate.getTime() - requestDate.getTime();
                 return new SocketResponse(data, rtt);
 
-            } else {
-                throw new WebXDisconnectedException();
+            } catch (ZMQException e) {
+                logger.warn("Caught ZMQ Exception: {}", e.getMessage());
+                throw new WebXCommunicationException(String.format("Failed to send request to WebX Router: %s", e.getMessage()));
             }
 
-        } catch (ZMQException e) {
-            logger.warn("Caught ZMQ Exception: {}", e.getMessage());
-            throw new WebXCommunicationException(String.format("Failed to send request to WebX Router: %s", e.getMessage()));
+        } else {
+            throw new WebXDisconnectedException();
         }
     }
 
@@ -181,7 +181,7 @@ public class SessionChannel {
      * @return a SessionCreation object containing a unique Session Id and the creation status
      * @throws WebXCommunicationException thrown if an error occurs with the socket connection
      */
-    SessionCreation startSession(final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXClientConnectionException {
+    synchronized SessionCreation startSession(final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXCommunicationException, WebXDisconnectedException, WebXClientConnectionException {
         // Check for null engine configuration
         if (engineConfiguration == null) {
             return this.startSession(clientConfiguration);
