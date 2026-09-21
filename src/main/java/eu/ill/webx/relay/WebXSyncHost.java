@@ -24,6 +24,10 @@ public class WebXSyncHost {
         lock.lock();
     }
 
+    public boolean tryLock() {
+        return lock.tryLock();
+    }
+
     public void unlock() {
         lock.unlock();
     }

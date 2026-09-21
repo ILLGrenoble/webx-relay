@@ -57,13 +57,22 @@ public class WebXParallelRelay {
     public WebXClient connectToHost(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXConnectionException {
         final String hostname = hostConfiguration.getHostname();
 
-        // Lock the relay and clean terminated hosts
-        this.lockHostsAndClean();
-        WebXSyncHost syncHost = this.hosts.computeIfAbsent(hostname, k -> new WebXSyncHost(hostConfiguration));
+        // Get a lock on the SyncHost without blocking access to other SyncHosts.
+        WebXSyncHost syncHost = null;
+        do {
+            // Lock the relay and clean terminated hosts
+            this.lockHostsAndClean();
+            syncHost = this.hosts.computeIfAbsent(hostname, k -> new WebXSyncHost(hostConfiguration));
 
-        // Lock first the host then release the relay to accept other requests
-        syncHost.lock();
-        this.hostsLock.unlock();
+            // Lock first the host then release the relay to accept other requests
+            boolean lockHeld = syncHost.tryLock();
+            if (!lockHeld) {
+                syncHost = null;
+            }
+
+            this.hostsLock.unlock();
+
+        } while (syncHost == null);
 
         final WebXHost host = syncHost.getHost();
         try {
@@ -76,7 +85,7 @@ public class WebXParallelRelay {
 
             // Send the connection message to the client (client is running/fully connected if it has a valid client identifier)
             client.onMessage(new ConnectionMessage(client.getClientIdentifier() == null));
-            logger.info("... client created.");
+            logger.debug("... client created.");
 
             return client;
 
@@ -90,7 +99,7 @@ public class WebXParallelRelay {
             throw new WebXConnectionException(String.format("Failed to connect to host: %s", exception.getMessage()));
 
         } catch (WebXClientConnectionException error) {
-            logger.info("... client connection failed: {}", error.getMessage());
+            logger.warn("Client connection failed: {}", error.getMessage());
             // Cleanup after connection failure (in a separate thread due to synchronised)
             host.cleanupSessions();
 
@@ -113,20 +122,30 @@ public class WebXParallelRelay {
      */
     public void disconnectFromHost(final WebXClient client, final String hostname) {
 
-        // Lock the relay and cleanup terminated hosts
-        this.lockHostsAndClean();
+        // Get a lock on the SyncHost (if it exists) without blocking access to other SyncHosts.
+        WebXSyncHost syncHost = null;
+        boolean hostExists = false;
+        do {
+            // Lock the relay and clean terminated hosts
+            this.lockHostsAndClean();
+            syncHost = this.hosts.get(hostname);
+            if (syncHost != null) {
+                hostExists = true;
 
-        WebXSyncHost syncHost = this.hosts.get(hostname);
+                // Lock first the host then release the relay to accept other requests
+                boolean lockHeld = syncHost.tryLock();
+                if (!lockHeld) {
+                    syncHost = null;
+                }
+            }
 
-        // If host null: unlock and return
-        if (syncHost == null) {
             this.hostsLock.unlock();
+
+        } while (syncHost == null && hostExists);
+
+        if (!hostExists) {
             return;
         }
-
-        // Lock first the host then release the relay to accept other requests
-        syncHost.lock();
-        this.hostsLock.unlock();
 
         try {
             WebXHost host = syncHost.getHost();
@@ -134,7 +153,7 @@ public class WebXParallelRelay {
             // Disconnect the client
             logger.debug("Disconnecting client from {}...", hostname);
             host.onClientDisconnected(client);
-            logger.info("... client disconnected.");
+            logger.debug("... client disconnected.");
 
         } catch(Exception e) {
             logger.warn("Error while disconnecting from {}: {}", hostname, e.getMessage());
@@ -149,7 +168,7 @@ public class WebXParallelRelay {
 
         // Cleanup terminated hosts
         this.lockHostsAndClean();
-        logger.info("Hosts remaining = {}", this.hosts.size());
+        logger.debug("Hosts remaining = {}", this.hosts.size());
         this.hostsLock.unlock();
     }
 
