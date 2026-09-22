@@ -103,7 +103,6 @@ public class WebXParallelRelay {
             // Cleanup after connection failure (in a separate thread due to synchronised)
             host.cleanupSessions();
 
-            // TODO: Check if potentially thread blocking
             this.onClientDisconnected(syncHost);
 
             throw new WebXConnectionException(error.getMessage());

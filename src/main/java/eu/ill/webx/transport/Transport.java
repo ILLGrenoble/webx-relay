@@ -117,13 +117,12 @@ public class Transport {
         if (this.context != null) {
             this.connected = false;
 
-            this.connector.disconnect();
-            this.messageSubscriber.disconnect();
-            this.instructionPublisher.disconnect();
-
             if (this.sessionChannel != null) {
                 this.sessionChannel.disconnect();
             }
+            this.instructionPublisher.disconnect();
+            this.messageSubscriber.disconnect();
+            this.connector.disconnect();
 
             this.context.destroy();
             this.context = null;
