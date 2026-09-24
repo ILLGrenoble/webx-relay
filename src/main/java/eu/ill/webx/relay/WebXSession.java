@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Encapsulates a particular WebX X11 session, identified by a unique sessionId.
@@ -46,7 +48,9 @@ public class WebXSession {
          */
         void onError(final WebXSession session);
     }
+
     private static final Logger logger = LoggerFactory.getLogger(WebXSession.class);
+    private static final Pattern connectionStringPattern = Pattern.compile("[0-9a-fA-F]+,[0-9a-fA-F]+$");
 
     private SessionCreation.CreationStatus creationStatus;
     private final SessionId sessionId;
@@ -85,21 +89,21 @@ public class WebXSession {
      * Starts the session validator thread (pings the session - either to the WebX Engine or via the WebX Router - to ensure it
      * is running correctly)
      */
-    public void start() {
+    public void enableSessionValidation() {
         this.sessionValidator.start();
     }
 
     /**
      * Stops the session validator thread and waits for it to join.
      */
-    public void stop() {
+    public void disableSessionValidation() {
         try {
             if (this.sessionValidator.isRunning()) {
                 this.sessionValidator.interrupt();
                 this.sessionValidator.join();
-
-                logger.debug("Session {} stopped", this.sessionId.hexString());
             }
+
+            logger.debug("Session {} stopped", this.sessionId.hexString());
 
         } catch (InterruptedException exception) {
             logger.warn("Stop of relay message listener and client instruction threads interrupted", exception);
@@ -286,9 +290,10 @@ public class WebXSession {
             final String request = String.format("connect,%s,%s", sessionId.hexString(), clientVersion);
             final String response = this.sendConnectionRequest(request, sessionId);
 
-            final String[] responseElements = response.split(",");
-
-            if (responseElements.length == 2) {
+            // Check response (could be an error message)
+            Matcher matcher = connectionStringPattern.matcher(response);
+            if (matcher.matches()) {
+                final String[] responseElements = response.split(",");
                 return new Tuple<>(responseElements[0], responseElements[1]);
             }
 
@@ -298,7 +303,7 @@ public class WebXSession {
             logger.warn("Failed to connect client with sessionId and client version ({}), using legacy client connection method.", exception.getMessage());
         }
 
-        return this.sendConnectionRequest(sessionId);
+        return this.sendLegacyConnectionRequest(sessionId);
     }
 
     /**
@@ -309,17 +314,18 @@ public class WebXSession {
      * @throws WebXDisconnectedException thrown if the server is disconnected
      * @throws WebXCommunicationException thrown if the communication fails
      */
-    private Tuple<String, String> sendConnectionRequest(final SessionId sessionId) throws WebXClientConnectionException, WebXDisconnectedException, WebXCommunicationException {
+    private Tuple<String, String> sendLegacyConnectionRequest(final SessionId sessionId) throws WebXClientConnectionException, WebXDisconnectedException, WebXCommunicationException {
         final String request = String.format("connect,%s", sessionId.hexString());
         final String response = this.sendConnectionRequest(request, sessionId);
 
-        final String[] responseElements = response.split(",");
-
-        if (responseElements.length != 2) {
-            throw new WebXClientConnectionException("WebX Server returned an invalid connection response");
+        // Check response (could be an error message)
+        Matcher matcher = connectionStringPattern.matcher(response);
+        if (matcher.matches()) {
+            final String[] responseElements = response.split(",");
+            return new Tuple<>(responseElements[0], responseElements[1]);
         }
 
-        return new Tuple<>(responseElements[0], responseElements[1]);
+        throw new WebXClientConnectionException(String.format("WebX Server connection request failed: %s", response));
     }
 
     /**

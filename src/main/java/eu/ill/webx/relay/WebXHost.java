@@ -130,13 +130,17 @@ public class WebXHost {
             // Check if the session already exists
             final WebXSession session = this.getSession(sessionId).orElseGet(() -> {
                 final WebXSession webXSession = new WebXSession(sessionCreation, transport, this::onSessionError);
-                webXSession.start();
-
                 this.addSession(webXSession);
                 return webXSession;
             });
 
-            return session.createClient(clientConfiguration.getClientVersion());
+            // Create the client
+            WebXClient client = session.createClient(clientConfiguration.getClientVersion());
+
+            // If client created without problems then enable session validation (if not already enabled)
+            session.enableSessionValidation();
+
+            return client;
         }
 
         logger.warn("Trying to create client but transport to host is not connected");
@@ -155,7 +159,7 @@ public class WebXHost {
 
             if (session.getClientCount() == 0) {
                 logger.debug("Client removed from session with Id \"{}\". Session now has no clients: stopping it", session.getSessionId().hexString());
-                session.stop();
+                session.disableSessionValidation();
 
                 this.removeSession(session);
             }
@@ -180,12 +184,12 @@ public class WebXHost {
     public void cleanupSessions() {
         synchronized (this.sessions) {
             List<WebXSession> sessionsToRemove = this.sessions.stream()
-                    .filter(session -> session.getClientCount() != 0)
+                    .filter(session -> session.getClientCount() == 0)
                     .toList();
 
             for (WebXSession session : sessionsToRemove) {
                 logger.debug("Cleanup: Session with Id \"{}\" has no clients: stopping it", session.getSessionId().hexString());
-                session.stop();
+                session.disableSessionValidation();
                 this.sessions.remove(session);
             }
         }

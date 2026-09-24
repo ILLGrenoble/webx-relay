@@ -25,6 +25,9 @@ import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Date;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 /**
  * Separate thread to ping a session to ensure it is still running.
  */
@@ -142,7 +145,10 @@ public class WebXSessionValidator extends Thread {
      * @throws InterruptedException if the sleep fails
      */
     private void doPing() throws InterruptedException {
-        Thread.sleep(PING_DELAY_MS);
+        Date now = new Date();
+        while (new Date().getTime() - now.getTime() < PING_DELAY_MS && this.running) {
+            Thread.sleep(100);
+        }
 
         if (this.running) {
             try {
@@ -176,7 +182,11 @@ public class WebXSessionValidator extends Thread {
      * @throws InterruptedException if the sleep fails
      */
     private void updateCreationStatus() throws InterruptedException {
-        Thread.sleep(CREATION_STATE_DELAY_MS);
+        Date now = new Date();
+        while (new Date().getTime() - now.getTime() < CREATION_STATE_DELAY_MS && this.running) {
+            Thread.sleep(100);
+        }
+
         if (this.running) {
             try {
                 logger.trace("Requesting status of session {}", this.sessionId.hexString());
