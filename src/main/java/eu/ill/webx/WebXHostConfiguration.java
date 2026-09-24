@@ -26,7 +26,8 @@ public class WebXHostConfiguration {
     private final Integer port;
     private final boolean isStandalone;
 
-    private Integer socketTimeoutMs = 15000;
+    private Integer socketTimeoutMs = 2000;
+    private Integer socketRetries = 3;
 
     /**
      * Standard host connection parameters with hostname and port
@@ -57,12 +58,14 @@ public class WebXHostConfiguration {
      * running WebX-Engine
      * @param hostname the name of the host
      * @param port the port to connect to
-     * @param socketTimeoutMs The timeout in milliseconds for a timeout exception to be thrown when doing blocking ZMQ requests
+     * @param socketTimeoutMs The timeout in milliseconds when doing blocking ZMQ requests: request will then be retried depending on the socketRetries value
+     * @param socketRetries The number of times a socket request is retried if a timeout occurs
      */
-    public WebXHostConfiguration(final String hostname, final Integer port, final Integer socketTimeoutMs) {
+    public WebXHostConfiguration(final String hostname, final Integer port, final Integer socketTimeoutMs, final Integer socketRetries) {
         this.hostname = hostname;
         this.port = port;
         this.socketTimeoutMs = socketTimeoutMs;
+        this.socketRetries = socketRetries;
         this.isStandalone = false;
     }
 
@@ -88,6 +91,14 @@ public class WebXHostConfiguration {
      */
     public Integer getSocketTimeoutMs() {
         return socketTimeoutMs;
+    }
+
+    /**
+     * Returns the socket retries value
+     * @return The socket retries
+     */
+    public Integer getSocketRetries() {
+        return socketRetries;
     }
 
     /**

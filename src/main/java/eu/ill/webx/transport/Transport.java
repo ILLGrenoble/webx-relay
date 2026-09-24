@@ -26,6 +26,8 @@ import eu.ill.webx.exceptions.WebXDisconnectedException;
 import eu.ill.webx.model.ConnectionData;
 import eu.ill.webx.model.SessionCreation;
 import eu.ill.webx.model.SocketResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.zeromq.ZContext;
 
 /**
@@ -33,6 +35,7 @@ import org.zeromq.ZContext;
  * Each WebX Host uses an individual Transport to communicate with the server.
  */
 public class Transport {
+    private static final Logger logger = LoggerFactory.getLogger(Transport.class);
 
     private ZContext context;
     private boolean connected = false;
@@ -50,10 +53,10 @@ public class Transport {
      */
     public Transport(final WebXHostConfiguration configuration, final MessageSubscriber.MessageHandler messageHandler) {
         this.configuration = configuration;
-        this.connector = new ClientConnector();
+        this.connector = new ClientConnector(configuration.getSocketTimeoutMs(), configuration.getSocketRetries(), configuration.isStandalone());
         this.messageSubscriber = new MessageSubscriber(messageHandler);
         this.instructionPublisher = new InstructionPublisher();
-        this.sessionChannel = !configuration.isStandalone() ? new SessionChannel() : null;
+        this.sessionChannel = !configuration.isStandalone() ? new SessionChannel(configuration.getSocketTimeoutMs(), configuration.getSocketRetries()) : null;
     }
 
     /**
@@ -84,16 +87,14 @@ public class Transport {
 
             final String hostname = this.configuration.getHostname();
             final Integer port = this.configuration.getPort();
-            final Integer socketTimeoutMs = this.configuration.getSocketTimeoutMs();
-            boolean isStandalone = this.configuration.isStandalone();
 
             try {
-                ConnectionData connectionData = this.connector.connect(this.context, "tcp://" + hostname + ":" + port, socketTimeoutMs, isStandalone);
+                ConnectionData connectionData = this.connector.connect(this.context, "tcp://" + hostname + ":" + port);
                 this.messageSubscriber.connect(this.context, "tcp://" + hostname + ":" + connectionData.publisherPort());
                 this.instructionPublisher.connect(this.context, "tcp://" + hostname + ":" + connectionData.subscriberPort());
 
-                if (!isStandalone) {
-                    this.sessionChannel.connect(this.context, "tcp://" + hostname + ":" + connectionData.sessionPort(), socketTimeoutMs, connectionData.serverPublicKey());
+                if (!this.configuration.isStandalone()) {
+                    this.sessionChannel.connect(this.context, "tcp://" + hostname + ":" + connectionData.sessionPort(), connectionData.serverPublicKey());
                 }
 
                 this.connected = true;

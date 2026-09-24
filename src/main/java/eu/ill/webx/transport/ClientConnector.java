@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.zeromq.SocketType;
 import org.zeromq.ZContext;
 import org.zeromq.ZMQ;
+import org.zeromq.ZMQ.Poller;
 import org.zeromq.ZMQException;
 
 import java.util.Date;
@@ -38,13 +39,26 @@ public class ClientConnector {
 
     private static final Logger logger = LoggerFactory.getLogger(ClientConnector.class);
 
+    private final int socketTimeoutMs;
+    private final int socketRetries;
+    private final boolean standalone;
+
     private ZMQ.Socket socket;
     private ConnectionData connectionData;
+    private ZContext context;
+    private Poller poller;
+    private String address;
 
     /**
      * Default constructor
+     * @param socketTimeoutMs The timeout for all requests
+     * @param socketRetries The number of times to retry a request when timeout occurs
+     * @param standalone specifies whether the connection is directly to a standalone engine or to a router
      */
-    ClientConnector() {
+    ClientConnector(int socketTimeoutMs, int socketRetries, boolean standalone) {
+        this.socketTimeoutMs = socketTimeoutMs;
+        this.socketRetries = socketRetries;
+        this.standalone = standalone;
     }
 
     /**
@@ -53,19 +67,17 @@ public class ClientConnector {
      * If connecting to the router the same command also sends the port of the session channel and the public key for encryption
      * @param context The ZMQ context
      * @param address The address of the client connector socket
-     * @param socketTimeoutMs The timeout for all requests
-     * @param standalone specifies whether the connection is directly to a standalone engine or to a router
      * @return The connection data for the other sockets
      * @throws WebXDisconnectedException thrown if the connection fails
      */
-    synchronized ConnectionData connect(ZContext context, String address, int socketTimeoutMs, boolean standalone) throws WebXDisconnectedException {
+    synchronized ConnectionData connect(ZContext context, String address) throws WebXDisconnectedException {
 
         if (this.socket == null) {
-            this.socket = context.createSocket(SocketType.REQ);
-            this.socket.setLinger(0);
-            this.socket.setReceiveTimeOut(socketTimeoutMs);
+            this.context = context;
+            this.poller = this.context.createPoller(1);
+            this.address = address;
 
-            this.socket.connect(address);
+            this.makeSocket();
 
             try {
                 String commResponse = this.sendRequest("comm").toString();
@@ -99,10 +111,11 @@ public class ClientConnector {
     }
 
     /**
-     * Disconnects the ZMQ socket
+     * Disconnects from the ZQM socket and unregisters if from the poller
      */
     synchronized void disconnect() {
         if (this.socket != null) {
+            this.poller.unregister(this.socket);
             this.socket.close();
             this.socket = null;
 
@@ -110,6 +123,19 @@ public class ClientConnector {
                 this.connectionData = null;
                 logger.debug("WebX Connector disconnected");
             }
+        }
+    }
+
+    /**
+     * Builds the socket connection to the server and registers it in the poller
+     */
+    private synchronized void makeSocket() {
+        if (this.socket == null) {
+            this.socket = this.context.createSocket(SocketType.REQ);
+            this.socket.setLinger(0);
+
+            this.socket.connect(this.address);
+            poller.register(this.socket, Poller.POLLIN);
         }
     }
 
@@ -125,13 +151,41 @@ public class ClientConnector {
             try {
                 Date requestDate = new Date();
                 this.socket.send(request);
-                byte[] data = socket.recv();
-                Date responseDate = new Date();
-                long rtt = responseDate.getTime() - requestDate.getTime();
-                return new SocketResponse(data, rtt);
+
+                int retriesLeft = this.socketRetries;
+                while (retriesLeft > 0) {
+                    //  Poll socket for a reply, with timeout
+                    int rc = poller.poll(this.socketTimeoutMs);
+                    if (rc == -1) {
+                        // Failed
+                        throw new WebXCommunicationException("Communication with WebX Engine failed");
+                    }
+
+                    if (poller.pollin(0)) {
+                        byte[] data = socket.recv();
+
+                        Date responseDate = new Date();
+                        long rtt = responseDate.getTime() - requestDate.getTime();
+                        return new SocketResponse(data, rtt);
+
+                    } else if (--retriesLeft == 0) {
+                        logger.warn("Failed to communicate with WebX Engine at {}: abandoning", this.address);
+
+                    } else {
+                        logger.warn("No response from {}: reconnecting and sending request again", this.address);
+                        //  Old socket is confused; close it and open a new one, then send request again
+                        this.disconnect();
+                        this.makeSocket();
+
+                        requestDate = new Date();
+                        this.socket.send(request);
+                    }
+                }
+
+                throw new WebXCommunicationException(String.format("Failed to communicate with WebX Engine at %s", this.address));
 
             } catch (ZMQException e) {
-                logger.warn("Caught ZMQ Exception: {}", e.getMessage());
+                logger.warn("Caught ZMQ Exception with ClientConnector: {}", e.getMessage());
                 throw new WebXCommunicationException(String.format("Failed to send request to WebX Engine: %s", e.getMessage()));
             }
 

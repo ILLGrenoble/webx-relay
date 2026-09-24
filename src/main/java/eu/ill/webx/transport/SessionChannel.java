@@ -66,8 +66,8 @@ public class SessionChannel {
 
     /**
      * Contains the response data from a session creation request
-     * @param responseCode The respone code
-     * @param payload Either sesssion Id or error message
+     * @param responseCode The response code
+     * @param payload Either session Id or error message
      * @param creationStatus The creation status if an async creation is made
      */
     private record SessionCreationResponse(CreationResponseCode responseCode, String payload, SessionCreation.CreationStatus creationStatus) {
@@ -75,47 +75,75 @@ public class SessionChannel {
 
     private static final Logger logger = LoggerFactory.getLogger(SessionChannel.class);
 
+    private final int socketTimeoutMs;
+    private final int socketRetries;
+
     private ZMQ.Socket socket;
     private boolean routerCanAsync = true;
+    private ZContext context;
+    private ZMQ.Poller poller;
+    private String address;
+    private String serverPublicKey;
+
 
     /**
      * Default constructor
+     * @param socketTimeoutMs The timeout in milliseconds for responses
+     * @param socketRetries The number of times to retry a request when timeout occurs
      */
-    SessionChannel() {
+    SessionChannel(int socketTimeoutMs, int socketRetries) {
+        this.socketTimeoutMs = socketTimeoutMs;
+        this.socketRetries = socketRetries;
     }
 
     /**
      * Connects to the ZQM session channel socket of the WebX Router
      * @param context The ZMQ context
      * @param address The address of the session channel socket
-     * @param socketTimeoutMs The timeout in milliseconds for responses
      * @param serverPublicKey The public key of the WebX Router
      */
-    synchronized void connect(ZContext context, String address, int socketTimeoutMs, String serverPublicKey) {
+    synchronized void connect(ZContext context, String address, String serverPublicKey) {
         if (this.socket == null) {
-            this.socket = context.createSocket(SocketType.REQ);
-            this.socket.setReceiveTimeOut(socketTimeoutMs);
-            this.socket.setLinger(0);
+            this.context = context;
+            this.poller = this.context.createPoller(1);
+            this.address = address;
+            this.serverPublicKey = serverPublicKey;
 
-            ZMQ.Curve.KeyPair keypair = ZMQ.Curve.generateKeyPair();
-            this.socket.setCurveServerKey(Z85.decode(serverPublicKey));
-            this.socket.setCurveSecretKey(keypair.secretKey.getBytes());
-            this.socket.setCurvePublicKey(keypair.publicKey.getBytes());
+            this.makeSocket();
 
-            socket.connect(address);
             logger.debug("WebX Session Channel connected");
         }
     }
 
     /**
-     * Disconnects from the ZQM socket
+     * Disconnects from the ZQM socket and unregisters if from the poller
      */
     synchronized void disconnect() {
         if (this.socket != null) {
+            this.poller.unregister(this.socket);
             this.socket.close();
             this.socket = null;
 
             logger.debug("WebX Session Channel disconnected");
+        }
+    }
+
+    /**
+     * Builds the socket connection to the server, configuring the security layer, and registers
+     * it in the poller
+     */
+    private synchronized void makeSocket() {
+        if (this.socket == null) {
+            this.socket = context.createSocket(SocketType.REQ);
+            this.socket.setLinger(0);
+
+            ZMQ.Curve.KeyPair keypair = ZMQ.Curve.generateKeyPair();
+            this.socket.setCurveServerKey(Z85.decode(this.serverPublicKey));
+            this.socket.setCurveSecretKey(keypair.secretKey.getBytes());
+            this.socket.setCurvePublicKey(keypair.publicKey.getBytes());
+
+            socket.connect(this.address);
+            poller.register(this.socket, ZMQ.Poller.POLLIN);
         }
     }
 
@@ -131,13 +159,41 @@ public class SessionChannel {
             try {
                 Date requestDate = new Date();
                 this.socket.send(request);
-                byte[] data = socket.recv();
-                Date responseDate = new Date();
-                long rtt = responseDate.getTime() - requestDate.getTime();
-                return new SocketResponse(data, rtt);
+
+                int retriesLeft = this.socketRetries;
+                while (retriesLeft > 0) {
+                    //  Poll socket for a reply, with timeout
+                    int rc = poller.poll(this.socketTimeoutMs);
+                    if (rc == -1) {
+                        // failed
+                        throw new WebXCommunicationException("Communication with WebX Router failed");
+                    }
+
+                    if (poller.pollin(0)) {
+                        byte[] data = socket.recv();
+
+                        Date responseDate = new Date();
+                        long rtt = responseDate.getTime() - requestDate.getTime();
+                        return new SocketResponse(data, rtt);
+
+                    } else if (--retriesLeft == 0) {
+                        logger.warn("Failed to communicate with WebX Router at {}: abandoning", this.address);
+
+                    } else {
+                        logger.warn("No response from {}: reconnecting and sending request again", this.address);
+                        //  Old socket is confused; close it and open a new one, then send request again
+                        this.disconnect();
+                        this.makeSocket();
+
+                        requestDate = new Date();
+                        this.socket.send(request);
+                    }
+                }
+
+                throw new WebXCommunicationException(String.format("Failed to communicate with WebX Router at %s", this.address));
 
             } catch (ZMQException e) {
-                logger.warn("Caught ZMQ Exception: {}", e.getMessage());
+                logger.warn("Caught ZMQ Exception with SessionChannel: {}", e.getMessage());
                 throw new WebXCommunicationException(String.format("Failed to send request to WebX Router: %s", e.getMessage()));
             }
 
@@ -161,7 +217,7 @@ public class SessionChannel {
 
         // Check for empty response (command unknown) and retry
         if (response.isEmpty() && this.routerCanAsync) {
-            logger.debug("Response from async creation was empty: assuming legacy WebX Router and attempting synchronous creation command");
+            logger.warn("Response from async creation was empty: assuming legacy WebX Router and attempting synchronous creation command");
             this.routerCanAsync = false;
             return this.startSession(clientConfiguration);
         }
@@ -196,7 +252,7 @@ public class SessionChannel {
 
         // Check for empty response (command unknown) and retry
         if (response.isEmpty() && this.routerCanAsync) {
-            logger.debug("Response from async creation was empty: assuming legacy WebX Router and attempting synchronous creation command");
+            logger.warn("Response from async creation was empty: assuming legacy WebX Router and attempting synchronous creation command");
             this.routerCanAsync = false;
             return this.startSession(clientConfiguration, engineConfiguration);
         }

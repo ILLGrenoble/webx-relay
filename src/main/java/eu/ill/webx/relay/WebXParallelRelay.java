@@ -57,6 +57,7 @@ public class WebXParallelRelay {
     public WebXClient connectToHost(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXConnectionException {
         final String hostname = hostConfiguration.getHostname();
 
+        logger.trace("Connect: Getting lock in host {}...", hostname);
         // Get a lock on the SyncHost without blocking access to other SyncHosts.
         WebXSyncHost syncHost = null;
         do {
@@ -73,6 +74,7 @@ public class WebXParallelRelay {
             this.hostsLock.unlock();
 
         } while (syncHost == null);
+        logger.trace("Connect: Locked in host {}", hostname);
 
         final WebXHost host = syncHost.getHost();
         try {
@@ -95,6 +97,7 @@ public class WebXParallelRelay {
 
             // Fully disconnect host if it is connected
             host.disconnect();
+
             logger.warn("Failed to create WebX host at {}:{} : {}", hostname, hostConfiguration.getPort(), exception.getMessage());
             throw new WebXConnectionException(String.format("Failed to connect to host: %s", exception.getMessage()));
 
@@ -122,6 +125,7 @@ public class WebXParallelRelay {
     public void disconnectFromHost(final WebXClient client, final String hostname) {
 
         // Get a lock on the SyncHost (if it exists) without blocking access to other SyncHosts.
+        logger.trace("Disconnect: Getting lock in host {}...", hostname);
         WebXSyncHost syncHost = null;
         boolean hostExists = false;
         do {
@@ -141,6 +145,7 @@ public class WebXParallelRelay {
             this.hostsLock.unlock();
 
         } while (syncHost == null && hostExists);
+        logger.trace("Disconnect: Locked in host {}", hostname);
 
         if (!hostExists) {
             return;

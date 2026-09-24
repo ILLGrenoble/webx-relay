@@ -46,10 +46,11 @@ public class MessageSubscriber {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageSubscriber.class);
 
+    private final MessageHandler messageHandler;
+
     private ZMQ.Socket socket;
     private Thread messageThread;
     private boolean running = false;
-    private final MessageHandler messageHandler;
 
     /**
      * Constructor of the MessageSubscriber that takes a MessageHandler as a parameter.

@@ -34,8 +34,9 @@ public class InstructionPublisher {
 
     private static final Logger logger = LoggerFactory.getLogger(InstructionPublisher.class);
 
-    private ZMQ.Socket socket;
     private final LinkedBlockingDeque<byte[]> instructionQueue = new LinkedBlockingDeque<>();
+
+    private ZMQ.Socket socket;
     private Thread instructionThread;
     private boolean connected = false;
 
@@ -61,12 +62,6 @@ public class InstructionPublisher {
 
             this.instructionThread = new Thread(this::instructionLoop);
             this.instructionThread.start();
-
-            try {
-                // Hackityhack Add a sleep to ensure that the socket is connected
-                Thread.sleep(500);
-            } catch (InterruptedException ignored) {
-            }
 
             logger.debug("WebX Instruction Publisher connected");
         }
