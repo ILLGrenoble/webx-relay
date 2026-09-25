@@ -26,12 +26,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Date;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Separate thread to ping a session to ensure it is still running.
  */
 public class WebXSessionValidator extends Thread {
+
+    private enum State {
+        PENDING,
+        RUNNING,
+        HANDLING_ERROR,
+        TERMINATED,
+    }
 
     private static final Logger logger = LoggerFactory.getLogger(WebXSessionValidator.class);
     private static final int CREATION_STATE_DELAY_MS = 500;
@@ -66,7 +72,7 @@ public class WebXSessionValidator extends Thread {
     private final OnErrorHandler onErrorHandler;
     private final PingResponseHandler pingResponseHandler;
 
-    private boolean running = false;
+    private State state = State.PENDING;
 
     /**
      * Constructor taking the session Id, transport layer and error handler (callback function when pinging fails)
@@ -92,20 +98,12 @@ public class WebXSessionValidator extends Thread {
     }
 
     /**
-     * Returns true when running
-     * @return true when running
-     */
-    public boolean isRunning() {
-        return this.running;
-    }
-
-    /**
      * Starts the session validator thread
      */
     @Override
     public void start() {
-        if (!this.running) {
-            this.running = true;
+        if (this.state == State.PENDING) {
+            this.state = State.RUNNING;
             super.start();
         }
     }
@@ -115,8 +113,8 @@ public class WebXSessionValidator extends Thread {
      */
     @Override
     public void interrupt() {
-        if (this.running) {
-            this.running = false;
+        if (this.state == State.RUNNING || this.state == State.HANDLING_ERROR) {
+            this.state = State.TERMINATED;
             super.interrupt();
         }
     }
@@ -127,7 +125,7 @@ public class WebXSessionValidator extends Thread {
      */
     @Override
     public void run() {
-        while (this.running) {
+        while (this.state == State.RUNNING) {
             try {
                 if (this.creationStatus != SessionCreation.CreationStatus.RUNNING) {
                     this.updateCreationStatus();
@@ -146,11 +144,11 @@ public class WebXSessionValidator extends Thread {
      */
     private void doPing() throws InterruptedException {
         Date now = new Date();
-        while (new Date().getTime() - now.getTime() < PING_DELAY_MS && this.running) {
+        while (new Date().getTime() - now.getTime() < PING_DELAY_MS && this.state == State.RUNNING) {
             Thread.sleep(100);
         }
 
-        if (this.running) {
+        if (this.state == State.RUNNING) {
             try {
                 logger.trace("Sending ping to session {}", this.sessionId.hexString());
                 SocketResponse response = this.transport.sendRequest("ping," + this.sessionId.hexString());
@@ -183,11 +181,11 @@ public class WebXSessionValidator extends Thread {
      */
     private void updateCreationStatus() throws InterruptedException {
         Date now = new Date();
-        while (new Date().getTime() - now.getTime() < CREATION_STATE_DELAY_MS && this.running) {
+        while (new Date().getTime() - now.getTime() < CREATION_STATE_DELAY_MS && this.state == State.RUNNING) {
             Thread.sleep(100);
         }
 
-        if (this.running) {
+        if (this.state == State.RUNNING) {
             try {
                 logger.trace("Requesting status of session {}", this.sessionId.hexString());
                 SessionStatusResponse response = new SessionStatusResponse(this.transport.sendRequest("status," + this.sessionId.hexString()));
@@ -230,9 +228,7 @@ public class WebXSessionValidator extends Thread {
      * @param error The error message
      */
     private void onError(String error) {
-        this.running = false;
-        if (this.onErrorHandler != null) {
-            this.onErrorHandler.onError(error);
-        }
+        this.state = State.HANDLING_ERROR;
+        this.onErrorHandler.onError(error);
     }
 }

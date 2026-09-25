@@ -97,17 +97,9 @@ public class WebXSession {
      * Stops the session validator thread and waits for it to join.
      */
     public void disableSessionValidation() {
-        try {
-            if (this.sessionValidator.isRunning()) {
-                this.sessionValidator.interrupt();
-                this.sessionValidator.join();
-            }
+        this.sessionValidator.interrupt();
 
-            logger.debug("Session {} stopped", this.sessionId.hexString());
-
-        } catch (InterruptedException exception) {
-            logger.warn("Stop of relay message listener and client instruction threads interrupted", exception);
-        }
+        logger.debug("Session {} stopped", this.sessionId.hexString());
     }
 
     /**

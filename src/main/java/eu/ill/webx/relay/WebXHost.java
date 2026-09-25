@@ -25,6 +25,7 @@ import eu.ill.webx.model.SessionCreation;
 import eu.ill.webx.model.SessionId;
 import eu.ill.webx.model.SessionStatusResponse;
 import eu.ill.webx.model.SocketResponse;
+import eu.ill.webx.relay.WebXSession.OnSessionErrorHandler;
 import eu.ill.webx.transport.Transport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +44,7 @@ public class WebXHost {
     private static final Logger logger = LoggerFactory.getLogger(WebXHost.class);
 
     private final WebXHostConfiguration configuration;
+    private final OnSessionErrorHandler onSessionErrorHandler;
     private final Transport transport;
 
     private final List<WebXSession> sessions = new ArrayList<>();
@@ -50,9 +52,11 @@ public class WebXHost {
     /**
      * Constructor taking a host configuration
      * @param configuration The host configuration
+     * @param onSessionErrorHandler the callback function to handle errors during session validation on this host
      */
-    WebXHost(final WebXHostConfiguration configuration) {
+    WebXHost(final WebXHostConfiguration configuration, final OnSessionErrorHandler onSessionErrorHandler) {
         this.configuration = configuration;
+        this.onSessionErrorHandler = onSessionErrorHandler;
         this.transport = new Transport(configuration, this::onMessage);
     }
 
@@ -129,7 +133,7 @@ public class WebXHost {
 
             // Check if the session already exists
             final WebXSession session = this.getSession(sessionId).orElseGet(() -> {
-                final WebXSession webXSession = new WebXSession(sessionCreation, transport, this::onSessionError);
+                final WebXSession webXSession = new WebXSession(sessionCreation, transport, this.onSessionErrorHandler);
                 this.addSession(webXSession);
                 return webXSession;
             });
@@ -152,18 +156,18 @@ public class WebXHost {
      * @param client the WebX client
      */
     public void onClientDisconnected(WebXClient client) {
-        this.disconnectClient(client);
+        synchronized (this.sessions) {
+            this.disconnectClient(client);
 
-        this.getSession(client.getSessionId()).ifPresent(session -> {
-            session.onClientDisconnected(client);
+            this.getSession(client.getSessionId()).ifPresent(session -> {
+                session.onClientDisconnected(client);
 
-            if (session.getClientCount() == 0) {
-                logger.debug("Client removed from session with Id \"{}\". Session now has no clients: stopping it", session.getSessionId().hexString());
-                session.disableSessionValidation();
-
-                this.removeSession(session);
-            }
-        });
+                if (session.getClientCount() == 0) {
+                    logger.debug("Client removed from session with Id \"{}\". Session now has no clients: stopping it", session.getSessionId().hexString());
+                    this.removeSession(session);
+                }
+            });
+        }
     }
 
     /**
@@ -189,10 +193,19 @@ public class WebXHost {
 
             for (WebXSession session : sessionsToRemove) {
                 logger.debug("Cleanup: Session with Id \"{}\" has no clients: stopping it", session.getSessionId().hexString());
-                session.disableSessionValidation();
-                this.sessions.remove(session);
+                this.removeSession(session);
             }
         }
+    }
+
+    /**
+     * Closes all clients on a session
+     */
+    public void closeAndRemoveSession(final WebXSession session) {
+        logger.warn("Session {} in error, closing all clients and removing session", session.getSessionId().hexString());
+        session.getClients().forEach(this::onClientDisconnected);
+
+        this.cleanupSessions();
     }
 
     /**
@@ -211,6 +224,7 @@ public class WebXHost {
      */
     private void removeSession(final WebXSession session) {
         synchronized (this.sessions) {
+            session.disableSessionValidation();
             this.sessions.remove(session);
         }
     }
@@ -323,20 +337,6 @@ public class WebXHost {
                 logger.warn("Cannot disconnect client {}: WebX Server is disconnected", client.getClientIdentifier().clientIdString());
             }
         }
-    }
-
-    /**
-     * Callback when a session is in error. This will close all clients and remove the session.
-     * @param session the session that is in error
-     */
-    private void onSessionError(final WebXSession session) {
-        session.getClients().forEach(client -> {
-            logger.warn("Session {} in error, closing all clients and removing session", session.getSessionId().hexString());
-            this.onClientDisconnected(client);
-        });
-
-        // Ensure that any sessions that are empty are cleaned up
-        this.cleanupSessions();
     }
 
 }

@@ -106,7 +106,7 @@ public class WebXParallelRelay {
             // Cleanup after connection failure (in a separate thread due to synchronised)
             host.cleanupSessions();
 
-            this.onClientDisconnected(syncHost);
+            syncHost.checkClientCountAndDisconnectIfTerminated();
 
             throw new WebXConnectionException(error.getMessage());
 
@@ -140,6 +140,9 @@ public class WebXParallelRelay {
                 if (!lockHeld) {
                     syncHost = null;
                 }
+
+            } else {
+                hostExists = false;
             }
 
             this.hostsLock.unlock();
@@ -164,7 +167,7 @@ public class WebXParallelRelay {
 
         } finally {
             // Cleanup after client disconnect
-            this.onClientDisconnected(syncHost);
+            syncHost.checkClientCountAndDisconnectIfTerminated();
 
             // Unlock the host
             syncHost.unlock();
@@ -174,32 +177,6 @@ public class WebXParallelRelay {
         this.lockHostsAndClean();
         logger.debug("Hosts remaining = {}", this.hosts.size());
         this.hostsLock.unlock();
-    }
-
-    /**
-     * Checks if the underlying host has any clients attached to it. If no clients
-     * remain then the host disconnects from the server and is removed from the hosts map.
-     * @param syncHost The synchronised host which has had a client disconnected
-     */
-    private void onClientDisconnected(final WebXSyncHost syncHost) {
-        // Lock the host (should already be the case)
-        syncHost.lock();
-
-        try {
-            final WebXHost host = syncHost.getHost();
-
-            // Disconnect from host and mark SyncHost as terminated (to be removed later to avoid thread lock on hostsLock)
-            if (host.getClientCount() == 0) {
-                syncHost.terminate();
-
-                // Disconnect from host
-                host.disconnect();
-            }
-
-        } finally {
-            // Unlock the host
-            syncHost.unlock();
-        }
     }
 
     /**
