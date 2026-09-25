@@ -1,3 +1,20 @@
+/*
+ * WebX Relay
+ * Copyright (C) 2023 Institut Laue-Langevin
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package eu.ill.webx.relay;
 
 
@@ -18,8 +35,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 
-public class WebXParallelRelay {
-    private static final Logger logger = LoggerFactory.getLogger(WebXParallelRelay.class);
+/**
+ * Central creation and storage of WebXHosts. The WebX Tunnel uses the relay to connect to hosts and to indicate when a client connects (so that cleanup can be performed).
+ * The WebXRelay is a singleton class.
+ */
+public class WebXRelay {
+    private static final Logger logger = LoggerFactory.getLogger(WebXRelay.class);
 
     private final Map<String, WebXSyncHost> hosts = new HashMap<>();
     private final Lock hostsLock = new ReentrantLock();
@@ -27,22 +48,22 @@ public class WebXParallelRelay {
     /**
      * Private constructor
      */
-    private WebXParallelRelay() {
+    private WebXRelay() {
     }
 
     /**
      * Private static creator of a singleton instance
      */
     private static class Holder {
-        private static final WebXParallelRelay INSTANCE = new WebXParallelRelay();
+        private static final WebXRelay INSTANCE = new WebXRelay();
     }
 
     /**
      * Returns the singleton instance
      * @return the singleton WebXRelay instance
      */
-    public static WebXParallelRelay getInstance() {
-        return WebXParallelRelay.Holder.INSTANCE;
+    public static WebXRelay getInstance() {
+        return WebXRelay.Holder.INSTANCE;
     }
 
     /**

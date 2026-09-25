@@ -200,6 +200,7 @@ public class WebXHost {
 
     /**
      * Closes all clients on a session
+     * @param session The session to be closed
      */
     public void closeAndRemoveSession(final WebXSession session) {
         logger.warn("Session {} in error, closing all clients and removing session", session.getSessionId().hexString());

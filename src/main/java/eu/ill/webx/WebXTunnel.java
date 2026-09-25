@@ -21,7 +21,7 @@ import eu.ill.webx.exceptions.*;
 import eu.ill.webx.model.Message;
 import eu.ill.webx.model.PingResponseData;
 import eu.ill.webx.relay.WebXClient;
-import eu.ill.webx.relay.WebXParallelRelay;
+import eu.ill.webx.relay.WebXRelay;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,7 +94,7 @@ public class WebXTunnel {
     public void connect(final WebXHostConfiguration hostConfiguration, final WebXClientConfiguration clientConfiguration, final WebXEngineConfiguration engineConfiguration) throws WebXConnectionException {
         if (this.client == null) {
             this.hostname = hostConfiguration.getHostname();
-            this.client = WebXParallelRelay.getInstance().connectToHost(hostConfiguration, clientConfiguration, engineConfiguration);
+            this.client = WebXRelay.getInstance().connectToHost(hostConfiguration, clientConfiguration, engineConfiguration);
         }
     }
 
@@ -120,7 +120,7 @@ public class WebXTunnel {
      */
     public void disconnect() {
         if (this.client != null) {
-            WebXParallelRelay.getInstance().disconnectFromHost(client, hostname);
+            WebXRelay.getInstance().disconnectFromHost(client, hostname);
         }
     }
 
