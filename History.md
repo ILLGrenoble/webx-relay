@@ -1,3 +1,21 @@
+2.0.0 28/09/2026
+================
+ - Redevelopment of the connection/disconnection of clients to improve parallelisation of multiple hosts and synchronisation within hosts
+ - explicit locking and unlocking of hosts collection
+ - explicit locking and unlocking of each host during connection and disconnection
+ - connection/disconnection of multiple hosts is fully parallelised
+ - Separation of ConnectionException into ClientConnectionException and HostConnectionException to improve exception handling in relay
+ - Refactoring of synchronisation blocks in Host, Session, Transport and the 4 socket-encapsulation classes
+ - Remove race condition bugs
+ - Use "reliable request-reply" pattern for ClientConnector and SessionChannel to handle failures to communicate with the engine/router:
+   - HostConfiguration contains a "socketRetries" value that will recreate the socket if the timeout value is reached (default timeout reduced from 15s to 2s)
+   - Polling is used rather than explicit socket timeout value (poll returns after host HostConfiguration socketTimeoutMs value if no response is received)
+   - Request is resent after socket is recreated
+ - Remove 500ms delay in InstructionPublisher connection
+ - Improve handling of client connection response from the engine (eg can occur if too many clients are connected to a session)
+ - SessionValidator started only if a client is successfully created and interrupt is more quickly handled
+ - Improve handling of session validation error (ping error): integrate handler into new hosts collection synchronisation and host disconnection/cleanup
+
 1.8.11 14/09/2026
 ================
 * Test for empty parameter list before adding them to the request
